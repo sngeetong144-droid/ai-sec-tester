@@ -8,15 +8,19 @@ import {
   SeverityTag,
   ScoreRing,
 } from "@/app/_components/badges";
+import { DeepScanCta } from "@/app/_components/deep-scan-cta";
 
 export const dynamic = "force-dynamic";
 
 export default async function ScanDetail({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ purchase?: string }>;
 }) {
   const { id } = await params;
+  const { purchase } = await searchParams;
   const scan = await getScan(id);
   if (!scan) notFound();
 
@@ -65,7 +69,7 @@ export default async function ScanDetail({
             </div>
           </div>
 
-          {/* Actions — both persist/route, no dead buttons */}
+          {/* Actions — all persist/route/download, no dead buttons */}
           <div className="mt-6 flex flex-wrap gap-2">
             <form action={rerunScan}>
               <input type="hidden" name="target_url" value={scan.target_url} />
@@ -82,6 +86,12 @@ export default async function ScanDetail({
                 ↻ Run again
               </button>
             </form>
+            <a
+              href={`/api/scans/${scan.id}/report`}
+              className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-brand-500/50 hover:text-brand-300"
+            >
+              ↓ Download PDF report
+            </a>
             <form action={deleteScan}>
               <input type="hidden" name="id" value={scan.id} />
               <button
@@ -93,6 +103,18 @@ export default async function ScanDetail({
             </form>
           </div>
         </div>
+
+        {purchase === "success" && (
+          <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            Payment received — thank you! Our team will reach out to schedule
+            your Enterprise deep scan.
+          </div>
+        )}
+        {purchase === "cancelled" && (
+          <div className="mt-6 rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm text-slate-300">
+            Checkout cancelled — no charge was made.
+          </div>
+        )}
 
         {/* Failed-first summary */}
         {failed.length > 0 && (
@@ -144,6 +166,8 @@ export default async function ScanDetail({
             </article>
           ))}
         </section>
+
+        <DeepScanCta scanId={scan.id} email={scan.email} />
 
         <p className="mt-8 text-center text-xs text-slate-600">
           Interactive jailbreak probes are simulated for safety and labelled in
