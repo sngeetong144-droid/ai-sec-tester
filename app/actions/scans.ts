@@ -26,24 +26,25 @@ function normalizeUrl(raw: string): string | null {
 }
 
 /**
- * Core scan routine, shared by the form runner and the "Run again" action.
- * Creates a scan row, runs the engine against the target, persists every
- * per-test result, and finalizes the rollup. Returns the new scan id.
+ * Core scan routine. Creates a scan row, runs the engine, persists results.
+ * Exported so API routes (e.g. enterprise approval) can call it server-side.
  */
-async function executeScan(input: {
+export async function executeScan(input: {
   target: string;
-  label: string | null;
-  email: string | null;
+  label?: string | null;
+  email?: string | null;
+  sessionId?: string | null;
 }): Promise<string> {
   const supabase = await createClient();
-  const sessionId = await ensureSessionId();
+  const sessionId =
+    input.sessionId !== undefined ? input.sessionId : await ensureSessionId();
 
   const { data: created, error: insErr } = await supabase
     .from("scans")
     .insert({
       target_url: input.target,
-      target_label: input.label,
-      email: input.email,
+      target_label: input.label ?? null,
+      email: input.email ?? null,
       session_id: sessionId,
       authorized: true,
       status: "running",

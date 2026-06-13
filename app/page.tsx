@@ -3,6 +3,7 @@ import { getScans } from "@/lib/queries";
 import { deleteScan } from "@/app/actions/scans";
 import { ScanRunner } from "@/app/_components/scan-runner";
 import { VerdictBadge } from "@/app/_components/badges";
+import { PricingTiers } from "@/app/_components/pricing-tiers";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,9 @@ export default async function Home() {
           </p>
         </header>
 
-        <ScanRunner />
+        <div id="scanner">
+          <ScanRunner />
+        </div>
 
         {/* History */}
         <section className="mt-12">
@@ -107,6 +110,8 @@ export default async function Home() {
             </ul>
           )}
         </section>
+
+        <PricingTiers />
 
         <footer className="mt-16 text-center text-xs text-slate-600">
           Checks are aligned with the OWASP Top-10 for LLM Applications. Only

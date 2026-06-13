@@ -1,0 +1,56 @@
+import { EnterpriseForm } from "@/app/_components/enterprise-form";
+
+export const metadata = {
+  title: "Enterprise Scan Request — AI Sec Tester",
+};
+
+export default function EnterprisePage() {
+  return (
+    <main className="grid-bg min-h-screen">
+      <div className="mx-auto max-w-2xl px-5 py-12 sm:py-16">
+        <header className="mb-10 text-center">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-xs text-brand-400">
+            <span className="size-1.5 rounded-full bg-brand-400" />
+            Enterprise Deep Scan
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Request an{" "}
+            <span className="text-brand-400">Enterprise Scan</span>
+          </h1>
+          <p className="mx-auto mt-3 max-w-lg text-slate-400">
+            Our team reviews every request before the scan runs. Complete the
+            form below — we&apos;ll email you within 24 hours with your report.
+          </p>
+        </header>
+
+        <div className="mb-6 grid grid-cols-3 gap-3 text-center text-xs">
+          {[
+            ["Authorization verified", "We confirm ownership before any scan"],
+            ["Automated triage", "Instant risk check on submission"],
+            ["Full report + re-scan", "PDF report + one free re-scan included"],
+          ].map(([title, desc]) => (
+            <div
+              key={title}
+              className="rounded-xl border border-slate-800 bg-slate-900/40 p-3"
+            >
+              <p className="font-semibold text-slate-200">{title}</p>
+              <p className="mt-1 text-slate-500">{desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <EnterpriseForm />
+
+        <p className="mt-6 text-center text-xs text-slate-600">
+          Questions? Email{" "}
+          <a
+            href="mailto:hello@thesoulsofai.com"
+            className="text-slate-500 hover:text-slate-300"
+          >
+            hello@thesoulsofai.com
+          </a>
+        </p>
+      </div>
+    </main>
+  );
+}

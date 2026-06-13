@@ -1,0 +1,68 @@
+import { type NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { verifyApprovalToken } from "@/lib/hmac";
+import { sendRejectionEmail } from "@/lib/email";
+
+function html(title: string, color: string, body: string) {
+  return new NextResponse(
+    `<!DOCTYPE html><html><body style="background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;padding:32px;max-width:560px;margin:0 auto">
+      <h2 style="color:${color};margin-top:0">${title}</h2>${body}
+    </body></html>`,
+    { headers: { "content-type": "text/html" } },
+  );
+}
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+  const token = searchParams.get("token");
+  const reason = searchParams.get("reason") ?? "";
+
+  if (!id || !token) {
+    return html("Invalid Link", "#ef4444", "<p>Missing id or token parameter.</p>");
+  }
+
+  if (!verifyApprovalToken(id, token)) {
+    return html("Invalid Token", "#ef4444", "<p>This rejection link is invalid or has been tampered with.</p>");
+  }
+
+  const supabase = await createClient();
+
+  const { data: rows } = await supabase.rpc(
+    "get_enterprise_request_by_approval_token",
+    { p_token: token },
+  );
+  const req = Array.isArray(rows) ? rows[0] : rows;
+
+  if (!req) {
+    return html("Not Found", "#ef4444", "<p>No matching request found.</p>");
+  }
+
+  if (req.approval_status !== "pending") {
+    return html(
+      "Already Processed",
+      "#f59e0b",
+      `<p>This request was already <strong>${req.approval_status}</strong>.</p>`,
+    );
+  }
+
+  await supabase.rpc("reject_enterprise_request", {
+    p_id: id,
+    p_token: token,
+    p_reason: reason || null,
+  });
+
+  await sendRejectionEmail({
+    toEmail: req.email,
+    toName: req.full_name,
+    chatbotUrl: req.chatbot_url,
+    reason: reason || undefined,
+  });
+
+  return html(
+    "Request Rejected",
+    "#ef4444",
+    `<p>The requester (<strong>${req.email}</strong>) has been notified by email.</p>
+     <p style="color:#64748b;font-size:12px;margin-top:24px">Request ID: ${id}</p>`,
+  );
+}
