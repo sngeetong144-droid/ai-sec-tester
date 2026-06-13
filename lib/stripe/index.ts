@@ -20,7 +20,10 @@ import Stripe from "stripe";
 // valid key at runtime — this only keeps `next build` from crashing while
 // collecting page data for projects that don't use Stripe.
 export const stripe = new Stripe(
-  process.env.STRIPE_SECRET_KEY ?? "sk_test_placeholder_build_only",
+  // Use || (not ??) so a defined-but-empty env var (e.g. "STRIPE_SECRET_KEY="
+  // in .env.local or a blank Vercel env) still falls back to the placeholder
+  // instead of crashing `new Stripe("")` at build time.
+  process.env.STRIPE_SECRET_KEY || "sk_test_placeholder_build_only",
   {
     apiVersion: "2025-02-24.acacia",
     typescript: true,
