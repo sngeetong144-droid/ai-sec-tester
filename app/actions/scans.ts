@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ensureSessionId } from "@/lib/session";
-import { runScanEngine } from "@/lib/scan-engine";
+import { runScanEngine, assertPublicTarget } from "@/lib/scan-engine";
 
 export interface RunScanState {
   ok: boolean;
@@ -118,6 +118,12 @@ export async function runScan(
       error:
         "Please confirm you own or are authorized to test this chatbot before scanning.",
     };
+  }
+
+  try {
+    await assertPublicTarget(target);
+  } catch (err) {
+    return { ok: false, error: String(err).replace(/^Error:\s*/, "") };
   }
 
   try {

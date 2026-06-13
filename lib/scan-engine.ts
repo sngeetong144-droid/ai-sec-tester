@@ -16,6 +16,9 @@
  *    This is a defensive tool, not an attack kit.
  */
 
+import { promises as dns } from "dns";
+import { isIP } from "net";
+
 export type Severity = "low" | "medium" | "high" | "critical";
 export type TestStatus = "pass" | "fail";
 
@@ -97,6 +100,103 @@ export const TEST_DEFINITIONS: TestDefinition[] = [
   },
 ];
 
+// ── SSRF guard ───────────────────────────────────────────────────────────────
+
+function isPrivateIpv4(a: number, b: number, c: number, d: number): boolean {
+  return (
+    a === 127 || // 127.0.0.0/8 loopback
+    a === 0 || // 0.0.0.0/8
+    a === 10 || // 10.0.0.0/8 private
+    (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0/12 private
+    (a === 192 && b === 168) || // 192.168.0.0/16 private
+    (a === 169 && b === 254) || // 169.254.0.0/16 link-local + cloud metadata (169.254.169.254)
+    (a === 100 && b >= 64 && b <= 127) || // 100.64.0.0/10 CGNAT
+    (a === 192 && b === 0 && c === 2) || // 192.0.2.0/24 documentation
+    (a === 198 && b === 51 && c === 100) || // 198.51.100.0/24 documentation
+    (a === 203 && b === 0 && c === 113) || // 203.0.113.0/24 documentation
+    (a === 198 && (b === 18 || b === 19)) // 198.18.0.0/15 benchmarking
+  );
+}
+
+function isPrivateIp(ip: string): boolean {
+  const addr = ip.replace(/^\[|\]$/g, ""); // strip IPv6 brackets if present
+  const v = isIP(addr);
+
+  if (v === 4) {
+    const p = addr.split(".").map(Number);
+    return isPrivateIpv4(p[0], p[1], p[2], p[3]);
+  }
+
+  if (v === 6) {
+    const lo = addr.toLowerCase();
+    if (lo === "::1" || lo === "::") return true;
+    if (lo.startsWith("fc") || lo.startsWith("fd")) return true; // ULA fc00::/7
+    if (lo.startsWith("fe80")) return true; // link-local fe80::/10
+    // IPv4-mapped ::ffff:a.b.c.d — extract and check the inner IPv4
+    if (lo.startsWith("::ffff:")) {
+      const inner = lo.slice(7);
+      if (isIP(inner) === 4) {
+        const p = inner.split(".").map(Number);
+        return isPrivateIpv4(p[0], p[1], p[2], p[3]);
+      }
+      return true; // unknown mapped form — block for safety
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Throws if `rawUrl` targets a private/internal address.
+ * Exported so callers (e.g. form actions) can reject early before touching the DB.
+ *
+ * Note: DNS-resolved IPs are checked at call time (TOCTOU gap exists for DNS
+ * rebinding, mitigated by Vercel's network boundary and short function lifetime).
+ */
+export async function assertPublicTarget(rawUrl: string): Promise<void> {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new Error("Invalid URL.");
+  }
+
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    throw new Error(`URL scheme not permitted: ${parsed.protocol}`);
+  }
+
+  const rawHostname = parsed.hostname.toLowerCase();
+  const hostname = rawHostname.replace(/^\[|\]$/g, ""); // strip IPv6 brackets
+
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) {
+    throw new Error("Scanning localhost is not permitted.");
+  }
+
+  // IP literal — check directly, no DNS needed
+  if (isIP(hostname) !== 0) {
+    if (isPrivateIp(hostname)) {
+      throw new Error("Scanning private or internal IP addresses is not permitted.");
+    }
+    return;
+  }
+
+  // Hostname — resolve and check the resulting IP
+  try {
+    const { address } = await dns.lookup(hostname, { family: 0 });
+    if (isPrivateIp(address)) {
+      throw new Error("Target hostname resolves to a private or internal IP address.");
+    }
+  } catch (err) {
+    // Re-throw only our own security errors; DNS failures are handled gracefully by probeTarget
+    if (
+      err instanceof Error &&
+      (err.message.startsWith("Target hostname") || err.message.startsWith("Scanning"))
+    ) {
+      throw err;
+    }
+  }
+}
+
 // ── deterministic helpers ────────────────────────────────────────────────────
 
 /** djb2 string hash → unsigned 32-bit int. Stable across runs and platforms. */
@@ -152,6 +252,9 @@ function redact(sample: string): string {
 }
 
 async function probeTarget(targetUrl: string): Promise<TargetSignals> {
+  // Defense-in-depth: block private/internal targets even if the caller skipped assertPublicTarget
+  await assertPublicTarget(targetUrl);
+
   const signals: TargetSignals = {
     reachable: false,
     httpStatus: null,
