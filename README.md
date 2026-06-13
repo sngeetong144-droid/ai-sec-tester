@@ -1,41 +1,70 @@
-# vibe-stack-supabase
+# AI Sec Tester
 
-Next.js 15 + Supabase starter for shipping vibe-coded apps fast. Clone, provision, build.
+A front-end security scanner for AI chatbots. Paste your chatbot's public URL,
+run 5 standard prompt-injection & jailbreak checks, and get a Pass/Fail security
+scorecard — with a downloadable PDF audit report.
+
+Aligned with the [OWASP Top-10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/).
+
+## What it does
+
+1. Enter a chatbot URL and confirm you're authorized to test it.
+2. A live progress bar runs 5 checks:
+   - **System Prompt Disclosure** (LLM07)
+   - **Prompt Injection / Instruction Override** (LLM01)
+   - **Jailbreak & Persona Bypass** (LLM01)
+   - **Sensitive Data Exposure** (LLM06)
+   - **Unsafe Content Generation** (LLM05)
+3. Get a Pass/Fail scorecard, severity, evidence, and remediation per check.
+4. Download a PDF audit report, or upgrade to an Enterprise deep scan.
+
+The engine performs **live** transport, secret-exposure, and chatbot-widget
+checks against the target, and **deterministic, clearly-labelled simulations**
+for the interactive jailbreak probes (no AI dependency; same URL → same score).
+It ships **no working exploit payloads** — it's a defensive tool.
+
+> Only scan chatbots you own or are authorized to test.
 
 ## Stack
 
 | Layer | Choice |
 |---|---|
 | Framework | Next.js 15 (App Router, React 19, Server Actions) |
-| Language | TypeScript strict |
-| Styles | Tailwind CSS v4 (CSS-first, no config file) |
-| Auth + DB | Supabase (`@supabase/ssr`) |
-| Package manager | Bun |
-| Deploy | Vercel |
+| Language | TypeScript |
+| Styles | Tailwind CSS v4 |
+| DB | Supabase (Postgres + RLS) |
+| PDF | pdf-lib |
+| Payments | Stripe (optional — Enterprise upsell) |
+| Deploy | Vercel (git auto-deploy) |
 
-## Quick start
+## Local development
 
 ```bash
 bun install
-cp .env.example .env.local   # fill in your Supabase keys
-bun dev
+vercel env pull .env.local   # or copy .env.example and fill Supabase keys
+bun dev                      # http://localhost:3000
 ```
 
-Open http://localhost:3000. Edit `app/page.tsx` to start building.
+## Database
 
-## Provisioning a new project
+Schema lives in `supabase/migrations/`. Two tables: `scans` (a tested URL +
+overall verdict/score) and `scan_results` (one row per check). RLS is enabled
+with demo-first public policies; tighten to per-user at the "lock it down"
+sprint before onboarding real accounts.
 
-Use the `/new-vibe-project <name>` skill (see `claude-dotfiles` repo) which:
-1. Clones this template and renames it
-2. Creates a new GitHub repo and pushes
-3. Creates a Supabase project and injects URL + anon key
-4. Creates a Vercel project linked to the GitHub repo
-5. Triggers first deploy and returns the preview URL
+## Configuration
 
-## Working with AI
+| Env var | Purpose |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/publishable key |
+| `STRIPE_SECRET_KEY` | Enables the Enterprise deep-scan checkout (optional) |
+| `DEEP_SCAN_PRICE_CENTS` | Deep-scan price in cents (default `49900` = $499) |
 
-See [CLAUDE.md](CLAUDE.md) for conventions. This repo is pre-wired for gstack — start with `/office-hours`.
+Without a Stripe key the upsell button stays visible and reports that payments
+aren't configured yet — it goes live the moment `STRIPE_SECRET_KEY` is set.
 
-## Switching to Neon
+## Deploy
 
-If you need Postgres without Supabase (e.g. prefer Drizzle ORM + Clerk for auth), a `vibe-stack-neon` variant is planned. For now: fork this and swap `@supabase/ssr` for `drizzle-orm` + `@neondatabase/serverless`, add Clerk or NextAuth.
+Pushing to `main` auto-deploys via Vercel. Do **not** run `vercel --prod` with
+local files — git is the source of truth.
