@@ -1,0 +1,6 @@
+Problem: A single-page web app that acts as a front-end security scanner for AI chatbots. Users paste their chatbot's public URL or widget embed code, and the tool runs a quick batch of 5 pre-set prompt injection and jailbreak tests to see if the chatbot exposes vulnerabilities.
+For: Small business owners, web developers, and agency builders who have deployed an AI chatbot on their website and want to ensure it cannot be easily hacked or tricked.
+Core things to track: User email accounts, the tested chatbot URLs, a history of past test scans, and the pass/fail results for each security test type.
+The one workflow (must work v1): A user can input an AI chatbot web link, hit "Run Security Scan," watch a live progress bar execute 5 standard prompt injection attack simulations, and receive a clean Pass/Fail security scorecard.
+Success in a week: The scanner successfully simulates front-end chatbot interactions, generates a downloadable PDF audit report, and displays a Stripe or Lemon Squeezy link to purchase an "Enterprise Grade" deep security scan.
+Not v1: Continuous real-time threat monitoring, continuous API-level backend pentesting, automated vulnerability fixing, or custom prompt payload uploads by the user.
