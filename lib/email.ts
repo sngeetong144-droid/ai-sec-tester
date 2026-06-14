@@ -1,5 +1,5 @@
 const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || "https://ai-sec-tester.vercel.app";
+  process.env.NEXT_PUBLIC_APP_URL || "https://scan.thesoulsofai.com";
 
 async function send(payload: {
   from: string;

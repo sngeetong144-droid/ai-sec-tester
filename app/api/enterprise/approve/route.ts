@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const reportUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://ai-sec-tester.vercel.app"}/enterprise/report/${req.report_token}`;
+  const reportUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://scan.thesoulsofai.com"}/enterprise/report/${req.report_token}`;
 
   return html(
     "Request Approved",
