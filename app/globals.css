@@ -7,10 +7,6 @@
   --color-brand-600: #7c3aed;
 }
 
-:root {
-  color-scheme: dark;
-}
-
 /* Animated scan progress shimmer */
 @keyframes scan-pulse {
   0%,
@@ -28,7 +24,7 @@
 /* subtle grid backdrop */
 .grid-bg {
   background-image:
-    linear-gradient(rgba(167, 139, 250, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(167, 139, 250, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(167, 139, 250, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(167, 139, 250, 0.08) 1px, transparent 1px);
   background-size: 40px 40px;
 }

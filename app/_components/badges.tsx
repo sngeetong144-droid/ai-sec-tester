@@ -2,9 +2,9 @@ import type { Scan, ScanResultRow } from "@/lib/types";
 
 export function VerdictBadge({ verdict }: { verdict: Scan["verdict"] }) {
   const map: Record<string, string> = {
-    pass: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
-    warn: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
-    fail: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
+    pass: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    warn: "bg-amber-50 text-amber-700 ring-amber-200",
+    fail: "bg-rose-50 text-rose-700 ring-rose-200",
   };
   const label: Record<string, string> = {
     pass: "Secure",
@@ -28,8 +28,8 @@ export function TestStatusPill({ status }: { status: ScanResultRow["status"] }) 
     <span
       className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold ring-1 ${
         pass
-          ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30"
-          : "bg-rose-500/15 text-rose-300 ring-rose-500/30"
+          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+          : "bg-rose-50 text-rose-700 ring-rose-200"
       }`}
     >
       {pass ? "PASS" : "FAIL"}
@@ -39,10 +39,10 @@ export function TestStatusPill({ status }: { status: ScanResultRow["status"] }) 
 
 export function SeverityTag({ severity }: { severity: ScanResultRow["severity"] }) {
   const map: Record<string, string> = {
-    low: "text-slate-400 ring-slate-600",
-    medium: "text-amber-300 ring-amber-500/40",
-    high: "text-orange-300 ring-orange-500/40",
-    critical: "text-rose-300 ring-rose-500/40",
+    low: "text-slate-500 ring-slate-300",
+    medium: "text-amber-700 ring-amber-300",
+    high: "text-orange-700 ring-orange-300",
+    critical: "text-rose-700 ring-rose-300",
   };
   const s = severity ?? "low";
   return (
@@ -58,10 +58,10 @@ export function ScoreRing({ score }: { score: number | null }) {
   const value = score ?? 0;
   const color =
     value >= 80
-      ? "text-emerald-400"
+      ? "text-emerald-600"
       : value >= 50
-        ? "text-amber-400"
-        : "text-rose-400";
+        ? "text-amber-600"
+        : "text-rose-600";
   const circumference = 2 * Math.PI * 26;
   const offset = circumference - (value / 100) * circumference;
   return (
@@ -73,7 +73,7 @@ export function ScoreRing({ score }: { score: number | null }) {
           r="26"
           fill="none"
           strokeWidth="6"
-          className="stroke-slate-800"
+          className="stroke-slate-200"
         />
         <circle
           cx="30"
@@ -90,7 +90,7 @@ export function ScoreRing({ score }: { score: number | null }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className={`text-xl font-bold ${color}`}>{value}</span>
-        <span className="text-[9px] uppercase tracking-wider text-slate-500">
+        <span className="text-[9px] uppercase tracking-wider text-slate-400">
           score
         </span>
       </div>
