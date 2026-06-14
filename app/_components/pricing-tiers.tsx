@@ -79,14 +79,14 @@ export function PricingTiers() {
         </div>
 
         {/* Pro */}
-        <div className="relative flex flex-col rounded-2xl border border-sky-500/40 bg-sky-500/5 p-6">
+        <div className="relative flex flex-col rounded-2xl border border-violet-500/40 bg-violet-500/5 p-6">
           <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-            <span className="rounded-full border border-sky-500/40 bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-400">
+            <span className="rounded-full border border-violet-500/40 bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-violet-400">
               Most Popular
             </span>
           </div>
           <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-sky-400">Pro</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-violet-400">Pro</p>
             <p className="mt-1 text-3xl font-bold text-slate-100">$10<span className="text-base font-normal text-slate-400">/mo</span></p>
             <p className="mt-1 text-sm text-slate-500">or $50 one-time annual report</p>
           </div>
@@ -99,7 +99,7 @@ export function PricingTiers() {
               "Cancel anytime",
             ].map((f) => (
               <li key={f} className="flex items-start gap-2">
-                <span className="mt-0.5 text-sky-400">✓</span>
+                <span className="mt-0.5 text-violet-400">✓</span>
                 {f}
               </li>
             ))}
@@ -108,7 +108,7 @@ export function PricingTiers() {
             href={SCALENDO.proMonthly}
             target="_blank"
             rel="noopener noreferrer"
-            className="block rounded-lg bg-sky-600 py-2.5 text-center text-sm font-semibold text-white hover:bg-sky-500"
+            className="block rounded-lg bg-violet-600 py-2.5 text-center text-sm font-semibold text-white hover:bg-violet-500"
           >
             Start Monthly — $10/mo
           </a>
@@ -116,7 +116,7 @@ export function PricingTiers() {
             href={SCALENDO.proAnnual}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 block rounded-lg border border-sky-500/40 py-2 text-center text-xs font-semibold text-sky-400 hover:border-sky-400"
+            className="mt-2 block rounded-lg border border-violet-500/40 py-2 text-center text-xs font-semibold text-violet-400 hover:border-sky-400"
           >
             Or get annual report — $50 one-time
           </a>

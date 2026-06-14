@@ -69,11 +69,11 @@ export async function sendOwnerAlert(params: {
 
   const html = `<!DOCTYPE html>
 <html><body style="background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;padding:32px;max-width:640px">
-<h2 style="color:#38bdf8;margin-top:0">New Enterprise Scan Request</h2>
+<h2 style="color:#a78bfa;margin-top:0">New Enterprise Scan Request</h2>
 <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
   <tr><td style="padding:5px 0;color:#94a3b8;width:140px">Requester</td><td>${params.requesterName} &lt;${params.requesterEmail}&gt;</td></tr>
   <tr><td style="padding:5px 0;color:#94a3b8">Company</td><td>${params.company ?? "—"}</td></tr>
-  <tr><td style="padding:5px 0;color:#94a3b8">Target</td><td><a href="${params.chatbotUrl}" style="color:#38bdf8">${params.chatbotUrl}</a></td></tr>
+  <tr><td style="padding:5px 0;color:#94a3b8">Target</td><td><a href="${params.chatbotUrl}" style="color:#a78bfa">${params.chatbotUrl}</a></td></tr>
 </table>
 <h3 style="color:#94a3b8;font-size:13px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Automated Triage</h3>
 <div style="background:#1e293b;border-radius:8px;padding:16px;margin-bottom:20px">
@@ -105,7 +105,7 @@ export async function sendRejectionEmail(params: {
 }) {
   const html = `<!DOCTYPE html>
 <html><body style="background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;padding:32px;max-width:580px">
-<h2 style="color:#38bdf8;margin-top:0">Enterprise Scan Request — Update</h2>
+<h2 style="color:#a78bfa;margin-top:0">Enterprise Scan Request — Update</h2>
 <p>Hi ${params.toName},</p>
 <p>Thank you for submitting an Enterprise scan request for <strong>${params.chatbotUrl}</strong>.</p>
 <p>After review, we are unable to proceed with this request at this time.</p>
@@ -142,7 +142,7 @@ export async function sendReportEmail(params: {
 
   const html = `<!DOCTYPE html>
 <html><body style="background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;padding:32px;max-width:580px">
-<h2 style="color:#38bdf8;margin-top:0">Your Security Report is Ready</h2>
+<h2 style="color:#a78bfa;margin-top:0">Your Security Report is Ready</h2>
 <p>Hi ${params.toName},</p>
 <p>Your Enterprise scan of <strong>${params.chatbotUrl}</strong> is complete.</p>
 <div style="background:#1e293b;border-radius:8px;padding:16px;margin:16px 0;display:inline-block">
@@ -150,10 +150,10 @@ export async function sendReportEmail(params: {
   <span style="color:#94a3b8;font-size:13px;margin-left:10px">/ 100 &nbsp;·&nbsp;</span>
   <span style="color:${verdictColor};font-weight:bold;text-transform:uppercase;font-size:14px">${params.verdict}</span>
 </div>
-<p><a href="${reportUrl}" style="background:#38bdf8;color:#0f172a;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:8px">View Full Report &amp; PDF</a></p>
+<p><a href="${reportUrl}" style="background:#8b5cf6;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:8px">View Full Report &amp; PDF</a></p>
 <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0">
 <p style="color:#64748b;font-size:13px">You have one complimentary re-scan once you've addressed the findings.<br>
-<a href="${reScanUrl}" style="color:#38bdf8">Run Free Re-Scan</a></p>
+<a href="${reScanUrl}" style="color:#a78bfa">Run Free Re-Scan</a></p>
 <p style="color:#94a3b8;margin-top:24px">AI Sec Tester · The Souls of AI</p>
 </body></html>`;
 

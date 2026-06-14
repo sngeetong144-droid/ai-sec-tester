@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     "Request Approved",
     "#22c55e",
     `<p>The scan has been triggered and the report is being sent to <strong>${req.email}</strong>.</p>
-     <p style="margin-top:16px"><a href="${reportUrl}" style="color:#38bdf8">View report directly</a></p>
+     <p style="margin-top:16px"><a href="${reportUrl}" style="color:#a78bfa">View report directly</a></p>
      <p style="color:#64748b;font-size:12px;margin-top:24px">Request ID: ${id}</p>`,
   );
 }

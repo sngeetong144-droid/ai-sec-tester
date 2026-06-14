@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50: #eef6ff;
-  --color-brand-400: #38bdf8;
-  --color-brand-500: #0ea5e9;
-  --color-brand-600: #0284c7;
+  --color-brand-50: #f5f3ff;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
 }
 
 :root {
@@ -28,7 +28,7 @@
 /* subtle grid backdrop */
 .grid-bg {
   background-image:
-    linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(167, 139, 250, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(167, 139, 250, 0.05) 1px, transparent 1px);
   background-size: 40px 40px;
 }

@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "AI Sec Tester — Scan your chatbot for prompt-injection flaws",
@@ -14,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen bg-slate-950 text-slate-100">
+      <body className={`${jakarta.className} antialiased min-h-screen bg-slate-950 text-slate-100`}>
         {children}
       </body>
     </html>
