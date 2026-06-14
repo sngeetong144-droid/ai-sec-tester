@@ -110,11 +110,6 @@ export default async function Home() {
         </section>
 
         <PricingTiers />
-
-        <footer className="mt-16 text-center text-xs text-slate-400">
-          Checks are aligned with the OWASP Top-10 for LLM Applications. Only
-          scan chatbots you own or are authorized to test.
-        </footer>
       </div>
     </main>
   );

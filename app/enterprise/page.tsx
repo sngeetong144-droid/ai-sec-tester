@@ -9,15 +9,15 @@ export default function EnterprisePage() {
     <main className="grid-bg min-h-screen">
       <div className="mx-auto max-w-2xl px-5 py-12 sm:py-16">
         <header className="mb-10 text-center">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-xs text-brand-400">
-            <span className="size-1.5 rounded-full bg-brand-400" />
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/60 px-3 py-1 text-xs text-brand-600">
+            <span className="size-1.5 rounded-full bg-brand-500" />
             Enterprise Deep Scan
           </div>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-800 sm:text-4xl">
             Request an{" "}
-            <span className="text-brand-400">Enterprise Scan</span>
+            <span className="text-brand-600">Enterprise Scan</span>
           </h1>
-          <p className="mx-auto mt-3 max-w-lg text-slate-400">
+          <p className="mx-auto mt-3 max-w-lg text-slate-500">
             Our team reviews every request before the scan runs. Complete the
             form below — we&apos;ll email you within 24 hours with your report.
           </p>
@@ -31,21 +31,21 @@ export default function EnterprisePage() {
           ].map(([title, desc]) => (
             <div
               key={title}
-              className="rounded-xl border border-slate-800 bg-slate-900/40 p-3"
+              className="rounded-xl border border-violet-100 bg-white/60 p-3"
             >
-              <p className="font-semibold text-slate-200">{title}</p>
-              <p className="mt-1 text-slate-500">{desc}</p>
+              <p className="font-semibold text-slate-700">{title}</p>
+              <p className="mt-1 text-slate-400">{desc}</p>
             </div>
           ))}
         </div>
 
         <EnterpriseForm />
 
-        <p className="mt-6 text-center text-xs text-slate-600">
+        <p className="mt-6 text-center text-xs text-slate-400">
           Questions? Email{" "}
           <a
             href="mailto:hello@thesoulsofai.com"
-            className="text-slate-500 hover:text-slate-300"
+            className="text-slate-500 hover:text-slate-700"
           >
             hello@thesoulsofai.com
           </a>

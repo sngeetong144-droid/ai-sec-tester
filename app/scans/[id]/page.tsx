@@ -31,23 +31,23 @@ export default async function ScanDetail({
       <div className="mx-auto max-w-3xl px-5 py-10">
         <Link
           href="/"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-brand-400"
+          className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-600"
         >
           ← Back to scanner
         </Link>
 
         {/* Scorecard header */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+        <div className="rounded-2xl border border-violet-100 bg-white/70 p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="truncate text-xl font-bold text-slate-100">
+              <h1 className="truncate text-xl font-bold text-slate-800">
                 {scan.target_label || scan.target_url}
               </h1>
               <a
                 href={scan.target_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="truncate text-sm text-brand-400 hover:underline"
+                className="truncate text-sm text-brand-600 hover:underline"
               >
                 {scan.target_url}
               </a>
@@ -58,18 +58,17 @@ export default async function ScanDetail({
           <div className="mt-6 flex items-center gap-5">
             <ScoreRing score={scan.score} />
             <div className="space-y-1">
-              <p className="text-2xl font-bold text-slate-100">
+              <p className="text-2xl font-bold text-slate-800">
                 {scan.tests_passed}
-                <span className="text-slate-500">/{scan.tests_total}</span>{" "}
-                <span className="text-base font-normal text-slate-400">
+                <span className="text-slate-400">/{scan.tests_total}</span>{" "}
+                <span className="text-base font-normal text-slate-500">
                   checks passed
                 </span>
               </p>
-              <p className="text-sm text-slate-400">{scan.summary}</p>
+              <p className="text-sm text-slate-500">{scan.summary}</p>
             </div>
           </div>
 
-          {/* Actions — all persist/route/download, no dead buttons */}
           <div className="mt-6 flex flex-wrap gap-2">
             <form action={rerunScan}>
               <input type="hidden" name="target_url" value={scan.target_url} />
@@ -81,14 +80,14 @@ export default async function ScanDetail({
               <input type="hidden" name="email" value={scan.email ?? ""} />
               <button
                 type="submit"
-                className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-brand-400"
+                className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
               >
                 ↻ Run again
               </button>
             </form>
             <a
               href={`/api/scans/${scan.id}/report`}
-              className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-brand-500/50 hover:text-brand-300"
+              className="rounded-lg border border-violet-200 px-4 py-2 text-sm font-medium text-slate-600 hover:border-brand-500 hover:text-brand-600"
             >
               ↓ Download PDF report
             </a>
@@ -96,7 +95,7 @@ export default async function ScanDetail({
               <input type="hidden" name="id" value={scan.id} />
               <button
                 type="submit"
-                className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 hover:border-rose-500/50 hover:text-rose-300"
+                className="rounded-lg border border-violet-200 px-4 py-2 text-sm font-medium text-slate-500 hover:border-rose-300 hover:text-rose-600"
               >
                 Delete
               </button>
@@ -105,60 +104,58 @@ export default async function ScanDetail({
         </div>
 
         {purchase === "success" && (
-          <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             Payment received — thank you! Our team will reach out to schedule
             your Enterprise deep scan.
           </div>
         )}
         {purchase === "cancelled" && (
-          <div className="mt-6 rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm text-slate-300">
+          <div className="mt-6 rounded-xl border border-violet-100 bg-white/50 px-4 py-3 text-sm text-slate-500">
             Checkout cancelled — no charge was made.
           </div>
         )}
 
-        {/* Failed-first summary */}
         {failed.length > 0 && (
-          <div className="mt-6 rounded-xl border border-rose-500/30 bg-rose-500/5 px-4 py-3 text-sm text-rose-200">
+          <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             <strong>{failed.length}</strong>{" "}
             {failed.length === 1 ? "vulnerability" : "vulnerabilities"} found:{" "}
             {failed.map((f) => f.test_name).join(", ")}.
           </div>
         )}
 
-        {/* Per-test results */}
         <section className="mt-6 space-y-3">
           {scan.results.map((r) => (
             <article
               key={r.id}
               className={`rounded-xl border p-4 ${
                 r.status === "fail"
-                  ? "border-rose-500/30 bg-rose-500/5"
-                  : "border-slate-800 bg-slate-900/40"
+                  ? "border-rose-200 bg-rose-50"
+                  : "border-violet-100 bg-white/50"
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-slate-100">
+                    <h3 className="font-semibold text-slate-800">
                       {r.test_name}
                     </h3>
                     <SeverityTag severity={r.severity} />
                   </div>
-                  <p className="mt-0.5 text-xs text-slate-500">{r.category}</p>
+                  <p className="mt-0.5 text-xs text-slate-400">{r.category}</p>
                 </div>
                 <TestStatusPill status={r.status} />
               </div>
 
-              <p className="mt-3 text-sm text-slate-400">{r.detail}</p>
+              <p className="mt-3 text-sm text-slate-600">{r.detail}</p>
 
               {r.evidence && (
-                <p className="mt-2 rounded-md bg-slate-950/60 px-3 py-2 font-mono text-xs text-slate-400">
+                <p className="mt-2 rounded-md bg-violet-50 px-3 py-2 font-mono text-xs text-slate-600">
                   {r.evidence}
                 </p>
               )}
 
               {r.status === "fail" && r.remediation && (
-                <p className="mt-2 text-sm text-emerald-300/90">
+                <p className="mt-2 text-sm text-emerald-700">
                   <span className="font-semibold">Fix: </span>
                   {r.remediation}
                 </p>
@@ -169,7 +166,7 @@ export default async function ScanDetail({
 
         <DeepScanCta scanId={scan.id} email={scan.email} />
 
-        <p className="mt-8 text-center text-xs text-slate-600">
+        <p className="mt-8 text-center text-xs text-slate-400">
           Interactive jailbreak probes are simulated for safety and labelled in
           each result. Transport &amp; secret-exposure checks are performed live
           against the target.

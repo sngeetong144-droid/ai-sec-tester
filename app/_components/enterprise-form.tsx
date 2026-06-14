@@ -45,15 +45,10 @@ export function EnterpriseForm() {
     initial,
   );
 
-  const steps = [
-    "About You",
-    "Target Chatbot",
-    "Prove Ownership",
-    "Agreement",
-  ];
+  const steps = ["About You", "Target Chatbot", "Prove Ownership", "Agreement"];
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8">
+    <div className="rounded-2xl border border-violet-100 bg-white/70 p-6 sm:p-8">
       {/* Step indicator */}
       <div className="mb-8 flex items-center gap-2">
         {steps.map((label, i) => {
@@ -67,19 +62,19 @@ export function EnterpriseForm() {
                   done
                     ? "bg-brand-500 text-white"
                     : active
-                      ? "border border-brand-400 text-brand-400"
-                      : "border border-slate-700 text-slate-600"
+                      ? "border border-brand-500 text-brand-600"
+                      : "border border-slate-200 text-slate-300"
                 }`}
               >
                 {done ? "✓" : n}
               </div>
               <span
-                className={`hidden text-xs sm:block ${active ? "text-slate-200" : "text-slate-600"}`}
+                className={`hidden text-xs sm:block ${active ? "text-slate-700" : "text-slate-400"}`}
               >
                 {label}
               </span>
               {i < steps.length - 1 && (
-                <div className="h-px w-6 bg-slate-800 sm:w-10" />
+                <div className="h-px w-6 bg-slate-200 sm:w-10" />
               )}
             </div>
           );
@@ -87,14 +82,12 @@ export function EnterpriseForm() {
       </div>
 
       <form action={action}>
-        {/* Hidden inputs that persist across steps */}
         <input type="hidden" name="agreed_to_tos" value={agreed ? "true" : "false"} />
         <input type="hidden" name="ownership_method" value={ownershipMethod} />
 
-        {/* Step 1 — About You */}
         {step === 1 && (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-100">About You</h2>
+            <h2 className="text-lg font-semibold text-slate-800">About You</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Full name *" name="full_name" required />
               <Field label="Work email *" name="email" type="email" required />
@@ -105,12 +98,9 @@ export function EnterpriseForm() {
           </div>
         )}
 
-        {/* Step 2 — Target */}
         {step === 2 && (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-100">
-              Target Chatbot
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-800">Target Chatbot</h2>
             <Field
               label="Chatbot URL *"
               name="chatbot_url"
@@ -118,26 +108,23 @@ export function EnterpriseForm() {
               required
             />
             <div>
-              <label className="mb-1.5 block text-sm text-slate-400">
+              <label className="mb-1.5 block text-sm text-slate-600">
                 Describe the chatbot (what it does, which platform)
               </label>
               <textarea
                 name="target_description"
                 rows={3}
                 placeholder="e.g. Customer support bot built on OpenAI GPT-4o, embedded on our homepage via Intercom"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-brand-400 focus:outline-none"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:border-brand-500 focus:outline-none"
               />
             </div>
           </div>
         )}
 
-        {/* Step 3 — Ownership */}
         {step === 3 && (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-100">
-              Prove Ownership
-            </h2>
-            <p className="text-sm text-slate-400">
+            <h2 className="text-lg font-semibold text-slate-800">Prove Ownership</h2>
+            <p className="text-sm text-slate-500">
               Choose any one method to verify you control the target domain.
               Instructions are provided after you select.
             </p>
@@ -147,8 +134,8 @@ export function EnterpriseForm() {
                   key={m.id}
                   className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition ${
                     ownershipMethod === m.id
-                      ? "border-brand-400 bg-brand-500/10"
-                      : "border-slate-700 hover:border-slate-600"
+                      ? "border-brand-500 bg-brand-50"
+                      : "border-slate-200 hover:border-slate-300"
                   }`}
                 >
                   <input
@@ -157,20 +144,18 @@ export function EnterpriseForm() {
                     value={m.id}
                     checked={ownershipMethod === m.id}
                     onChange={() => setOwnershipMethod(m.id)}
-                    className="mt-0.5 accent-brand-400"
+                    className="mt-0.5 accent-brand-500"
                   />
                   <div>
-                    <p className="font-medium text-slate-200">{m.label}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {m.description}
-                    </p>
+                    <p className="font-medium text-slate-700">{m.label}</p>
+                    <p className="mt-1 text-xs text-slate-400">{m.description}</p>
                   </div>
                 </label>
               ))}
             </div>
             {ownershipMethod && (
               <div>
-                <label className="mb-1.5 block text-sm text-slate-400">
+                <label className="mb-1.5 block text-sm text-slate-600">
                   Notes / confirmation (e.g. TXT record value you set, or that
                   you&apos;ve placed the file)
                 </label>
@@ -178,20 +163,17 @@ export function EnterpriseForm() {
                   name="ownership_detail"
                   rows={2}
                   placeholder="e.g. DNS TXT record set to my@company.com on 2026-06-13"
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-brand-400 focus:outline-none"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:border-brand-500 focus:outline-none"
                 />
               </div>
             )}
           </div>
         )}
 
-        {/* Step 4 — Agreement */}
         {step === 4 && (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-100">
-              Authorization Agreement
-            </h2>
-            <pre className="max-h-44 overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-xs leading-relaxed text-slate-400">
+            <h2 className="text-lg font-semibold text-slate-800">Authorization Agreement</h2>
+            <pre className="max-h-44 overflow-y-auto whitespace-pre-wrap rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-xs leading-relaxed text-slate-600">
               {AGREEMENT}
             </pre>
             <label className="flex cursor-pointer items-start gap-3">
@@ -199,29 +181,28 @@ export function EnterpriseForm() {
                 type="checkbox"
                 checked={agreed}
                 onChange={(e) => setAgreed(e.target.checked)}
-                className="mt-0.5 accent-brand-400"
+                className="mt-0.5 accent-brand-500"
               />
-              <span className="text-sm text-slate-300">
+              <span className="text-sm text-slate-600">
                 I have read and agree to the above authorization agreement. I
                 confirm I am the owner or authorized representative.
               </span>
             </label>
 
             {state?.error && (
-              <p className="rounded-lg border border-rose-800 bg-rose-950/30 px-4 py-2 text-sm text-rose-400">
+              <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">
                 {state.error}
               </p>
             )}
           </div>
         )}
 
-        {/* Navigation */}
         <div className="mt-8 flex items-center justify-between">
           {step > 1 ? (
             <button
               type="button"
               onClick={() => setStep((s) => s - 1)}
-              className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-400 hover:border-slate-600 hover:text-slate-200"
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-500 hover:border-slate-300 hover:text-slate-700"
             >
               Back
             </button>
@@ -270,13 +251,13 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm text-slate-400">{label}</label>
+      <label className="mb-1.5 block text-sm text-slate-600">{label}</label>
       <input
         type={type}
         name={name}
         placeholder={placeholder}
         required={required}
-        className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-brand-400 focus:outline-none"
+        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:border-brand-500 focus:outline-none"
       />
     </div>
   );
