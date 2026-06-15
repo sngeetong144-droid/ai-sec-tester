@@ -1,11 +1,20 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // AI-generated apps should deploy even if the template has strict type or
-  // lint issues. Type errors are compile-time only and don't affect runtime,
-  // so we don't let them block a deployment.
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          // Allow iframing from nova-dashboard (localhost:8787) in local dev
+          { key: "X-Frame-Options", value: "ALLOWALL" },
+          { key: "Content-Security-Policy", value: "frame-ancestors *" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
