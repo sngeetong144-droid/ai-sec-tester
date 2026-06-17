@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { createClient } from "@/lib/supabase/server";
+import { signOut } from "@/app/auth/login/actions";
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
@@ -10,11 +12,14 @@ export const metadata: Metadata = {
     "Paste your AI chatbot's URL and run 5 standard prompt-injection & jailbreak checks. Get a Pass/Fail security scorecard in seconds.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <html lang="en">
       <body className={`${jakarta.className} antialiased bg-[#F0EEFF] text-slate-800 flex flex-col min-h-screen`}>
@@ -30,6 +35,26 @@ export default function RootLayout({
             <div className="flex items-center gap-4 text-xs text-slate-400">
               <a href="/" className="hover:text-slate-600 transition-colors">Scanner</a>
               <a href="/enterprise" className="hover:text-slate-600 transition-colors">Enterprise</a>
+              {user ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-slate-500">{user.email}</span>
+                  <form action={signOut}>
+                    <button
+                      type="submit"
+                      className="rounded-full border border-violet-200 px-3 py-1 text-xs text-violet-600 hover:bg-violet-50 transition-colors"
+                    >
+                      Sign out
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <a
+                  href="/auth/login"
+                  className="rounded-full border border-violet-200 px-3 py-1 text-xs text-violet-600 hover:bg-violet-50 transition-colors"
+                >
+                  Sign in
+                </a>
+              )}
             </div>
           </div>
         </div>

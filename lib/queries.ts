@@ -3,13 +3,13 @@ import { readSessionId } from "@/lib/session";
 import type { Scan, ScanResultRow, ScanWithResults } from "@/lib/types";
 
 /**
- * Recent scans for the current visitor. Demo-first: if the visitor has a
- * session cookie we show theirs; otherwise we show the most recent scans so
- * the app is never empty and stays screenshot-able.
+ * Recent scans for the current visitor.
+ * Authenticated users: see all scans linked to their user_id.
+ * Anonymous: filter by session cookie.
  */
 export async function getScans(limit = 25): Promise<Scan[]> {
   const supabase = await createClient();
-  const sid = await readSessionId();
+  const { data: { user } } = await supabase.auth.getUser();
 
   let query = supabase
     .from("scans")
@@ -17,7 +17,12 @@ export async function getScans(limit = 25): Promise<Scan[]> {
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (sid) query = query.eq("session_id", sid);
+  if (user) {
+    query = query.eq("user_id", user.id);
+  } else {
+    const sid = await readSessionId();
+    if (sid) query = query.eq("session_id", sid);
+  }
 
   const { data, error } = await query;
   if (error) {

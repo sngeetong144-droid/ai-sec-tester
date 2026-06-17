@@ -39,6 +39,8 @@ export async function executeScan(input: {
   const sessionId =
     input.sessionId !== undefined ? input.sessionId : await ensureSessionId();
 
+  const { data: { user } } = await supabase.auth.getUser();
+
   const { data: created, error: insErr } = await supabase
     .from("scans")
     .insert({
@@ -46,6 +48,7 @@ export async function executeScan(input: {
       target_label: input.label ?? null,
       email: input.email ?? null,
       session_id: sessionId,
+      user_id: user?.id ?? null,
       authorized: true,
       status: "running",
     })
