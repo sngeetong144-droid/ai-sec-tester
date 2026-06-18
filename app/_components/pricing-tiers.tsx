@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { ComplianceGate } from "./compliance-gate";
 
 const SCALENDO = {
   basic: "https://link.fastpaydirect.com/payment-link/6a2d547c03b17c94f57161ea",
@@ -39,14 +42,12 @@ export function PricingTiers() {
               </li>
             ))}
           </ul>
-          <a
+          <ComplianceGate
             href={SCALENDO.basic}
-            target="_blank"
-            rel="noopener noreferrer"
             className="block rounded-lg border border-violet-200 py-2.5 text-center text-sm font-semibold text-slate-600 transition-colors hover:border-brand-500 hover:text-brand-600"
           >
             Buy Basic — $10
-          </a>
+          </ComplianceGate>
         </div>
 
         {/* Pro */}
@@ -77,22 +78,18 @@ export function PricingTiers() {
               </li>
             ))}
           </ul>
-          <a
+          <ComplianceGate
             href={SCALENDO.proMonthly}
-            target="_blank"
-            rel="noopener noreferrer"
             className="block rounded-lg bg-brand-500 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-600"
           >
             Start Monthly — $10/mo
-          </a>
-          <a
+          </ComplianceGate>
+          <ComplianceGate
             href={SCALENDO.proAnnual}
-            target="_blank"
-            rel="noopener noreferrer"
             className="mt-2 block rounded-lg border border-brand-500/40 py-2 text-center text-xs font-semibold text-brand-600 transition-colors hover:border-brand-500"
           >
             Or get annual report — $50 one-time
-          </a>
+          </ComplianceGate>
         </div>
 
         {/* Enterprise */}
