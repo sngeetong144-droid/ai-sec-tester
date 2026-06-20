@@ -44,15 +44,9 @@ export default async function Home() {
           </p>
           {!user && (
             <div className="mt-6 flex items-center justify-center gap-3">
-              <Link
-                href="/auth/login"
-                className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
-              >
-                Sign in to scan
-              </Link>
               <a
                 href="#pricing"
-                className="rounded-lg border border-violet-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-brand-400 hover:text-brand-600"
+                className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
               >
                 View plans
               </a>
