@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { runTriage } from "@/lib/triage";
 import { sendOwnerAlert } from "@/lib/email";
 import { makeApprovalToken, makeReportToken, makeReScanToken } from "@/lib/hmac";
+import { assertPublicTarget } from "@/lib/scan-engine";
 
 export interface EnterpriseFormState {
   error?: string;
@@ -46,6 +47,11 @@ export async function submitEnterpriseRequest(
     new URL(chatbotUrl);
   } catch {
     return { error: "Target URL must be a valid http:// or https:// address." };
+  }
+  try {
+    await assertPublicTarget(chatbotUrl);
+  } catch (err) {
+    return { error: String(err).replace(/^Error:\s*/, "") };
   }
 
   const headersList = await headers();

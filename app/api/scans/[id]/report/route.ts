@@ -1,4 +1,5 @@
 import { getScan } from "@/lib/queries";
+import { consumerOptionsFor, remediationStepsFor } from "@/lib/remediation-guidance";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 
 export const dynamic = "force-dynamic";
@@ -135,10 +136,10 @@ export async function GET(
   hr();
 
   // ── Per-test results ──
-  drawWrapped("Test results", { font: bold, size: 12, gap: 4 });
+  drawWrapped("Findings and remediation plan", { font: bold, size: 12, gap: 4 });
 
   for (const r of scan.results) {
-    ensureSpace(50);
+    ensureSpace(72);
     const statusText = r.status === "pass" ? "PASS" : "FAIL";
     const statusColor = r.status === "pass" ? green : red;
     page.drawText(statusText, { x: margin, y, size: 10, font: bold, color: statusColor });
@@ -153,10 +154,20 @@ export async function GET(
     if (r.category) drawWrapped(r.category, { size: 8, color: muted });
     if (r.detail) drawWrapped(r.detail, { size: 9, color: ink });
     if (r.evidence) drawWrapped("Observed: " + r.evidence, { size: 9, color: muted });
-    if (r.status === "fail" && r.remediation)
-      drawWrapped("Fix: " + r.remediation, { size: 9, color: green });
+    if (r.status === "fail" && r.remediation) {
+      drawWrapped("Remediation steps:", { font: bold, size: 9, color: green });
+      remediationStepsFor({ key: r.test_key, remediation: r.remediation }).forEach((step, index) => {
+        drawWrapped(`${index + 1}. ${step}`, { size: 9, color: green });
+      });
+    }
     y -= 8;
   }
+
+  hr();
+  drawWrapped("Consumer next options", { font: bold, size: 12, gap: 4 });
+  consumerOptionsFor(scan.results).forEach((option, index) => {
+    drawWrapped(`${index + 1}. ${option}`, { size: 9, color: ink });
+  });
 
   hr();
   drawWrapped(

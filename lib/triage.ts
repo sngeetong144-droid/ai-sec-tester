@@ -1,3 +1,5 @@
+import { ssrfSafeTarget } from "@/lib/scan-gate";
+
 export interface TriageFlag {
   code: string;
   severity: "info" | "warn" | "critical";
@@ -12,6 +14,23 @@ export interface TriageResult {
   summary: string;
 }
 
+// ── jurisdiction due-diligence flags ───────────────────────────────────────────
+// Raised by the scan-request review (lib/jurisdiction-review.ts), not by the
+// target-side runTriage above. Held requests get one or both of these appended
+// to their triage_flags for the human reviewer.
+export const GEO_FLAG_CODES = {
+  PROXY_DETECTED: "PROXY_DETECTED",
+  GEO_SIGNAL_CONFLICT: "GEO_SIGNAL_CONFLICT",
+} as const;
+
+export function geoFlag(
+  code: keyof typeof GEO_FLAG_CODES,
+  message: string,
+  severity: TriageFlag["severity"] = "warn",
+): TriageFlag {
+  return { code: GEO_FLAG_CODES[code], severity, message };
+}
+
 const BLOCKED_DOMAINS = [
   /\.gov(\.|\b)/i,
   /\.mil(\.|\b)/i,
@@ -22,19 +41,6 @@ const BLOCKED_DOMAINS = [
   /cia\.gov/i,
   /dhs\.gov/i,
   /pentagon\.mil/i,
-];
-
-const PRIVATE_IP = [
-  /^127\./,
-  /^10\./,
-  /^192\.168\./,
-  /^172\.(1[6-9]|2\d|3[01])\./,
-  /^169\.254\./,
-  /^::1$/,
-  /^fc00:/i,
-  /^fe80:/i,
-  /^0\.0\.0\.0/,
-  /^localhost$/i,
 ];
 
 const FREE_EMAIL = [
@@ -71,13 +77,18 @@ export async function runTriage(input: {
 
   const hostname = parsed.hostname;
 
-  if (PRIVATE_IP.some((r) => r.test(hostname))) {
+  // SSRF guard: the shared DNS-resolving guard (lib/probe assertPublicTarget via
+  // ssrfSafeTarget) catches hostnames that resolve to an internal/metadata IP,
+  // which a static regex on the literal hostname cannot. Reject before the
+  // fetch() below so a crafted hostname can't reach an internal address.
+  const ssrf = await ssrfSafeTarget(parsed.origin);
+  if (!ssrf.ok) {
     flags.push({
       code: "PRIVATE_IP",
       severity: "critical",
-      message: `Target '${hostname}' is a private/internal address — SSRF risk.`,
+      message: `Target '${hostname}' failed the SSRF safety check — ${ssrf.reason}.`,
     });
-    score += 70;
+    return finalize(100, flags);
   }
 
   if (BLOCKED_DOMAINS.some((r) => r.test(hostname))) {

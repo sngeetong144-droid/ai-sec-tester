@@ -10,7 +10,7 @@
  * For basic this is 1 probe, pro is 2, enterprise is 3 — each under 8s timeout.
  */
 
-import { assertPublicTarget } from "@/lib/probe";
+import { assertPublicTarget, type ProbeOptions } from "@/lib/probe";
 import { runScanEngine, type EngineResult, type TestResult } from "@/lib/scan-engine";
 import { runProScanEngine } from "@/lib/pro-scan-engine";
 import { runEnterpriseScanEngine } from "@/lib/enterprise-scan-engine";
@@ -56,15 +56,16 @@ function scoreResults(results: TestResult[]): Pick<EngineResult, "score" | "test
 export async function runTieredScanEngine(
   targetUrl: string,
   tier: ScanTier,
+  options: ProbeOptions = {},
 ): Promise<TieredEngineResult> {
   // SSRF guard runs first regardless of tier
-  await assertPublicTarget(targetUrl);
+  await assertPublicTarget(targetUrl, options);
 
   const tierLabel =
     tier === "basic" ? "Basic (5 checks)" : tier === "pro" ? "Pro (10 checks)" : "Enterprise (15 checks)";
 
   if (tier === "basic") {
-    const engine = await runScanEngine(targetUrl);
+    const engine = await runScanEngine(targetUrl, options);
     return {
       ...engine,
       tier,
@@ -74,8 +75,8 @@ export async function runTieredScanEngine(
 
   if (tier === "pro") {
     const [basic, pro] = await Promise.all([
-      runScanEngine(targetUrl),
-      runProScanEngine(targetUrl),
+      runScanEngine(targetUrl, options),
+      runProScanEngine(targetUrl, options),
     ]);
     const { results, checks_by_tier } = mergeResults([
       { results: basic.results, key: "basic" },
@@ -93,9 +94,9 @@ export async function runTieredScanEngine(
 
   // enterprise
   const [basic, pro, enterprise] = await Promise.all([
-    runScanEngine(targetUrl),
-    runProScanEngine(targetUrl),
-    runEnterpriseScanEngine(targetUrl),
+    runScanEngine(targetUrl, options),
+    runProScanEngine(targetUrl, options),
+    runEnterpriseScanEngine(targetUrl, options),
   ]);
   const { results, checks_by_tier } = mergeResults([
     { results: basic.results, key: "basic" },

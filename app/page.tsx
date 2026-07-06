@@ -3,8 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getScans } from "@/lib/queries";
 import { deleteScan } from "@/app/actions/scans";
 import { ScanRunner } from "@/app/_components/scan-runner";
+import { LocalScanRunner } from "@/app/_components/local-scan-runner";
 import { VerdictBadge } from "@/app/_components/badges";
 import { PricingTiers } from "@/app/_components/pricing-tiers";
+import { JURISDICTION_NOTICE } from "@/lib/jurisdiction-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,7 @@ export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const scans = user ? await getScans() : [];
+  const localScannerEnabled = process.env.NODE_ENV === "development";
 
   return (
     <main className="grid-bg min-h-screen">
@@ -53,6 +56,16 @@ export default async function Home() {
             </div>
           )}
         </header>
+
+        <section className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-relaxed text-amber-900">
+          <p className="font-semibold">Compliance guardrail</p>
+          <p className="mt-1">
+            AI Sec Tester is for defensive chatbot assessments on systems you own
+            or are explicitly authorized to test. {JURISDICTION_NOTICE}
+          </p>
+        </section>
+
+        {localScannerEnabled && !user && <LocalScanRunner />}
 
         {/* Scanner — authenticated users only */}
         {user && (

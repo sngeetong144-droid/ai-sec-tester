@@ -7,6 +7,11 @@
 
 import { promises as dns } from "dns";
 import { isIP } from "net";
+import { assertJurisdictionAllowed } from "@/lib/jurisdiction-policy";
+
+export interface ProbeOptions {
+  allowPrivateTarget?: boolean;
+}
 
 // ── SSRF guard ────────────────────────────────────────────────────────────────
 
@@ -53,7 +58,29 @@ function isPrivateIp(ip: string): boolean {
   return false;
 }
 
-export async function assertPublicTarget(rawUrl: string): Promise<void> {
+async function lookupCountryCode(ip: string): Promise<string | null> {
+  if (process.env.DISABLE_TARGET_GEOLOOKUP === "true") return null;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/country/`, {
+      signal: controller.signal,
+      headers: { "user-agent": "ai-sec-tester/1.0 (+compliance-guardrail)" },
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+    const code = (await res.text()).trim().toUpperCase();
+    return /^[A-Z]{2}$/.test(code) ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function assertPublicTarget(
+  rawUrl: string,
+  options: ProbeOptions = {},
+): Promise<void> {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
@@ -69,25 +96,35 @@ export async function assertPublicTarget(rawUrl: string): Promise<void> {
   const hostname = rawHostname.replace(/^\[|\]$/g, "");
 
   if (hostname === "localhost" || hostname.endsWith(".localhost")) {
+    if (options.allowPrivateTarget) return;
     throw new Error("Scanning localhost is not permitted.");
   }
 
+  await assertJurisdictionAllowed(hostname, [], lookupCountryCode);
+
   if (isIP(hostname) !== 0) {
     if (isPrivateIp(hostname)) {
+      if (options.allowPrivateTarget) return;
       throw new Error("Scanning private or internal IP addresses is not permitted.");
     }
+    await assertJurisdictionAllowed(hostname, [hostname], lookupCountryCode);
     return;
   }
 
   try {
-    const { address } = await dns.lookup(hostname, { family: 0 });
-    if (isPrivateIp(address)) {
+    const records = await dns.lookup(hostname, { family: 0, all: true });
+    const addresses = records.map((r) => r.address);
+    if (addresses.some(isPrivateIp)) {
+      if (options.allowPrivateTarget) return;
       throw new Error("Target hostname resolves to a private or internal IP address.");
     }
+    await assertJurisdictionAllowed(hostname, addresses, lookupCountryCode);
   } catch (err) {
     if (
       err instanceof Error &&
-      (err.message.startsWith("Target hostname") || err.message.startsWith("Scanning"))
+      (err.message.startsWith("Target hostname") ||
+        err.message.startsWith("Scanning") ||
+        err.message.startsWith("Target jurisdiction"))
     ) {
       throw err;
     }
@@ -155,8 +192,11 @@ export interface TargetSignals {
   responseHeaders: Record<string, string>;
 }
 
-export async function probeTarget(targetUrl: string): Promise<TargetSignals> {
-  await assertPublicTarget(targetUrl);
+export async function probeTarget(
+  targetUrl: string,
+  options: ProbeOptions = {},
+): Promise<TargetSignals> {
+  await assertPublicTarget(targetUrl, options);
 
   const signals: TargetSignals = {
     reachable: false,

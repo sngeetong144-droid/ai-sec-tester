@@ -17,6 +17,7 @@
 import {
   probeTarget,
   hashString,
+  type ProbeOptions,
   type TargetSignals,
 } from "@/lib/probe";
 
@@ -237,8 +238,11 @@ function evaluateProTest(
   return { ...def, status, evidence, simulated, sort_order: index };
 }
 
-export async function runProScanEngine(targetUrl: string): Promise<EngineResult> {
-  const signals = await probeTarget(targetUrl);
+export async function runProScanEngine(
+  targetUrl: string,
+  options: ProbeOptions = {},
+): Promise<EngineResult> {
+  const signals = await probeTarget(targetUrl, options);
   const seed = hashString(targetUrl.toLowerCase().trim());
 
   const results = PRO_TEST_DEFINITIONS.map((def, i) =>

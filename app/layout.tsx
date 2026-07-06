@@ -21,8 +21,11 @@ export default async function RootLayout({
   const { data: { user } } = await supabase.auth.getUser();
 
   return (
-    <html lang="en">
-      <body className={`${jakarta.className} antialiased bg-[#F0EEFF] text-slate-800 flex flex-col min-h-screen`}>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        suppressHydrationWarning
+        className={`${jakarta.className} antialiased bg-[#F0EEFF] text-slate-800 flex flex-col min-h-screen`}
+      >
         {/* Site header */}
         <div className="bg-white/70 backdrop-blur-sm border-b border-violet-100 px-6 py-3 shrink-0">
           <div className="max-w-3xl mx-auto flex items-center justify-between">

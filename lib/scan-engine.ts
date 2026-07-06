@@ -18,6 +18,11 @@
 
 import { promises as dns } from "dns";
 import { isIP } from "net";
+import { assertJurisdictionAllowed } from "@/lib/jurisdiction-policy";
+
+export interface ScanEngineOptions {
+  allowPrivateTarget?: boolean;
+}
 
 export type Severity = "low" | "medium" | "high" | "critical";
 export type TestStatus = "pass" | "fail";
@@ -146,6 +151,25 @@ function isPrivateIp(ip: string): boolean {
   return false;
 }
 
+async function lookupCountryCode(ip: string): Promise<string | null> {
+  if (process.env.DISABLE_TARGET_GEOLOOKUP === "true") return null;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/country/`, {
+      signal: controller.signal,
+      headers: { "user-agent": "ai-sec-tester/1.0 (+compliance-guardrail)" },
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+    const code = (await res.text()).trim().toUpperCase();
+    return /^[A-Z]{2}$/.test(code) ? code : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Throws if `rawUrl` targets a private/internal address.
  * Exported so callers (e.g. form actions) can reject early before touching the DB.
@@ -153,7 +177,10 @@ function isPrivateIp(ip: string): boolean {
  * Note: DNS-resolved IPs are checked at call time (TOCTOU gap exists for DNS
  * rebinding, mitigated by Vercel's network boundary and short function lifetime).
  */
-export async function assertPublicTarget(rawUrl: string): Promise<void> {
+export async function assertPublicTarget(
+  rawUrl: string,
+  options: ScanEngineOptions = {},
+): Promise<void> {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
@@ -169,28 +196,38 @@ export async function assertPublicTarget(rawUrl: string): Promise<void> {
   const hostname = rawHostname.replace(/^\[|\]$/g, ""); // strip IPv6 brackets
 
   if (hostname === "localhost" || hostname.endsWith(".localhost")) {
+    if (options.allowPrivateTarget) return;
     throw new Error("Scanning localhost is not permitted.");
   }
+
+  await assertJurisdictionAllowed(hostname, [], lookupCountryCode);
 
   // IP literal — check directly, no DNS needed
   if (isIP(hostname) !== 0) {
     if (isPrivateIp(hostname)) {
+      if (options.allowPrivateTarget) return;
       throw new Error("Scanning private or internal IP addresses is not permitted.");
     }
+    await assertJurisdictionAllowed(hostname, [hostname], lookupCountryCode);
     return;
   }
 
   // Hostname — resolve and check the resulting IP
   try {
-    const { address } = await dns.lookup(hostname, { family: 0 });
-    if (isPrivateIp(address)) {
+    const records = await dns.lookup(hostname, { family: 0, all: true });
+    const addresses = records.map((r) => r.address);
+    if (addresses.some(isPrivateIp)) {
+      if (options.allowPrivateTarget) return;
       throw new Error("Target hostname resolves to a private or internal IP address.");
     }
+    await assertJurisdictionAllowed(hostname, addresses, lookupCountryCode);
   } catch (err) {
     // Re-throw only our own security errors; DNS failures are handled gracefully by probeTarget
     if (
       err instanceof Error &&
-      (err.message.startsWith("Target hostname") || err.message.startsWith("Scanning"))
+      (err.message.startsWith("Target hostname") ||
+        err.message.startsWith("Scanning") ||
+        err.message.startsWith("Target jurisdiction"))
     ) {
       throw err;
     }
@@ -251,9 +288,12 @@ function redact(sample: string): string {
   return s.slice(0, 6) + "…" + "*".repeat(6);
 }
 
-async function probeTarget(targetUrl: string): Promise<TargetSignals> {
+async function probeTarget(
+  targetUrl: string,
+  options: ScanEngineOptions = {},
+): Promise<TargetSignals> {
   // Defense-in-depth: block private/internal targets even if the caller skipped assertPublicTarget
-  await assertPublicTarget(targetUrl);
+  await assertPublicTarget(targetUrl, options);
 
   const signals: TargetSignals = {
     reachable: false,
@@ -412,8 +452,11 @@ function evaluateTest(
   };
 }
 
-export async function runScanEngine(targetUrl: string): Promise<EngineResult> {
-  const signals = await probeTarget(targetUrl);
+export async function runScanEngine(
+  targetUrl: string,
+  options: ScanEngineOptions = {},
+): Promise<EngineResult> {
+  const signals = await probeTarget(targetUrl, options);
   const seed = hashString(targetUrl.toLowerCase().trim());
 
   const results = TEST_DEFINITIONS.map((def, i) =>

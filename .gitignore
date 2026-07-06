@@ -11,5 +11,14 @@ npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local dev server log
+# local dev server logs
 .devserver.log
+.devserver*.log
+.local-dev*.log
+
+# Claude Design pipeline artifacts (not app code)
+*.zip
+/Raw/
+/Staging/
+/Production/
+/Processing/

@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { runScan, type RunScanState } from "@/app/actions/scans";
+import { JURISDICTION_NOTICE } from "@/lib/jurisdiction-policy";
 
 const STEPS = [
   "System Prompt Disclosure",
@@ -113,6 +114,11 @@ export function ScanRunner() {
             against it. Only scan targets you have permission to test.
           </span>
         </label>
+
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
+          Jurisdiction guardrail: {JURISDICTION_NOTICE} Use this tool only for
+          systems you own or are explicitly authorized to assess.
+        </div>
 
         {state.error && !isPending && (
           <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">

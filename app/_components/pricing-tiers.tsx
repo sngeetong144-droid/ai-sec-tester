@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ComplianceGate } from "./compliance-gate";
+import { JURISDICTION_NOTICE } from "@/lib/jurisdiction-policy";
 
 const SCALENDO = {
   basic: "https://link.fastpaydirect.com/payment-link/6a2d547c03b17c94f57161ea",
@@ -15,7 +16,11 @@ export function PricingTiers() {
       <div className="mb-6 text-center">
         <h2 className="text-xl font-bold text-slate-800">Plans</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Paid plans for ongoing assurance · Enterprise for authorized deep scans
+          Monetise scan depth without crossing legal boundaries: automated checks,
+          recurring assurance, then authorization-gated human review.
+        </p>
+        <p className="mx-auto mt-2 max-w-2xl text-xs leading-relaxed text-amber-700">
+          {JURISDICTION_NOTICE}
         </p>
       </div>
 
@@ -29,12 +34,13 @@ export function PricingTiers() {
           </div>
           <ul className="mb-6 flex-1 space-y-2 text-sm text-slate-500">
             {[
-              "5 OWASP LLM checks",
+              "Level 1: automated chatbot scan",
+              "5 OWASP LLM prompt-injection checks",
               "Pass/Fail scorecard",
-              "Priority scan processing",
               "Branded PDF audit report",
               "Evidence per finding",
               "Remediation guidance",
+              "No exploit payloads or infrastructure testing",
             ].map((f) => (
               <li key={f} className="flex items-start gap-2">
                 <span className="mt-0.5 text-brand-500">✓</span>
@@ -66,10 +72,12 @@ export function PricingTiers() {
           </div>
           <ul className="mb-6 flex-1 space-y-2 text-sm text-slate-500">
             {[
+              "Level 2: recurring assurance",
               "Everything in Basic",
               "Monthly automated scans",
               "PDF report emailed monthly",
               "Scan history & trend tracking",
+              "Change tracking for score/failures",
               "Cancel anytime",
             ].map((f) => (
               <li key={f} className="flex items-start gap-2">
@@ -106,13 +114,15 @@ export function PricingTiers() {
           </div>
           <ul className="mb-6 flex-1 space-y-2 text-sm text-slate-500">
             {[
+              "Level 3: authorization-gated review",
               "Everything in Pro",
               "Authorization + identity verification",
               "Automated risk triage (score + flags)",
-              "Human review before scan runs",
+              "Human review before any deeper testing",
               "Full report + remediation plan",
               "1 free re-scan after fixes",
               "Secure token-gated report page",
+              "Restricted jurisdictions require licensed-provider handling or non-invasive review only",
             ].map((f) => (
               <li key={f} className="flex items-start gap-2">
                 <span className="mt-0.5 text-violet-600">✓</span>

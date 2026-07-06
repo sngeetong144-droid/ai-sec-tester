@@ -15,6 +15,7 @@
 import {
   probeTarget,
   hashString,
+  type ProbeOptions,
   type TargetSignals,
 } from "@/lib/probe";
 
@@ -297,8 +298,11 @@ function evaluateEnterpriseTest(
   return { ...def, status, evidence, simulated, sort_order: index };
 }
 
-export async function runEnterpriseScanEngine(targetUrl: string): Promise<EngineResult> {
-  const signals = await probeTarget(targetUrl);
+export async function runEnterpriseScanEngine(
+  targetUrl: string,
+  options: ProbeOptions = {},
+): Promise<EngineResult> {
+  const signals = await probeTarget(targetUrl, options);
   const seed = hashString(targetUrl.toLowerCase().trim());
 
   const results = ENTERPRISE_TEST_DEFINITIONS.map((def, i) =>
