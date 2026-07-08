@@ -6,6 +6,7 @@ import { ScanRunner } from "@/app/_components/scan-runner";
 import { LocalScanRunner } from "@/app/_components/local-scan-runner";
 import { VerdictBadge } from "@/app/_components/badges";
 import { PricingTiers } from "@/app/_components/pricing-tiers";
+import { Landing, LandingCta } from "@/app/_components/landing";
 import { JURISDICTION_NOTICE } from "@/lib/jurisdiction-policy";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,36 @@ export default async function Home() {
   const scans = user ? await getScans() : [];
   const localScannerEnabled = process.env.NODE_ENV === "development";
 
+  // Anonymous visitors get the emerald marketing landing; the pricing section
+  // reuses the real PricingTiers (ComplianceGate → live payment links) and every
+  // CTA points at /auth/login or #pricing — no dead buttons.
+  if (!user) {
+    return (
+      <main className="grid-bg min-h-screen">
+        <Landing />
+
+        <div className="mx-auto max-w-5xl px-5 pb-12">
+          <section className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-relaxed text-amber-900">
+            <p className="font-semibold">Compliance guardrail</p>
+            <p className="mt-1">
+              AI Sec Tester is for defensive chatbot assessments on systems you own
+              or are explicitly authorized to test. {JURISDICTION_NOTICE}
+            </p>
+          </section>
+
+          {localScannerEnabled && <LocalScanRunner />}
+
+          <div id="pricing">
+            <PricingTiers />
+          </div>
+        </div>
+
+        <LandingCta />
+      </main>
+    );
+  }
+
+  // Authenticated users get the working scanner + history + pricing.
   return (
     <main className="grid-bg min-h-screen">
       <div className="mx-auto max-w-3xl px-5 py-12 sm:py-16">
@@ -45,16 +76,6 @@ export default async function Home() {
             chatbot. Get a Pass/Fail security scorecard with remediation guidance
             in seconds.
           </p>
-          {!user && (
-            <div className="mt-6 flex items-center justify-center gap-3">
-              <a
-                href="#pricing"
-                className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
-              >
-                View plans
-              </a>
-            </div>
-          )}
         </header>
 
         <section className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-relaxed text-amber-900">
@@ -65,74 +86,68 @@ export default async function Home() {
           </p>
         </section>
 
-        {localScannerEnabled && !user && <LocalScanRunner />}
+        {/* Scanner */}
+        <div id="scanner">
+          <ScanRunner />
+        </div>
 
-        {/* Scanner — authenticated users only */}
-        {user && (
-          <>
-            <div id="scanner">
-              <ScanRunner />
-            </div>
+        <section className="mt-12">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-700">Recent scans</h2>
+            <span className="text-sm text-slate-400">{scans.length} total</span>
+          </div>
 
-            <section className="mt-12">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-slate-700">Recent scans</h2>
-                <span className="text-sm text-slate-400">{scans.length} total</span>
-              </div>
-
-              {scans.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-violet-200 bg-white/40 px-4 py-10 text-center text-slate-400">
-                  No scans yet. Run your first security scan above.
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {scans.map((scan) => (
-                    <li
-                      key={scan.id}
-                      className="group flex items-center gap-3 rounded-xl border border-violet-100 bg-white/60 px-4 py-3 transition hover:border-violet-200"
+          {scans.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-violet-200 bg-white/40 px-4 py-10 text-center text-slate-400">
+              No scans yet. Run your first security scan above.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {scans.map((scan) => (
+                <li
+                  key={scan.id}
+                  className="group flex items-center gap-3 rounded-xl border border-violet-100 bg-white/60 px-4 py-3 transition hover:border-violet-200"
+                >
+                  <Link
+                    href={`/scans/${scan.id}`}
+                    className="flex min-w-0 flex-1 items-center gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-slate-700">
+                        {scan.target_label || scan.target_url}
+                      </p>
+                      <p className="truncate text-xs text-slate-400">
+                        {scan.target_url} · {timeAgo(scan.created_at)} ·{" "}
+                        {scan.tests_passed}/{scan.tests_total} passed
+                      </p>
+                    </div>
+                    {scan.status === "complete" ? (
+                      <VerdictBadge verdict={scan.verdict} />
+                    ) : (
+                      <span className="text-xs uppercase tracking-wide text-slate-400">
+                        {scan.status}
+                      </span>
+                    )}
+                  </Link>
+                  <form action={deleteScan}>
+                    <input type="hidden" name="id" value={scan.id} />
+                    <button
+                      type="submit"
+                      title="Delete scan"
+                      className="rounded-md p-1.5 text-slate-300 opacity-0 transition hover:bg-rose-500/10 hover:text-rose-500 group-hover:opacity-100"
                     >
-                      <Link
-                        href={`/scans/${scan.id}`}
-                        className="flex min-w-0 flex-1 items-center gap-3"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium text-slate-700">
-                            {scan.target_label || scan.target_url}
-                          </p>
-                          <p className="truncate text-xs text-slate-400">
-                            {scan.target_url} · {timeAgo(scan.created_at)} ·{" "}
-                            {scan.tests_passed}/{scan.tests_total} passed
-                          </p>
-                        </div>
-                        {scan.status === "complete" ? (
-                          <VerdictBadge verdict={scan.verdict} />
-                        ) : (
-                          <span className="text-xs uppercase tracking-wide text-slate-400">
-                            {scan.status}
-                          </span>
-                        )}
-                      </Link>
-                      <form action={deleteScan}>
-                        <input type="hidden" name="id" value={scan.id} />
-                        <button
-                          type="submit"
-                          title="Delete scan"
-                          className="rounded-md p-1.5 text-slate-300 opacity-0 transition hover:bg-rose-500/10 hover:text-rose-500 group-hover:opacity-100"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                            <path d="M3 6h18M8 6V4h8v2m-9 0v14h10V6" />
-                          </svg>
-                        </button>
-                      </form>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </>
-        )}
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M3 6h18M8 6V4h8v2m-9 0v14h10V6" />
+                      </svg>
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-        {/* Pricing — always visible */}
+        {/* Pricing */}
         <div id="pricing">
           <PricingTiers />
         </div>
