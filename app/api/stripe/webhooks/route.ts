@@ -1,5 +1,6 @@
 import { constructWebhookEvent } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
+import { activateCase } from "@/lib/command-center/queries";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
@@ -39,6 +40,21 @@ export async function POST(request: Request) {
       // ── New subscription or one-time purchase ─────────────────────────────
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+
+        // Scalendo/Stripe settlement → activate the command-center case the
+        // payment link was minted for. This is how "paid -> activate scan"
+        // works: the case_id + scan_id ride in the payment-link metadata.
+        // Without them we cannot safely identify the case, so we skip (no
+        // fuzzy email/amount matching — that could mis-activate the wrong case).
+        // ponytail: metadata threading lives in the case/payment-link creation
+        // flow (out of this file's scope); until it populates case_id/scan_id,
+        // console activation (activate()) remains the path that flips the state.
+        const caseId = session.metadata?.case_id;
+        const scanId = session.metadata?.scan_id;
+        if (caseId && scanId && session.payment_status === "paid") {
+          await activateCase(caseId, scanId);
+        }
+
         const userId = session.metadata?.userId;
         if (!userId) break;
 

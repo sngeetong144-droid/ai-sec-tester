@@ -6,10 +6,48 @@ import { signOut } from "@/app/auth/login/actions";
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
+const SITE_URL = "https://scan.thesoulsofai.com";
+const DESCRIPTION =
+  "Scan your AI chatbot for prompt-injection & jailbreak flaws. Run OWASP LLM Top-10 aligned checks and get a Pass/Fail security scorecard with remediation guidance in seconds.";
+
 export const metadata: Metadata = {
-  title: "AI Sec Tester — Scan your chatbot for prompt-injection flaws",
-  description:
-    "Paste your AI chatbot's URL and run 5 standard prompt-injection & jailbreak checks. Get a Pass/Fail security scorecard in seconds.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "AI Sec Tester — Scan your chatbot for prompt-injection flaws",
+    template: "%s — AI Sec Tester",
+  },
+  description: DESCRIPTION,
+  keywords: [
+    "chatbot security scanner",
+    "prompt injection testing",
+    "LLM jailbreak testing",
+    "OWASP LLM Top 10",
+    "AI security assessment",
+    "prompt injection scanner",
+    "system prompt leakage",
+    "LLM red teaming",
+  ],
+  applicationName: "AI Sec Tester",
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
+  openGraph: {
+    title: "AI Sec Tester — Scan your chatbot for prompt-injection flaws",
+    description: DESCRIPTION,
+    url: SITE_URL,
+    siteName: "AI Sec Tester",
+    type: "website",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "AI Sec Tester — AI Chatbot Security Scanner" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI Sec Tester — Scan your chatbot for prompt-injection flaws",
+    description: DESCRIPTION,
+    images: ["/og.png"],
+  },
 };
 
 export default async function RootLayout({
@@ -27,20 +65,20 @@ export default async function RootLayout({
         className={`${jakarta.className} antialiased bg-[#F0EEFF] text-slate-800 flex flex-col min-h-screen`}
       >
         {/* Site header */}
-        <div className="bg-white/70 backdrop-blur-sm border-b border-violet-100 px-6 py-3 shrink-0">
-          <div className="max-w-3xl mx-auto flex items-center justify-between">
+        <div className="bg-white/70 backdrop-blur-sm border-b border-violet-100 px-4 py-3 shrink-0 sm:px-6">
+          <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
             <a
               href="https://thesoulsofai.com"
               className="text-sm font-semibold text-violet-700 hover:text-violet-900 transition-colors"
             >
               ← The Souls of AI
             </a>
-            <div className="flex items-center gap-4 text-xs text-slate-400">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-400">
               <a href="/" className="hover:text-slate-600 transition-colors">Scanner</a>
               <a href="/enterprise" className="hover:text-slate-600 transition-colors">Enterprise</a>
-              {user ? (
+              {user && (
                 <div className="flex items-center gap-3">
-                  <span className="text-slate-500">{user.email}</span>
+                  <span className="max-w-[45vw] truncate text-slate-500 sm:max-w-none">{user.email}</span>
                   <form action={signOut}>
                     <button
                       type="submit"
@@ -50,13 +88,6 @@ export default async function RootLayout({
                     </button>
                   </form>
                 </div>
-              ) : (
-                <a
-                  href="/auth/login"
-                  className="rounded-full border border-violet-200 px-3 py-1 text-xs text-violet-600 hover:bg-violet-50 transition-colors"
-                >
-                  Sign in
-                </a>
               )}
             </div>
           </div>

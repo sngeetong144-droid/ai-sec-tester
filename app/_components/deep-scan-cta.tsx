@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { PAYMENT_LINKS } from "@/lib/payment-links";
+
 export function DeepScanCta({
   scanId,
   email,
@@ -50,7 +52,9 @@ export function DeepScanCta({
           </p>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-slate-800">$499</div>
+          <div className="text-2xl font-bold text-slate-800">
+            ${PAYMENT_LINKS.enterprise.priceUsd}
+          </div>
           <div className="text-xs text-slate-400">one-time</div>
         </div>
       </div>

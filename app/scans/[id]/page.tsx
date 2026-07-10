@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getScan } from "@/lib/queries";
-import { rerunScan, deleteScan } from "@/app/actions/scans";
+import { deleteScan } from "@/app/actions/scans";
 import {
   VerdictBadge,
   TestStatusPill,
@@ -70,21 +70,6 @@ export default async function ScanDetail({
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
-            <form action={rerunScan}>
-              <input type="hidden" name="target_url" value={scan.target_url} />
-              <input
-                type="hidden"
-                name="target_label"
-                value={scan.target_label ?? ""}
-              />
-              <input type="hidden" name="email" value={scan.email ?? ""} />
-              <button
-                type="submit"
-                className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
-              >
-                ↻ Run again
-              </button>
-            </form>
             <a
               href={`/api/scans/${scan.id}/report`}
               className="rounded-lg border border-violet-200 px-4 py-2 text-sm font-medium text-slate-600 hover:border-brand-500 hover:text-brand-600"
@@ -167,9 +152,10 @@ export default async function ScanDetail({
         <DeepScanCta scanId={scan.id} email={scan.email} />
 
         <p className="mt-8 text-center text-xs text-slate-400">
-          Interactive jailbreak probes are simulated for safety and labelled in
-          each result. Transport &amp; secret-exposure checks are performed live
-          against the target.
+          Transport &amp; secret-exposure checks are performed live against the target.
+          Interactive prompt-injection probes run only when a chatbot endpoint is
+          connected and live testing is enabled; otherwise they are marked{" "}
+          <span className="font-semibold">Not run</span> — never simulated.
         </p>
       </div>
     </main>

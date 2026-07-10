@@ -1,20 +1,24 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function sendMagicLink(email: string): Promise<{ error?: string }> {
-  if (!email || !email.includes("@")) return { error: "Enter a valid email." };
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
+export async function signInWithGoogle(): Promise<void> {
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://scan.thesoulsofai.com"}/auth/callback`,
+      // Default identity scopes only (openid, email, profile). No Gmail/Drive/etc.
+      redirectTo: `${SITE_URL}/auth/callback?next=/command-center`,
+      queryParams: { prompt: "select_account" },
     },
   });
 
-  if (error) return { error: error.message };
-  return {};
+  // On failure there is no session to leak; bounce back to the gate.
+  if (error || !data?.url) redirect("/auth/login?denied=1");
+  redirect(data.url);
 }
 
 export async function signOut(): Promise<void> {

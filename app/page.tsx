@@ -2,11 +2,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getScans } from "@/lib/queries";
 import { deleteScan } from "@/app/actions/scans";
-import { ScanRunner } from "@/app/_components/scan-runner";
 import { LocalScanRunner } from "@/app/_components/local-scan-runner";
 import { VerdictBadge } from "@/app/_components/badges";
 import { PricingTiers } from "@/app/_components/pricing-tiers";
 import { Landing, LandingCta } from "@/app/_components/landing";
+import { Faq, SeoJsonLd } from "@/app/_components/faq";
 import { JURISDICTION_NOTICE } from "@/lib/jurisdiction-policy";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,7 @@ export default async function Home() {
   if (!user) {
     return (
       <main className="grid-bg min-h-screen">
+        <SeoJsonLd />
         <Landing />
 
         <div className="mx-auto max-w-5xl px-5 pb-12">
@@ -50,6 +51,8 @@ export default async function Home() {
             <PricingTiers />
           </div>
         </div>
+
+        <Faq />
 
         <LandingCta />
       </main>
@@ -86,10 +89,8 @@ export default async function Home() {
           </p>
         </section>
 
-        {/* Scanner */}
-        <div id="scanner">
-          <ScanRunner />
-        </div>
+        {/* Self-serve scanning has been removed — the scan engine runs only when
+            an admin activates a paid case in the Command Center. */}
 
         <section className="mt-12">
           <div className="mb-4 flex items-center justify-between">

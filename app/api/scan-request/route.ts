@@ -11,8 +11,8 @@ import {
 } from "@/lib/jurisdiction-review";
 
 /**
- * POST /api/scan-request — public scan-request intake for
- * scan.thesoulsofai.com/ai-security-scanner.html.
+ * POST /api/scan-request — public scan-request intake for the
+ * scan.thesoulsofai.com marketing landing.
  *
  * NO scan is launched here and NO payment is taken. This records an
  * authorization request and runs jurisdiction due-diligence so a human (or the

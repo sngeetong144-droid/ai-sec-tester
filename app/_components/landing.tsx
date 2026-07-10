@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { PAYMENT_LINKS } from "@/lib/payment-links";
+
 // Presentational emerald landing for anonymous visitors.
 // ponytail: pure Tailwind utilities scoped to this component — no global CSS,
 // so the authed scanner views are untouched. Accent = #0f9d6b scanner sub-brand.
@@ -54,11 +56,11 @@ export function Landing() {
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <Link
-                href="/auth/login"
+                href="#pricing"
                 className="inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
                 style={{ background: ACCENT, boxShadow: "0 8px 22px rgba(15,157,107,.26)" }}
               >
-                Scan my chatbot
+                Request a scan
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="size-4">
                   <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>
@@ -188,15 +190,16 @@ export function LandingCta() {
           Scan your chatbot today.
         </h2>
         <p className="mx-auto mt-4 max-w-lg text-lg text-white/60">
-          Get a security scorecard and fixes in seconds — plans start at $10 per scan.
+          Get a security scorecard and fixes — plans start at ${PAYMENT_LINKS.basic.priceUsd} per
+          scan, reviewed before you pay.
         </p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
           <Link
-            href="/auth/login"
+            href="#pricing"
             className="rounded-lg px-7 py-3.5 text-base font-semibold text-white transition-transform hover:-translate-y-0.5"
             style={{ background: ACCENT, boxShadow: "0 8px 22px rgba(15,157,107,.26)" }}
           >
-            Scan my chatbot
+            Request a scan
           </Link>
           <a
             href="#pricing"

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export interface ScanAuditInput {
   scanId: string | null;
@@ -28,5 +29,30 @@ export async function recordScanAudit(input: ScanAuditInput): Promise<void> {
   if (error) {
     console.error("recordScanAudit error:", error.message);
     throw new Error("Failed to record scan audit.");
+  }
+}
+
+/**
+ * Append an immutable command-center CASE audit row (cc_audit_log). Append-only:
+ * the table has no update/delete policy and only the service-role client writes
+ * it. Throws on failure so a mutation cannot silently proceed without its audit
+ * trail. Server-only — never import from a "use client" file.
+ */
+export async function recordCaseAudit(input: {
+  caseId: string;
+  eventType: string;
+  detail?: string | null;
+  ref?: string | null;
+}): Promise<void> {
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("cc_audit_log").insert({
+    case_id: input.caseId,
+    event_type: input.eventType,
+    detail: input.detail ?? null,
+    ref: input.ref ?? null,
+  });
+  if (error) {
+    console.error("recordCaseAudit error:", error.message);
+    throw new Error("Failed to record case audit.");
   }
 }

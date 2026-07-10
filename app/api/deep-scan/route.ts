@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { stripe, stripeAccountOptions } from "@/lib/stripe";
+import { resolvePaymentLink } from "@/lib/payment-links";
 import { getRequestIdentity, getScan, getVerifiedOwnership } from "@/lib/queries";
 import { extractDomain } from "@/lib/ownership-verification";
 import { recordScanAudit } from "@/lib/audit-log";
@@ -7,31 +7,17 @@ import { decideActivation, sanctionsCheck, ssrfSafeTarget } from "@/lib/scan-gat
 
 export const dynamic = "force-dynamic";
 
-const DEEP_SCAN_PRICE_CENTS = Number(
-  process.env.DEEP_SCAN_PRICE_CENTS || "49900",
-);
-
 /**
  * POST /api/deep-scan
- * Body: { scanId?: string, email?: string }
+ * Body: { scanId?: string, email?: string, ownership_proof_id?: string }
  *
- * Creates a one-time Stripe Checkout session for the "Enterprise Grade" deep
- * security scan. Uses inline price_data so it works with only STRIPE_SECRET_KEY
- * configured — no pre-created Stripe Product/Price needed. No auth (demo-first).
+ * Authorizes an "Enterprise Grade" deep-scan request (ownership + domain
+ * binding + SSRF/sanctions gate + audit), then hands back the canonical
+ * Scalendo (Stripe-backed) enterprise payment link. Payment/settlement happen
+ * on Scalendo — this route does NOT create a Stripe Checkout session. No auth
+ * (demo-first).
  */
 export async function POST(request: Request) {
-  // Not configured yet → tell the client clearly (no silent/dead button).
-  if (!process.env.STRIPE_SECRET_KEY) {
-    return NextResponse.json(
-      {
-        configured: false,
-        error:
-          "Payments aren't configured yet. Add STRIPE_SECRET_KEY to enable Enterprise checkout.",
-      },
-      { status: 503 },
-    );
-  }
-
   let body: { scanId?: string; email?: string; ownership_proof_id?: string } = {};
   try {
     body = await request.json();
@@ -92,12 +78,12 @@ export async function POST(request: Request) {
     // open on a null signal by design. FOLLOW-UP: capture requester/target
     // country (geo-IP or form field) and pass it here to arm the sub-check.
     sanctionsOk: sanctionsCheck(null).ok,
-    // ponytail: this route CREATES the Stripe checkout — it IS the payment step,
-    // so money-received cannot be confirmed here yet. FOLLOW-UP: bind activation
-    // to the signature-verified checkout.session.completed webhook. (The webhook
-    // can't re-verify ownership today — getVerifiedOwnership is identity-scoped
-    // and Stripe's server-to-server call carries no session cookie — so the real
-    // fix threads ownership_proof_id through checkout metadata.)
+    // ponytail: this route only HANDS OUT the Scalendo payment link — money
+    // isn't received here, so `paid` can't be confirmed at this step. Real
+    // "paid -> activate" is bound to the signature-verified
+    // checkout.session.completed webhook (app/api/stripe/webhooks). This gate
+    // therefore only proves pre-payment authorization (ownership/SSRF/sanctions)
+    // before issuing the link.
     paid: true,
   });
   if (!decision.activate) {
@@ -127,42 +113,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const origin =
-    request.headers.get("origin") ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
-  const back = body.scanId ? `${origin}/scans/${body.scanId}` : origin;
-
-  try {
-    const session = await stripe.checkout.sessions.create(
-      {
-        mode: "payment",
-        line_items: [
-          {
-            price_data: {
-              currency: "usd",
-              unit_amount: DEEP_SCAN_PRICE_CENTS,
-              product_data: {
-                name: "Enterprise Grade Deep Security Scan",
-                description:
-                  "Authorization-gated chatbot prompt-injection assessment with human review, remediation guidance, and a full written report.",
-              },
-            },
-            quantity: 1,
-          },
-        ],
-        customer_email: body.email || undefined,
-        metadata: { scanId: body.scanId ?? "", product: "deep_scan" },
-        success_url: `${back}?purchase=success`,
-        cancel_url: `${back}?purchase=cancelled`,
-      },
-      stripeAccountOptions(),
-    );
-
-    return NextResponse.json({ configured: true, url: session.url });
-  } catch (err) {
-    console.error("[deep-scan] checkout error:", err);
+  // Payment is the canonical Scalendo (Stripe-backed) enterprise link. The link
+  // owns its own checkout + success/cancel pages; we only hand it back.
+  const link = resolvePaymentLink("enterprise");
+  if (!link) {
     return NextResponse.json(
-      { configured: true, error: "Could not start checkout. Please try again." },
+      { configured: true, error: "Enterprise payment link is not configured." },
       { status: 500 },
     );
   }
+
+  return NextResponse.json({ configured: true, url: link.url });
 }

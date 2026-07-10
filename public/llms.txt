@@ -1,0 +1,40 @@
+# AI Sec Tester
+
+AI Sec Tester is a chatbot security scanner from The Souls of AI. It runs automated,
+OWASP LLM Top-10 aligned prompt-injection and jailbreak checks against an AI chatbot you
+own or are authorized to test, then returns a Pass/Fail security scorecard with evidence
+per finding and plain-language remediation guidance — in seconds.
+
+## Who it's for
+
+- Product and engineering teams shipping customer-facing AI chatbots and assistants
+- Security engineers and consultants running defensive LLM assessments
+- Founders who need proof their chatbot is resilient before an attacker probes it
+
+## Key capabilities
+
+- Prompt injection detection (OWASP LLM01) — crafted messages that override instructions
+- Insecure output handling (OWASP LLM02) — unsafe content returned to the consuming page
+- Sensitive information disclosure (OWASP LLM06) — secrets, keys, or other users' data
+- System prompt leakage (OWASP LLM07) — extraction of hidden system prompts and business logic
+- Excessive agency (OWASP LLM08) — tools/actions the bot shouldn't be allowed to take
+- Common jailbreak / guardrail-bypass patterns
+- Pass/Fail scorecard, branded PDF audit report, and remediation guidance
+
+## Pricing at a glance
+
+- Basic — $10 one-time per scan: Level 1 automated scan, 5 OWASP LLM checks, scorecard + PDF
+- Pro — $10/month (or $50 one-time annual report): recurring monthly scans, history & trend tracking
+- Enterprise — $499 one-time per chatbot: authorization-gated human review, full report + 1 re-scan
+
+## Compliance
+
+Defensive use only. Scan chatbots you own or are explicitly authorized to test. Checks are
+non-invasive and aligned with the OWASP Top-10 for LLM Applications.
+
+## Links
+
+- Scanner: https://scan.thesoulsofai.com/
+- Enterprise deep scan: https://scan.thesoulsofai.com/enterprise
+- Sign in: https://scan.thesoulsofai.com/auth/login
+- Parent brand — The Souls of AI: https://thesoulsofai.com

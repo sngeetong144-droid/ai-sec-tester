@@ -4,64 +4,89 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ensureSessionId } from "@/lib/session";
-import { runScanEngine, assertPublicTarget } from "@/lib/scan-engine";
-
-export interface RunScanState {
-  ok: boolean;
-  scanId?: string;
-  error?: string;
-}
-
-function normalizeUrl(raw: string): string | null {
-  let url = raw.trim();
-  if (!url) return null;
-  if (!/^https?:\/\//i.test(url)) url = "https://" + url;
-  try {
-    const u = new URL(url);
-    if (!u.hostname.includes(".")) return null;
-    return u.toString();
-  } catch {
-    return null;
-  }
-}
+import { runScanEngine } from "@/lib/scan-engine";
+import type { ChatbotEndpointConfig } from "@/lib/real-scan-engine";
+import { getCase } from "@/lib/command-center/queries";
+import {
+  isAdminSession,
+  decideScanAuthorization,
+  ScanAuthorizationError,
+} from "@/lib/command-center/admin";
 
 /**
- * Core scan routine. Creates a scan row, runs the engine, persists results.
- * Exported so API routes (e.g. enterprise approval) can call it server-side.
+ * Core scan routine and the SINGLE choke point for scan execution. Every path
+ * that runs the engine funnels through here, so the authorization gate lives
+ * here and nowhere else (root-cause: one guard in the shared function, not a
+ * copy in each caller). Deny by default — a scan runs only for an admin session
+ * AND a command-center case that is activated + paid. There is no self-serve
+ * entry point: the public/authenticated app no longer offers scanning.
+ *
+ * Throws ScanAuthorizationError (status 403) when the gate denies; the scan row
+ * is never created, so a denied request cannot produce a partial scan.
  */
 export async function executeScan(input: {
+  /** The activated + paid command-center case authorizing this scan. */
+  caseId: string;
   target: string;
   label?: string | null;
   email?: string | null;
   sessionId?: string | null;
+  /** Optional connected chatbot endpoint for real interactive probes (feature-flagged). */
+  chatbot?: ChatbotEndpointConfig | null;
 }): Promise<string> {
+  // ── Authorization gate ──────────────────────────────────────────────────────
+  const isAdmin = await isAdminSession();
+  const caseRecord = await getCase(input.caseId);
+  const decision = decideScanAuthorization({ isAdmin, caseRecord });
+  if (!decision.authorized) {
+    throw new ScanAuthorizationError(decision.reason);
+  }
+
   const supabase = await createClient();
   const sessionId =
     input.sessionId !== undefined ? input.sessionId : await ensureSessionId();
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: created, error: insErr } = await supabase
-    .from("scans")
-    .insert({
-      target_url: input.target,
-      target_label: input.label ?? null,
-      email: input.email ?? null,
-      session_id: sessionId,
-      user_id: user?.id ?? null,
-      authorized: true,
-      status: "running",
-    })
-    .select("id")
-    .single();
+  const scanRow = {
+    target_url: input.target,
+    target_label: input.label ?? null,
+    email: input.email ?? null,
+    session_id: sessionId,
+    user_id: user?.id ?? null,
+    authorized: true,
+    status: "running" as const,
+  };
 
-  if (insErr || !created) {
-    throw new Error(insErr?.message ?? "Could not create scan.");
+  // Resolve the scan row. Case activation (activateCase) already created a
+  // `pending` scans row and linked it (caseRecord.scan_id) — reuse it so it
+  // advances pending -> running -> complete and stays the row the console reads.
+  // This closes the activate->run chicken/egg: activate mints the id, run consumes
+  // it. Only insert a fresh row when nothing is linked.
+  // ponytail: reuse assumes the linked row has no prior results (true for a fresh
+  // pending row). A re-run/rescan would need scan_results cleared first — add that
+  // when the rescan path goes live.
+  let scanId = caseRecord?.scan_id ?? null;
+  if (scanId) {
+    const { error: reuseErr } = await supabase
+      .from("scans")
+      .update(scanRow)
+      .eq("id", scanId);
+    if (reuseErr) throw new Error(reuseErr.message);
+  } else {
+    const { data: created, error: insErr } = await supabase
+      .from("scans")
+      .insert(scanRow)
+      .select("id")
+      .single();
+    if (insErr || !created) {
+      throw new Error(insErr?.message ?? "Could not create scan.");
+    }
+    scanId = created.id as string;
   }
-  const scanId = created.id as string;
 
   try {
-    const engine = await runScanEngine(input.target);
+    const engine = await runScanEngine(input.target, { chatbot: input.chatbot ?? null });
 
     const rows = engine.results.map((r) => ({
       scan_id: scanId,
@@ -69,7 +94,10 @@ export async function executeScan(input: {
       test_name: r.name,
       category: r.category,
       severity: r.severity,
-      status: r.status,
+      // ponytail: DB CHECK allows pending|running|pass|fail only; persist the
+      // engine's honest "not_run" as "pending" (= not run). Evidence carries the
+      // full explanation. Upgrade path: add a migration allowing 'not_run'.
+      status: r.status === "not_run" ? "pending" : r.status,
       detail: r.detail,
       evidence: r.evidence,
       remediation: r.status === "fail" ? r.remediation : null,
@@ -100,55 +128,6 @@ export async function executeScan(input: {
   }
 
   return scanId;
-}
-
-/** Form runner used by <ScanRunner> via useActionState. */
-export async function runScan(
-  _prev: RunScanState,
-  formData: FormData,
-): Promise<RunScanState> {
-  const target = normalizeUrl(String(formData.get("target_url") ?? ""));
-  const label = String(formData.get("target_label") ?? "").trim() || null;
-  const email = String(formData.get("email") ?? "").trim() || null;
-  const authorized = formData.get("authorized") === "on";
-
-  if (!target) {
-    return { ok: false, error: "Enter a valid chatbot URL (e.g. example.com)." };
-  }
-  if (!authorized) {
-    return {
-      ok: false,
-      error:
-        "Please confirm you own or are authorized to test this chatbot before scanning.",
-    };
-  }
-
-  try {
-    await assertPublicTarget(target);
-  } catch (err) {
-    return { ok: false, error: String(err).replace(/^Error:\s*/, "") };
-  }
-
-  try {
-    const scanId = await executeScan({ target, label, email });
-    revalidatePath("/");
-    revalidatePath(`/scans/${scanId}`);
-    return { ok: true, scanId };
-  } catch (err) {
-    return { ok: false, error: "Scan failed: " + String(err) };
-  }
-}
-
-/** "Run again" action on the scorecard — re-scans the same target, redirects. */
-export async function rerunScan(formData: FormData): Promise<void> {
-  const target = normalizeUrl(String(formData.get("target_url") ?? ""));
-  const label = String(formData.get("target_label") ?? "").trim() || null;
-  const email = String(formData.get("email") ?? "").trim() || null;
-  if (!target) return;
-
-  const scanId = await executeScan({ target, label, email });
-  revalidatePath("/");
-  redirect(`/scans/${scanId}`);
 }
 
 export async function deleteScan(formData: FormData): Promise<void> {

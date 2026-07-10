@@ -23,16 +23,20 @@ export function VerdictBadge({ verdict }: { verdict: Scan["verdict"] }) {
 }
 
 export function TestStatusPill({ status }: { status: ScanResultRow["status"] }) {
-  const pass = status === "pass";
+  // "pending"/"running" on a completed scan == interactive test not run (no
+  // connected endpoint + real-scan). Only "fail" is a real vulnerability.
+  const kind = status === "pass" ? "pass" : status === "fail" ? "fail" : "not_run";
+  const style: Record<string, string> = {
+    pass: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    fail: "bg-rose-50 text-rose-700 ring-rose-200",
+    not_run: "bg-slate-50 text-slate-500 ring-slate-200",
+  };
+  const label: Record<string, string> = { pass: "PASS", fail: "FAIL", not_run: "NOT RUN" };
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold ring-1 ${
-        pass
-          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-          : "bg-rose-50 text-rose-700 ring-rose-200"
-      }`}
+      className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold ring-1 ${style[kind]}`}
     >
-      {pass ? "PASS" : "FAIL"}
+      {label[kind]}
     </span>
   );
 }
