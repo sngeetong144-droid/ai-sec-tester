@@ -1,11 +1,11 @@
 import Link from "next/link";
+import "./landing.css";
 import { createClient } from "@/lib/supabase/server";
 import { getScans } from "@/lib/queries";
 import { deleteScan } from "@/app/actions/scans";
-import { LocalScanRunner } from "@/app/_components/local-scan-runner";
 import { VerdictBadge } from "@/app/_components/badges";
 import { PricingTiers } from "@/app/_components/pricing-tiers";
-import { Landing, LandingCta } from "@/app/_components/landing";
+import { Landing, LandingFooter } from "@/app/_components/landing";
 import { Faq, SeoJsonLd } from "@/app/_components/faq";
 import { JURISDICTION_NOTICE } from "@/lib/jurisdiction-policy";
 
@@ -25,36 +25,28 @@ export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const scans = user ? await getScans() : [];
-  const localScannerEnabled = process.env.NODE_ENV === "development";
 
-  // Anonymous visitors get the emerald marketing landing; the pricing section
-  // reuses the real PricingTiers (ComplianceGate → live payment links) and every
-  // CTA points at /auth/login or #pricing — no dead buttons.
+  // Anonymous visitors get the faithful emerald marketing landing (ported from
+  // the static design). Every tier CTA routes to /enterprise (the scan
+  // authorization request flow) — NO payment/checkout links on the public page.
   if (!user) {
     return (
       <main className="grid-bg min-h-screen">
         <SeoJsonLd />
         <Landing />
 
-        <div className="mx-auto max-w-5xl px-5 pb-12">
-          <section className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-relaxed text-amber-900">
-            <p className="font-semibold">Compliance guardrail</p>
-            <p className="mt-1">
-              AI Sec Tester is for defensive chatbot assessments on systems you own
-              or are explicitly authorized to test. {JURISDICTION_NOTICE}
+        <div className="aist-landing">
+          <div className="wrap" style={{ paddingBottom: 40 }}>
+            <p className="muted" style={{ fontSize: 13.5, textAlign: "center", maxWidth: 760, margin: "0 auto" }}>
+              AI Sec Tester is for defensive chatbot assessments on systems you own or
+              are explicitly authorized to test. {JURISDICTION_NOTICE}
             </p>
-          </section>
-
-          {localScannerEnabled && <LocalScanRunner />}
-
-          <div id="pricing">
-            <PricingTiers />
           </div>
         </div>
 
         <Faq />
 
-        <LandingCta />
+        <LandingFooter />
       </main>
     );
   }

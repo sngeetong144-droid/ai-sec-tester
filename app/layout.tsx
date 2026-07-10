@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/login/actions";
+import { SiteFooter } from "@/app/_components/site-footer";
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
@@ -98,21 +99,8 @@ export default async function RootLayout({
           {children}
         </div>
 
-        {/* Site footer */}
-        <footer className="bg-white/50 border-t border-violet-100 px-6 py-6 shrink-0">
-          <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-            <a
-              href="https://thesoulsofai.com"
-              className="text-sm font-semibold text-violet-700 hover:text-violet-900 transition-colors"
-            >
-              The Souls of AI
-            </a>
-            <p className="text-xs text-slate-400">
-              Checks aligned with OWASP Top-10 for LLM Applications. Only scan chatbots you own or are authorized to test.
-            </p>
-            <p className="text-xs text-slate-400">© 2026 The Souls of AI</p>
-          </div>
-        </footer>
+        {/* Site footer — suppressed on the public landing ("/"), which ships its own. */}
+        <SiteFooter />
       </body>
     </html>
   );
