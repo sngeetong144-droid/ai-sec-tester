@@ -3,7 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/login/actions";
-import { SiteFooter } from "@/app/_components/site-footer";
+import { SiteFooter, HideOnHome } from "@/app/_components/site-footer";
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
@@ -65,7 +65,9 @@ export default async function RootLayout({
         suppressHydrationWarning
         className={`${jakarta.className} antialiased bg-[#F0EEFF] text-slate-800 flex flex-col min-h-screen`}
       >
-        {/* Site header */}
+        {/* Site header — hidden on the anonymous landing ("/"), which ships its
+            own fixed emerald nav. Authenticated users keep it (Sign out lives here). */}
+        <HideOnHome active={!user}>
         <div className="bg-white/70 backdrop-blur-sm border-b border-violet-100 px-4 py-3 shrink-0 sm:px-6">
           <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
             <a
@@ -93,6 +95,7 @@ export default async function RootLayout({
             </div>
           </div>
         </div>
+        </HideOnHome>
 
         {/* Page content */}
         <div className="flex-1">

@@ -6,7 +6,7 @@ import { deleteScan } from "@/app/actions/scans";
 import { VerdictBadge } from "@/app/_components/badges";
 import { PricingTiers } from "@/app/_components/pricing-tiers";
 import { Landing, LandingFooter } from "@/app/_components/landing";
-import { Faq, SeoJsonLd } from "@/app/_components/faq";
+import { SeoJsonLd } from "@/app/_components/faq";
 import { JURISDICTION_NOTICE } from "@/lib/jurisdiction-policy";
 
 export const dynamic = "force-dynamic";
@@ -43,8 +43,6 @@ export default async function Home() {
             </p>
           </div>
         </div>
-
-        <Faq />
 
         <LandingFooter />
       </main>

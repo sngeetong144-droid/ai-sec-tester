@@ -1,6 +1,16 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
+
+// Hides the global layout header on the anonymous public landing ("/"), which
+// ships its own fixed emerald nav. `active` is false for authenticated users, so
+// the authed home view (working scanner) keeps the global header + Sign out.
+export function HideOnHome({ active, children }: { active: boolean; children: ReactNode }) {
+  const isHome = usePathname() === "/";
+  if (active && isHome) return null;
+  return <>{children}</>;
+}
 
 // The public landing ("/") ships its own cohesive footer (LandingFooter), so the
 // global thin footer is suppressed there to avoid a double footer. Every other

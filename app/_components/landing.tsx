@@ -38,6 +38,25 @@ const SCORECARD = [
   { code: "LLM08", name: "Excessive agency", verdict: "PASS" as const },
 ];
 
+// Request-process band (#flow). New in this design drop.
+const FLOW = [
+  { n: "1", h: "Request", p: "Pick a plan and submit the scan request form with your target and authorization." },
+  { n: "2", h: "Review", p: "We verify ownership/authorization — manually or automatically — usually within one business day." },
+  { n: "3", h: "Approved → pay", p: "You get an email with a secure payment link for your chosen tier to start the scan." },
+  { n: "4", h: "Not approved", p: "If we can't verify authorization, you get an email with the reason — and no charge." },
+];
+
+// Inline FAQ (accordion). Copy from the static design drop. The SEO FAQPage
+// JSON-LD is emitted separately by <SeoJsonLd> (app/_components/faq.tsx).
+const FAQS = [
+  { q: "Do I need to be technical to run a scan?", a: "No. You point the scanner at your chatbot, it runs the checks, and you get a plain-language Pass/Fail report with fixes. No security background needed." },
+  { q: "What is OWASP LLM Top-10?", a: "It's the industry-standard list of the most critical security risks for applications built on large language models — the same failure modes real attackers target." },
+  { q: "Why do I have to request a scan first?", a: "Scanning a system you don't own is illegal. Every request is reviewed to confirm you own or are authorized to test the target before any payment link is issued or scan runs — it protects you and us." },
+  { q: "What happens after I submit the request?", a: "You'll get an email confirming we received it. After review (usually within one business day) we email you either a secure payment link to proceed, or the reason it wasn't approved — no charge either way until approved." },
+  { q: "Can I scan any chatbot?", a: "Only chatbots you own or are explicitly authorized to test. The request form captures that authorization, and Enterprise adds identity verification before anything runs." },
+  { q: "What do I actually get?", a: "A branded PDF scorecard with a grade, each check's Pass/Fail status, evidence for every finding, and remediation guidance you can hand to a developer." },
+];
+
 const { basic: NORMAL, advanced: ADVANCED, enterprise: ENTERPRISE } = PAYMENT_LINKS;
 
 const TIERS = [
@@ -117,6 +136,29 @@ export function Landing() {
         {/* eslint-disable-next-line react/no-danger */}
         <style dangerouslySetInnerHTML={{ __html: ".aist-landing [data-reveal]{opacity:1;transform:none}" }} />
       </noscript>
+
+      {/* NAV — anchor-only, fixed. No public "Sign in" link (login stays reachable
+          only by directly visiting /auth/login). CTA + links point to in-page anchors. */}
+      <nav className="nav" data-nav>
+        <div className="nav-in">
+          <a href="https://thesoulsofai.com" className="brand">
+            <img src="/assets/thesoulsofai_watermark.png" alt="The Souls of AI" />
+            <span>
+              AI Sec <b>Tester</b>
+            </span>
+          </a>
+          <div className="nav-links">
+            <a href="#how">How it works</a>
+            <a href="#checks">What we check</a>
+            <a href="#pricing">Pricing</a>
+          </div>
+          <div className="nav-cta">
+            <a href="#pricing" className="btn btn-accent" style={{ padding: "11px 20px" }}>
+              Scan my chatbot
+            </a>
+          </div>
+        </div>
+      </nav>
 
       {/* HERO */}
       <header className="s-hero">
@@ -263,6 +305,53 @@ export function Landing() {
                 <a href={REQUEST_HREF} data-plan={t.tier} className={t.btnClass}>
                   {t.cta}
                 </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="blk" id="faq" style={{ paddingTop: 0 }}>
+        <div className="wrap">
+          <div className="sec-head center" data-reveal>
+            <span className="eyebrow">Questions</span>
+            <h2 style={{ marginTop: 14 }}>Straight answers.</h2>
+          </div>
+          <div className="faq">
+            {FAQS.map(({ q, a }) => (
+              <details className="faq-item" key={q} data-reveal>
+                <summary>
+                  <span>{q}</span>
+                  <span className="pm" aria-hidden="true" />
+                </summary>
+                <div className="faq-a">
+                  <p>{a}</p>
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* HOW REQUESTS WORK */}
+      <section
+        className="blk"
+        id="flow"
+        style={{ background: "var(--surface-2)", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}
+      >
+        <div className="wrap">
+          <div className="sec-head center" data-reveal>
+            <span className="eyebrow">The process</span>
+            <h2 style={{ marginTop: 14 }}>Authorization first. Then scan.</h2>
+            <p>A short review step keeps this legal and safe — no payment until your request is approved.</p>
+          </div>
+          <div className="flow4">
+            {FLOW.map((f, i) => (
+              <div key={f.n} className="fl" data-reveal data-reveal-delay={i * 70}>
+                <div className="n">{f.n}</div>
+                <h4>{f.h}</h4>
+                <p>{f.p}</p>
               </div>
             ))}
           </div>
