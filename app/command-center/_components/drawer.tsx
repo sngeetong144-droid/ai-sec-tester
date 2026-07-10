@@ -17,6 +17,7 @@ import {
   DisclosureForm,
 } from "@/app/command-center/_components/action-forms";
 import { RejectButton } from "@/app/command-center/_components/reject-button";
+import { ManualActivateButton } from "@/app/command-center/_components/manual-activate-button";
 import type { ReactNode } from "react";
 
 /**
@@ -295,7 +296,13 @@ export async function Drawer({ view }: { view: CaseView }) {
               {(c.subscribed || req?.subscribed_platform) && c.disclosure_state !== "informed" && <DisclosureForm caseId={c.id} />}
             </>
           )}
-          {c.status === "approved" && <ActivateForm caseId={c.id} />}
+          {c.status === "approved" && (
+            <>
+              <ActivateForm caseId={c.id} />
+              {/* Fallback when the payment webhook never fired (stuck in approved). */}
+              <ManualActivateButton caseId={c.id} />
+            </>
+          )}
           {c.status === "scanning" && (
             <>
               {view.scan?.status !== "complete" && <RunScanForm caseId={c.id} />}

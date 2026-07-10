@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { activateCase, completeCase } from "@/lib/command-center/queries";
-import { loadCase } from "@/app/command-center/_data";
-import { composeEmail, queueEmail } from "@/app/command-center/_email";
-import { executeScan } from "@/app/actions/scans";
+import { queueEmail } from "@/app/command-center/_email";
+import { runScanForRequest } from "@/lib/command-center/run-scan";
 import { resolvePaymentLink } from "@/lib/payment-links";
 import { buildPaymentUrl, paymentCountdown } from "@/app/actions/scan-request-lifecycle";
 
@@ -75,7 +73,7 @@ export async function GET(request: Request): Promise<Response> {
 
   for (const req of (paid as Row[]) ?? []) {
     try {
-      const outcome = await dispatchOne(supabase, req, secret);
+      const outcome = await runScanForRequest(supabase, req, { cronSecret: secret });
       if (outcome.status === "dispatched") result.dispatched.push(req.id);
       else if (outcome.status === "reconciled") result.reconciled.push(req.id);
       else if (outcome.status === "in_flight") result.inFlight.push(req.id);
@@ -109,91 +107,6 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   return NextResponse.json(result);
-}
-
-interface DispatchOutcome {
-  status: "dispatched" | "reconciled" | "in_flight" | "skipped";
-  reason?: string;
-}
-
-async function dispatchOne(
-  supabase: Supa,
-  req: Row,
-  secret: string,
-): Promise<DispatchOutcome> {
-  // Bridge to the cc_case that carries the guarded engine gate.
-  const { data: cc } = await supabase
-    .from("cc_cases")
-    .select("*")
-    .eq("scan_request_id", req.id)
-    .maybeSingle();
-  if (!cc) return { status: "skipped", reason: "no cc_case (request not ingested to console)" };
-
-  const ccCase = cc as { id: string; status: string; scan_id: string | null };
-
-  if (ccCase.status === "complete") {
-    await supabase.from("scan_requests").update({ status: "complete" }).eq("id", req.id);
-    return { status: "reconciled" };
-  }
-
-  // Inspect the linked scan to avoid double-running one already in progress/done.
-  let scanStatus: string | null = null;
-  if (ccCase.scan_id) {
-    const { data: sc } = await supabase
-      .from("scans")
-      .select("status")
-      .eq("id", ccCase.scan_id)
-      .maybeSingle();
-    scanStatus = (sc as { status: string } | null)?.status ?? null;
-  }
-  // ponytail: no distributed lock — relies on 5-min cron spacing + this status check.
-  // Upgrade path: a SELECT ... FOR UPDATE claim if scans ever run concurrently.
-  if (scanStatus === "running") return { status: "in_flight" };
-  if (scanStatus === "failed") {
-    return { status: "skipped", reason: "linked scan failed — manual review, no auto-retry" };
-  }
-
-  if (ccCase.status === "approved") {
-    // Mint the pending scan row and activate (approved → scanning, paid=true).
-    const { data: scan, error } = await supabase
-      .from("scans")
-      .insert({
-        target_url: req.target_url,
-        target_label: req.company ?? null,
-        email: req.email ?? null,
-        authorized: true,
-        status: "pending",
-        tests_total: 5,
-      })
-      .select("id")
-      .maybeSingle();
-    if (error || !scan) {
-      return { status: "skipped", reason: `scan insert failed: ${error?.message ?? "no row"}` };
-    }
-    const activated = await activateCase(ccCase.id, (scan as { id: string }).id);
-    if (!activated) return { status: "skipped", reason: "activateCase denied" };
-  } else if (ccCase.status !== "scanning") {
-    return { status: "skipped", reason: `cc_case not runnable (status ${ccCase.status})` };
-  }
-
-  // THE single authorized engine path. cronSecret substitutes for the admin session;
-  // the gate still requires the case be scanning + paid (both true after activate).
-  await executeScan({
-    caseId: ccCase.id,
-    target: req.target_url,
-    label: req.company ?? null,
-    email: req.email ?? null,
-    sessionId: null,
-    cronSecret: secret,
-  });
-
-  // Finalize: cc_case scanning → complete, queue report email, close the request.
-  await completeCase(ccCase.id);
-  const view = await loadCase(ccCase.id);
-  if (view) await queueEmail(ccCase.id, composeEmail("report", view));
-  // report_url intentionally left null — signed-URL upload infra MISSING (flagged).
-  await supabase.from("scan_requests").update({ status: "complete" }).eq("id", req.id);
-  return { status: "dispatched" };
 }
 
 async function handleStale(supabase: Supa, req: Row): Promise<"auto_closed" | "reminded" | null> {

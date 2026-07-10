@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/command-center/access";
 import { createServiceClient } from "@/lib/supabase/service";
+import { createClient } from "@/lib/supabase/server";
 import { recordCaseAudit } from "@/lib/audit-log";
+import { runScanForRequest, type RunScanRow } from "@/lib/command-center/run-scan";
 import {
   approveCase,
   rejectCase,
@@ -185,6 +187,74 @@ export async function runScanAction(formData: FormData): Promise<void> {
     // scans row (executeScan stamps `failed`) + server logs; the console refreshes.
     console.error(
       "runScanAction executeScan error:",
+      err instanceof Error ? err.message : String(err),
+    );
+  }
+  revalidateConsole();
+}
+
+/** Best-effort admin identity for the audit trail (requireAdmin already ran). */
+async function adminEmail(): Promise<string> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user?.email ?? "admin";
+}
+
+/**
+ * MANUAL override for the "payment webhook never fired" case: a paid customer is
+ * stuck in `approved` because Scalendo/FastPayDirect's checkout.session.completed
+ * didn't reach us, so the cron dispatcher never saw `paid_scanning`. An admin who
+ * has verified payment out-of-band runs the EXACT same guarded flow the cron uses
+ * (runScanForRequest, no cronSecret — the admin session authorizes the engine).
+ *
+ * Not a gate bypass: executeScan still requires the case be scanning + paid, which
+ * activateCase (inside runScanForRequest) sets. Idempotent — already-running or
+ * already-complete cases return in_flight/reconciled without a double-run or throw.
+ */
+export async function manualActivateScanAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("caseId") ?? "");
+  if (!id) return;
+
+  const supabase = createServiceClient();
+  // The form carries the cc_case id; bridge to its scan_request (runScanForRequest
+  // re-derives the cc_case from the request, mirroring the cron entry point).
+  const { data: cc } = await supabase
+    .from("cc_cases")
+    .select("scan_request_id")
+    .eq("id", id)
+    .maybeSingle();
+  const requestId = (cc as { scan_request_id: string | null } | null)?.scan_request_id ?? null;
+  if (!requestId) {
+    revalidateConsole();
+    return;
+  }
+
+  const { data: req } = await supabase
+    .from("scan_requests")
+    .select("*")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (!req) {
+    revalidateConsole();
+    return;
+  }
+
+  try {
+    const who = await adminEmail();
+    const outcome = await runScanForRequest(supabase, req as RunScanRow, {});
+    await recordCaseAudit({
+      caseId: id,
+      eventType: "MANUAL_ACTIVATION",
+      detail: `${who} — ${outcome.status}${outcome.reason ? `: ${outcome.reason}` : ""}`,
+    });
+  } catch (err) {
+    // Gate denials / engine errors already surface in the scans row + logs; keep
+    // the action non-throwing so the console refreshes to the real state.
+    console.error(
+      "manualActivateScanAction error:",
       err instanceof Error ? err.message : String(err),
     );
   }
