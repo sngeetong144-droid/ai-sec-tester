@@ -1,6 +1,7 @@
 import { constructWebhookEvent } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { activateCase } from "@/lib/command-center/queries";
+import { markRequestPaid } from "@/app/actions/scan-request-lifecycle";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
@@ -41,14 +42,26 @@ export async function POST(request: Request) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
 
-        // Scalendo/Stripe settlement → activate the command-center case the
-        // payment link was minted for. This is how "paid -> activate scan"
-        // works: the case_id + scan_id ride in the payment-link metadata.
-        // Without them we cannot safely identify the case, so we skip (no
-        // fuzzy email/amount matching — that could mis-activate the wrong case).
-        // ponytail: metadata threading lives in the case/payment-link creation
-        // flow (out of this file's scope); until it populates case_id/scan_id,
-        // console activation (activate()) remains the path that flips the state.
+        // ── PRIMARY paid → paid_scanning path (scan_requests lifecycle) ────────
+        // The approval flow appends ?client_reference_id=<scan_request id> to the
+        // payment link, so a settled checkout carries it back. Flip that request to
+        // paid_scanning; the cron dispatch job then runs the guarded scan. IDEMPOTENT:
+        // markRequestPaid only transitions a row still in approved_awaiting_payment, so
+        // a duplicate delivery is a no-op (no second scan — the scan is triggered by the
+        // separate dispatch job, keyed on paid_scanning — and this handler queues no email).
+        // FLAG: it is UNCONFIRMED that FastPayDirect/Scalendo forwards client_reference_id
+        // and fires a Stripe `checkout.session.completed` event. If it does not, console
+        // activation remains the manual fallback. See deliverable notes.
+        const clientRef =
+          session.client_reference_id ?? session.metadata?.client_reference_id;
+        if (clientRef && session.payment_status === "paid") {
+          // Pass amount_total so markRequestPaid rejects underpayment (a basic-tier
+          // checkout carrying an enterprise request's client_reference_id).
+          await markRequestPaid(clientRef, session.amount_total);
+        }
+
+        // ── Legacy cc_cases metadata activation (kept; never fires for FastPayDirect
+        //    static links — flagged non-functional in recon). ───────────────────
         const caseId = session.metadata?.case_id;
         const scanId = session.metadata?.scan_id;
         if (caseId && scanId && session.payment_status === "paid") {

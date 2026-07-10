@@ -14,8 +14,10 @@ const AI_BOTS = [
 ];
 
 // Private/authed surfaces disallowed for every crawler, AI bots included —
-// the command center must never be indexed by anyone.
-const DISALLOW = ["/api/", "/scans/", "/command-center/"];
+// the command center must never be indexed by anyone. /admin + /auth merged in
+// from the handoff robots.txt so this dynamic route is the single source (a
+// public/robots.txt would shadow it — we ship only this one).
+const DISALLOW = ["/api/", "/scans/", "/command-center/", "/admin", "/auth"];
 
 export default function robots(): MetadataRoute.Robots {
   return {

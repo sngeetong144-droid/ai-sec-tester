@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FocusEvent, type FormEvent } from "react";
 import { PAYMENT_LINKS } from "@/lib/payment-links";
 import { COUNTRIES } from "@/lib/jurisdiction-policy";
 
@@ -131,18 +131,63 @@ const CheckSm = () => (
   </svg>
 );
 
+// ── Client-side geo preview (UX only) ────────────────────────────────────────
+// Restricted-jurisdiction sample used to give the visitor an immediate heads-up.
+// The server re-resolves both IP endpoints independently and never trusts these
+// client values (that gate lives in the /api/scan-request route). Ported from
+// the static design's evaluateGeo(): ONLY a restricted *target* hard-blocks.
+type Geo = { cc: string; name: string; host?: string };
+type GeoView = { text: string; tone: "" | "ok" | "bad" };
+
+const RESTRICTED: Record<string, { type: "sanctioned" | "license"; name: string }> = {
+  IR: { type: "sanctioned", name: "Iran" },
+  KP: { type: "sanctioned", name: "North Korea" },
+  SY: { type: "sanctioned", name: "Syria" },
+  CU: { type: "sanctioned", name: "Cuba" },
+  SG: { type: "license", name: "Singapore" },
+  MY: { type: "license", name: "Malaysia" },
+};
+
+// Exact copy from the design's evaluateGeo() — both-restricted vs target-only.
+const GEO_BLOCK_BOTH =
+  "We're unable to process this request. Both your current network location and the chatbot you'd like tested are associated with a jurisdiction where independent security testing requires a government-issued licence that we do not hold. To protect you and us from legal risk, we can't proceed with this scan from here. If this is inaccurate — for example you're travelling or using a company VPN — please email hello@thesoulsofai.com from your work address with more detail.";
+const GEO_BLOCK_TARGET =
+  "We're unable to process this request. The chatbot you'd like tested is hosted in a jurisdiction where independent security testing requires a licence we do not hold, regardless of where you are requesting from. We can't proceed with this scan target. If you believe this detection is incorrect, or you hold the required local licence, email hello@thesoulsofai.com with supporting documentation.";
+
 /**
- * Public scan-request form, ported from the static #request section. Posts the
- * exact ScanRequestBody shape to /api/scan-request, which records the request in
- * the Command Center Intake queue (scan_requests). NO payment/checkout here —
- * the payment link is emailed only after a human approves the request.
+ * Public scan-request form, ported faithfully from the static #request section.
+ * Posts the design's ScanRequestBody shape to /api/scan-request, which records
+ * the request in the Command Center Intake queue (scan_requests). NO
+ * payment/checkout here — the payment link is emailed only after a human
+ * approves the request. The static email stopgap from the design is dropped;
+ * the real backend is the POST target.
  */
 export function RequestForm() {
   const [plan, setPlan] = useState(PAYMENT_LINKS.advanced.label);
   const [country, setCountry] = useState("");
-  const [consent, setConsent] = useState(false);
+  const [subscribed, setSubscribed] = useState<"no" | "yes">("no");
+  const [authorized, setAuthorized] = useState(false);
+  const [dueDiligence, setDueDiligence] = useState(false);
+  const [providerNotified, setProviderNotified] = useState(false);
+  const [cbErr, setCbErr] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "ok" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Client geo preview state (data + display separated so a failed lookup can
+  // show its own status line without discarding a previous good value).
+  const [requestorGeo, setRequestorGeo] = useState<Geo | null>(null);
+  const [reqView, setReqView] = useState<GeoView>({ text: "Detecting…", tone: "" });
+  const [targetGeo, setTargetGeo] = useState<Geo | null>(null);
+  const [tgtView, setTgtView] = useState<GeoView>({ text: "Enter the target URL above", tone: "" });
+
+  // Hard geo-block is derived, not stored — only a restricted *target* blocks.
+  const targetRestricted = targetGeo ? RESTRICTED[targetGeo.cc] : undefined;
+  const blocked = Boolean(targetRestricted);
+  const geoAlert = blocked
+    ? requestorGeo && RESTRICTED[requestorGeo.cc]
+      ? GEO_BLOCK_BOTH
+      : GEO_BLOCK_TARGET
+    : "";
 
   // Tier CTAs elsewhere on the page carry data-plan="basic|advanced|enterprise";
   // clicking one preselects the matching plan here (static data-tier behavior).
@@ -156,13 +201,86 @@ export function RequestForm() {
     return () => btns.forEach((b) => b.removeEventListener("click", onClick));
   }, []);
 
+  // detectRequestor(): resolve the visitor's own IP country on load. UX only.
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetch("https://ipapi.co/json/", { signal: ctrl.signal })
+      .then((r) => r.json())
+      .then((d: { country_code?: string; country_name?: string }) => {
+        if (!d || !d.country_code) throw new Error("no country");
+        const geo: Geo = { cc: d.country_code, name: d.country_name || d.country_code };
+        setRequestorGeo(geo);
+        setReqView({ text: `${geo.name} (${geo.cc})`, tone: RESTRICTED[geo.cc] ? "bad" : "ok" });
+      })
+      .catch(() => {
+        if (ctrl.signal.aborted) return;
+        setReqView({ text: "Unavailable here — verified on submit", tone: "" });
+      });
+    return () => ctrl.abort();
+  }, []);
+
+  // lookupTarget(): on the target-URL field's blur, resolve the host's A record
+  // (dns.google) then that IP's country (ipapi.co). Best-effort; the server is
+  // authoritative and re-resolves on submit.
+  async function handleTargetBlur(e: FocusEvent<HTMLInputElement>) {
+    const url = e.currentTarget.value.trim();
+    if (!url) return;
+    let host: string;
+    try {
+      host = new URL(url).hostname;
+    } catch {
+      setTargetGeo(null);
+      setTgtView({ text: "Enter a valid URL", tone: "" });
+      return;
+    }
+    setTgtView({ text: `Looking up ${host}…`, tone: "" });
+    try {
+      const dns = (await fetch(
+        `https://dns.google/resolve?name=${encodeURIComponent(host)}&type=A`,
+      ).then((r) => r.json())) as { Answer?: { type: number; data: string }[] };
+      const rec = dns.Answer?.find((a) => a.type === 1);
+      if (!rec) {
+        setTargetGeo(null);
+        setTgtView({ text: `Could not resolve ${host}`, tone: "" });
+        return;
+      }
+      const d2 = (await fetch(`https://ipapi.co/${rec.data}/json/`).then((r) => r.json())) as {
+        country_code?: string;
+        country_name?: string;
+      };
+      if (!d2 || !d2.country_code) throw new Error("no country");
+      const geo: Geo = { cc: d2.country_code, name: d2.country_name || d2.country_code, host };
+      setTargetGeo(geo);
+      setTgtView({ text: `${geo.name} (${geo.cc}) — ${host}`, tone: RESTRICTED[geo.cc] ? "bad" : "ok" });
+    } catch {
+      setTargetGeo(null);
+      setTgtView({ text: "Lookup unavailable — verified server-side on submit", tone: "" });
+    }
+  }
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
     const fd = new FormData(form);
-    const website = String(fd.get("website") || ""); // honeypot — must stay empty
-    const selected = COUNTRIES.find((c) => c.code === country);
+    if (String(fd.get("website") || "")) return; // honeypot — must stay empty
+    if (blocked) return; // hard geo block already shown above the buttons
 
+    // Both consent checkboxes gate submit with a visible inline error.
+    if (!authorized || !dueDiligence) {
+      setCbErr(
+        "Please check both boxes above to confirm authorization and accuracy before submitting.",
+      );
+      return;
+    }
+    if (subscribed === "yes" && !providerNotified) {
+      setCbErr(
+        "This chatbot runs on a third-party platform — please confirm you've notified them before submitting.",
+      );
+      return;
+    }
+    setCbErr("");
+
+    const selected = COUNTRIES.find((c) => c.code === country);
     const body = {
       plan,
       name: String(fd.get("name") || "").trim(),
@@ -172,10 +290,17 @@ export function RequestForm() {
       countryDeclaredName: selected?.name ?? "",
       browserTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
       browserLocale: typeof navigator !== "undefined" ? navigator.language : "",
-      dueDiligenceConsent: consent,
+      dueDiligenceConsent: true,
+      // client geo signals — server re-resolves both, never trusts these alone.
+      requestorGeo,
+      targetGeo,
+      subscribedPlatform: subscribed,
+      providerName: String(fd.get("providerName") || "").trim(),
+      providerNotifyRef: String(fd.get("providerNotifyRef") || "").trim(),
+      providerNotified,
       target: String(fd.get("target") || "").trim(),
       context: String(fd.get("context") || "").trim(),
-      website,
+      website: "",
     };
 
     setStatus("sending");
@@ -214,7 +339,7 @@ export function RequestForm() {
   }
 
   return (
-    <form className="req-form" onSubmit={handleSubmit} autoComplete="on">
+    <form className="req-form" onSubmit={handleSubmit} autoComplete="on" noValidate>
       <div className="field">
         <label htmlFor="rf-plan">Plan</label>
         <select id="rf-plan" name="plan" value={plan} onChange={(e) => setPlan(e.target.value)} required>
@@ -243,27 +368,120 @@ export function RequestForm() {
         <div className="field">
           <label htmlFor="rf-country">Country of residence</label>
           <select id="rf-country" name="country" value={country} onChange={(e) => setCountry(e.target.value)} required>
-            <option value="">— Select country —</option>
+            <option value="" disabled>
+              Select your country…
+            </option>
             {COUNTRIES.map((c) => (
               <option key={c.code} value={c.code}>
                 {c.name}
               </option>
             ))}
           </select>
+          <span className="field-hint">
+            Where you actually live and work — cross-checked against your network location
+            during review.
+          </span>
         </div>
       </div>
       <div className="field">
         <label htmlFor="rf-target">Target to scan (chatbot URL or endpoint)</label>
-        <input id="rf-target" type="url" name="target" required placeholder="https://yoursite.com/chat" />
+        <input
+          id="rf-target"
+          type="url"
+          name="target"
+          required
+          placeholder="https://yoursite.com/chat"
+          onBlur={handleTargetBlur}
+        />
       </div>
+
+      {/* Location check — client-side geo preview (UX only; server is authoritative). */}
+      <div className="field geo-check">
+        <label>Location check</label>
+        <div className="geo-row">
+          <div className="geo-box">
+            <span className="geo-k">Your connection</span>
+            <span className={`geo-v${reqView.tone ? ` ${reqView.tone}` : ""}`}>{reqView.text}</span>
+          </div>
+          <div className="geo-box">
+            <span className="geo-k">Target hosting</span>
+            <span className={`geo-v${tgtView.tone ? ` ${tgtView.tone}` : ""}`}>{tgtView.text}</span>
+          </div>
+        </div>
+        {blocked && (
+          <div className="geo-alert show" role="alert">
+            {geoAlert}
+          </div>
+        )}
+      </div>
+
       <div className="field">
         <label htmlFor="rf-context">
           What is the chatbot for? <span style={{ fontWeight: 500, color: "var(--ink-3)" }}>(optional)</span>
         </label>
         <textarea id="rf-context" name="context" placeholder="e.g. customer support bot on our marketing site" />
       </div>
+
+      <div className="field">
+        <label htmlFor="rf-subscribed">Is this chatbot built on a third-party / subscribed platform?</label>
+        <select
+          id="rf-subscribed"
+          name="subscribedPlatform"
+          value={subscribed}
+          onChange={(e) => setSubscribed(e.target.value as "no" | "yes")}
+        >
+          <option value="no">No — it&rsquo;s self-hosted / custom-built</option>
+          <option value="yes">Yes (e.g. Intercom, Zendesk, OpenAI Assistants, Drift…)</option>
+        </select>
+        <span className="field-hint">
+          Platform terms often require you to notify them before a security test runs on
+          infrastructure they host.
+        </span>
+      </div>
+
+      {/* Third-party disclosure — shown only when the chatbot runs on a subscribed platform. */}
+      <div className={`field disc-wrap${subscribed === "yes" ? " show" : ""}`}>
+        <label htmlFor="rf-provider">Provider name</label>
+        <input id="rf-provider" type="text" name="providerName" placeholder="e.g. Intercom, Zendesk" />
+        <label htmlFor="rf-provider-ref" style={{ marginTop: 10 }}>
+          Notification reference{" "}
+          <span style={{ fontWeight: 500, color: "var(--ink-3)" }}>
+            (ticket #, or subject of the email you sent them)
+          </span>
+        </label>
+        <input
+          id="rf-provider-ref"
+          type="text"
+          name="providerNotifyRef"
+          placeholder="e.g. Support ticket #48213, or ‘Re: upcoming security test’"
+        />
+        <label className="consent" style={{ marginTop: 10 }}>
+          <input
+            type="checkbox"
+            name="providerNotified"
+            checked={providerNotified}
+            onChange={(e) => {
+              setProviderNotified(e.target.checked);
+              setCbErr("");
+            }}
+          />
+          <span>
+            I confirm I have informed this provider that a security test will be run against
+            this chatbot, before submitting this request.
+          </span>
+        </label>
+      </div>
+
       <label className="consent">
-        <input type="checkbox" name="authorized" checked={consent} onChange={(e) => setConsent(e.target.checked)} required />
+        <input
+          type="checkbox"
+          name="authorized"
+          checked={authorized}
+          onChange={(e) => {
+            setAuthorized(e.target.checked);
+            setCbErr("");
+          }}
+        />
         <span>
           I confirm I own this target, or I am explicitly authorized to test it, and I accept the{" "}
           <a href="https://thesoulsofai.com/terms" target="_blank" rel="noopener noreferrer">
@@ -272,9 +490,43 @@ export function RequestForm() {
           .
         </span>
       </label>
+      <label className="consent">
+        <input
+          type="checkbox"
+          name="dueDiligence"
+          checked={dueDiligence}
+          onChange={(e) => {
+            setDueDiligence(e.target.checked);
+            setCbErr("");
+          }}
+        />
+        <span>
+          I confirm my country of residence above is accurate. I understand my network location
+          (IP country &amp; network type), browser timezone/locale and — after approval — my
+          payment card country are checked against it, and that mismatches or VPN use may hold my
+          request for manual review or identity verification. Requests from sanctioned
+          jurisdictions are declined.
+        </span>
+      </label>
+
+      {cbErr && <div className="checkbox-err show">{cbErr}</div>}
+
+      <div className="liability-note">
+        AI Sec Tester runs non-intrusive, read-only checks against your chatbot&rsquo;s
+        conversational interface only — no exploitation, no infrastructure access, no
+        availability/DoS testing. Because the target and its infrastructure remain under your
+        control, The Souls of AI is not liable for any pre-existing issue, malfunction, downtime
+        or component failure observed during an approved scan. See the full clause in our{" "}
+        <a href="https://thesoulsofai.com/terms" target="_blank" rel="noopener noreferrer">
+          Terms
+        </a>
+        .
+      </div>
+
       {/* honeypot */}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: "absolute", left: -9999 }} />
-      <button type="submit" className="btn btn-accent" disabled={status === "sending"}>
+
+      <button type="submit" className="btn btn-accent" disabled={status === "sending" || blocked}>
         {status === "sending" ? "Submitting…" : "Submit scan request"}
       </button>
       {status === "error" && (

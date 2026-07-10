@@ -1,0 +1,11 @@
+Contact: mailto:security@thesoulsofai.com
+Contact: mailto:thesoulsofai@gmail.com
+Expires: 2027-07-10T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://thesoulsofai.com/.well-known/security.txt
+Policy: https://thesoulsofai.com/terms
+
+# We build security tooling — please report vulnerabilities in our own
+# site/service responsibly before public disclosure. Do not run automated
+# scans against thesoulsofai.com or scan.thesoulsofai.com without prior
+# written permission — request one via the scan-request form.

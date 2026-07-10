@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getScan } from "@/lib/queries";
+import { getScan, scanOwnedByCaller } from "@/lib/queries";
 import { deleteScan } from "@/app/actions/scans";
 import {
   VerdictBadge,
@@ -21,6 +21,11 @@ export default async function ScanDetail({
 }) {
   const { id } = await params;
   const { purchase } = await searchParams;
+  // IDOR guard: a scan (target + vuln detail) is only viewable by the caller who
+  // owns it (their session cookie / user_id). notFound() gives non-owners the same
+  // response as a missing id — no confirmation the scan exists. Matches the report
+  // route gate; both share the getScans ownership model.
+  if (!(await scanOwnedByCaller(id))) notFound();
   const scan = await getScan(id);
   if (!scan) notFound();
 

@@ -1,5 +1,10 @@
 import { Shell } from "@/app/command-center/_components/shell";
-import { Card, CardTitle, COLORS, Badge } from "@/app/command-center/_ui";
+import { Card, CardTitle, COLORS, Badge, Mono } from "@/app/command-center/_ui";
+import {
+  LICENSE_RESTRICTED_JURISDICTIONS,
+  SANCTIONS_CITATIONS,
+  JURISDICTION_POLICY,
+} from "@/lib/jurisdiction-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -9,17 +14,6 @@ const GATE_CARDS = [
   { title: "Sanctions", desc: "Deny-only. A hit rejects; a clear match is never on its own sufficient to approve." },
   { title: "Disclosure", desc: "Subscribed targets require provider-notice proof before a scan activates." },
   { title: "Payment", desc: "Scalendo Stripe-backed link; the approval email carries it. No charge until approved." },
-];
-
-const JUR_POLICY: { code: string; name: string; kind: "warn" | "bad" }[] = [
-  { code: "SG", name: "Licence required", kind: "warn" },
-  { code: "MY", name: "Licence required", kind: "warn" },
-  { code: "CU", name: "Sanctioned", kind: "bad" },
-  { code: "IR", name: "Sanctioned", kind: "bad" },
-  { code: "KP", name: "Sanctioned", kind: "bad" },
-  { code: "SY", name: "Sanctioned", kind: "bad" },
-  { code: "RU", name: "Sanctioned", kind: "bad" },
-  { code: "BY", name: "Sanctioned", kind: "bad" },
 ];
 
 const SIGNALS = [
@@ -60,8 +54,21 @@ export default async function GatePage({
         </div>
         <div style={{ marginTop: 8, fontSize: 12.5, color: COLORS.ink2 }}>
           Dual-source: the declared country on the form and the IP-resolved country. The stricter of the two wins.
-          Static policy list v1 — upgrade path is live OFAC/SDN.
+          Sanctions auto-reject; licence-required jurisdictions HOLD for manual review — they are never auto-rejected.
         </div>
+
+        {JURISDICTION_POLICY.needsLegalReview && (
+          <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: "rgba(201,154,46,0.10)", border: "1px solid rgba(201,154,46,0.35)" }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: "#a87d1e" }}>
+              Not legal advice — pending counsel sign-off
+            </div>
+            <div style={{ fontSize: 11.5, color: COLORS.ink2, marginTop: 4, lineHeight: 1.5 }}>
+              These lists are engineering&rsquo;s best effort at encoding sanctions and licensing signals. Each entry
+              shows the date it was last checked against its source, not that it is currently authoritative.
+            </div>
+          </div>
+        )}
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 12 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: COLORS.ink3, marginBottom: 8 }}>
@@ -73,14 +80,36 @@ export default async function GatePage({
           </div>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: COLORS.ink3, marginBottom: 8 }}>
-              Policy list
+              Licence required — hold for review
             </div>
-            {JUR_POLICY.map((j) => (
-              <div key={j.code} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0" }}>
-                <span style={{ fontSize: 12.5, color: COLORS.ink2, fontFamily: "var(--font-mono), monospace" }}>{j.code}</span>
-                <Badge kind={j.kind}>{j.name}</Badge>
+            {LICENSE_RESTRICTED_JURISDICTIONS.map((j) => (
+              <div key={j.code} style={{ padding: "4px 0", borderBottom: `1px solid ${COLORS.hairline}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12.5, color: COLORS.ink2 }}>
+                    <Mono>{j.code}</Mono> {j.name}
+                  </span>
+                  <Badge kind="warn">Hold for review</Badge>
+                </div>
+                {j.lastReviewed && (
+                  <div style={{ fontSize: 10.5, color: COLORS.ink3, marginTop: 2 }}>Reviewed {j.lastReviewed} · {j.regulator}</div>
+                )}
               </div>
             ))}
+
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: COLORS.ink3, margin: "12px 0 8px" }}>
+              Sanctions — auto-reject
+            </div>
+            <div style={{ maxHeight: 220, overflowY: "auto" }}>
+              {SANCTIONS_CITATIONS.map((s) => (
+                <div key={s.code} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0" }}>
+                  <span style={{ fontSize: 12, color: COLORS.ink2 }}>
+                    <Mono>{s.code}</Mono> {s.name}
+                    <span style={{ fontSize: 10.5, color: COLORS.ink3 }}> · reviewed {s.lastReviewed}</span>
+                  </span>
+                  <Badge kind="bad">{s.comprehensive ? "Comprehensive" : "Targeted"}</Badge>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </Card>

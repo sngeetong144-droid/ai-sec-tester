@@ -13,6 +13,7 @@ import {
 import { loadCase } from "@/app/command-center/_data";
 import { composeEmail, queueEmail } from "@/app/command-center/_email";
 import { executeScan } from "@/app/actions/scans";
+import { approveScanRequestPayment } from "@/app/actions/scan-request-lifecycle";
 
 /**
  * Command-center mutations (server actions). EVERY action calls requireAdmin()
@@ -63,14 +64,38 @@ export async function ingestIntakeAction(formData: FormData): Promise<void> {
   revalidateConsole();
 }
 
-/** approval → approved; queue the approval + payment-link email. */
+/**
+ * approval → approved; stamp the linked scan_request with its payment link
+ * (status approved_awaiting_payment + stripe_client_reference_id +
+ * payment_link_sent_at), then queue the approval email carrying that EXACT
+ * param-appended link. The customer pays → the Stripe webhook flips the request to
+ * paid_scanning → the cron dispatch job runs the scan. No charge, no send here —
+ * the email is QUEUED (existing repo pattern).
+ */
 export async function approveCaseAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("caseId") ?? "");
   const updated = await approveCase(id);
   if (!updated) return;
   const view = await loadCase(id);
-  if (view) await queueEmail(id, composeEmail("approval", view));
+  if (!view) {
+    revalidateConsole();
+    return;
+  }
+
+  const composed = composeEmail("approval", view);
+  const req = view.req;
+  if (req) {
+    const pay = await approveScanRequestPayment(
+      req.id,
+      view.case.tier ?? req.plan,
+      req.email,
+    );
+    // Inject the exact param-appended checkout URL into the templated body (the
+    // template renders the bare link.url; swap it for the client_reference_id one).
+    if (pay) composed.body = composed.body.replace(pay.baseUrl, pay.url);
+  }
+  await queueEmail(id, composed);
   revalidateConsole();
 }
 

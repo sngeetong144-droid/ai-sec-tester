@@ -1,12 +1,10 @@
-"use client";
-
-import Link from "next/link";
-import { ComplianceGate } from "./compliance-gate";
 import { PAYMENT_LINKS } from "@/lib/payment-links";
 import { JURISDICTION_NOTICE } from "@/lib/jurisdiction-policy";
 
-// Prices + payment links come from lib/payment-links.ts (single source of truth).
-// Every tier is reviewed by a human before payment — there is no self-serve scan.
+// Prices come from lib/payment-links.ts (single source of truth). Every tier is
+// reviewed by a human before payment — the public page NEVER exposes a checkout
+// link. Each CTA scrolls to the #request form and preselects its plan via
+// data-plan (RequestForm listens for it); the link is emailed only after approval.
 const NORMAL = PAYMENT_LINKS.basic;
 const ADVANCED = PAYMENT_LINKS.advanced;
 const ENTERPRISE = PAYMENT_LINKS.enterprise;
@@ -47,12 +45,13 @@ export function PricingTiers() {
               </li>
             ))}
           </ul>
-          <ComplianceGate
-            href={NORMAL.url}
+          <a
+            href="#request"
+            data-plan="basic"
             className="block rounded-lg border border-violet-200 py-2.5 text-center text-sm font-semibold text-slate-600 transition-colors hover:border-brand-500 hover:text-brand-600"
           >
             Request Normal — ${NORMAL.priceUsd}
-          </ComplianceGate>
+          </a>
         </div>
 
         {/* Advanced */}
@@ -80,12 +79,13 @@ export function PricingTiers() {
               </li>
             ))}
           </ul>
-          <ComplianceGate
-            href={ADVANCED.url}
+          <a
+            href="#request"
+            data-plan="advanced"
             className="block rounded-lg bg-brand-500 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-600"
           >
             Request Advanced — ${ADVANCED.priceUsd}
-          </ComplianceGate>
+          </a>
         </div>
 
         {/* Enterprise */}
@@ -115,12 +115,13 @@ export function PricingTiers() {
               </li>
             ))}
           </ul>
-          <Link
-            href="/enterprise"
+          <a
+            href="#request"
+            data-plan="enterprise"
             className="block rounded-lg bg-violet-600 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-violet-700"
           >
-            Apply for Enterprise Scan
-          </Link>
+            Request Enterprise — ${ENTERPRISE.priceUsd}
+          </a>
         </div>
       </div>
     </section>

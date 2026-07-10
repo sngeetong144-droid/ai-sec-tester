@@ -1,21 +1,39 @@
 export type RestrictedJurisdictionCode = "SG" | "MY";
 
+export type Confidence = "high" | "med" | "low";
+
 export interface RestrictedJurisdiction {
   code: RestrictedJurisdictionCode;
   name: string;
   tlds: string[];
   regulator: string;
   restriction: string;
+  /** Statute that imposes the licensing requirement. */
+  law?: string;
+  /** Primary regulator/source URL backing this entry. */
+  sourceUrl?: string;
+  /** ISO date this citation was last checked against the source. */
+  lastReviewed?: string;
+  /** How confident we are the entry is accurate and current. */
+  confidence?: Confidence;
 }
 
+// NOTE: licence-required jurisdictions FLAG FOR MANUAL ADMIN REVIEW (hold) — they
+// are NEVER auto-rejected. Only comprehensive-sanctions matches auto-reject.
+// This is not legal advice; see JURISDICTION_POLICY.needsLegalReview.
 export const LICENSE_RESTRICTED_JURISDICTIONS: RestrictedJurisdiction[] = [
   {
     code: "SG",
     name: "Singapore",
     tlds: [".sg"],
-    regulator: "Cyber Security Agency of Singapore (CSA)",
+    regulator:
+      "Cyber Security Agency of Singapore (CSA) / Cybersecurity Services Regulation Office (CSRO)",
     restriction:
-      "commercial penetration-testing services are licence-regulated in Singapore",
+      "penetration testing is a licensable cybersecurity service; providing it without a CSA licence is an offence (since 11 Oct 2022) under the Cybersecurity Act 2018",
+    law: "Cybersecurity Act 2018 (Part 5 — licensing of cybersecurity service providers)",
+    sourceUrl: "https://www.csa.gov.sg/legislation/cybersecurity-act/",
+    lastReviewed: "2026-07-11",
+    confidence: "high",
   },
   {
     code: "MY",
@@ -23,7 +41,11 @@ export const LICENSE_RESTRICTED_JURISDICTIONS: RestrictedJurisdiction[] = [
     tlds: [".my"],
     regulator: "National Cyber Security Agency Malaysia (NACSA)",
     restriction:
-      "commercial penetration-testing services are licence-regulated under Malaysia's Cyber Security Act 2024",
+      "penetration testing is a prescribed cybersecurity service requiring a NACSA licence; unlicensed provision is an offence under the Cyber Security Act 2024 (Act 854)",
+    law: "Cyber Security Act 2024 (Act 854), gazetted 26 Jun 2024; licensing from 1 Oct 2024",
+    sourceUrl: "https://licence.nacsa.gov.my/",
+    lastReviewed: "2026-07-11",
+    confidence: "high",
   },
 ];
 
@@ -95,6 +117,100 @@ export function isSanctionedCountry(code: string | null | undefined): boolean {
   if (!code) return false;
   return OFAC_BLOCKED_COUNTRY_CODES.has(code.trim().toUpperCase());
 }
+
+// ── Sanctions citations (per-country provenance for counsel) ───────────────────
+//
+// This is NOT legal advice and NOT a live SDN feed. It records WHY each code in
+// OFAC_BLOCKED_COUNTRY_CODES is on the auto-reject list, with a source and review
+// date, so counsel can audit the list. `comprehensive: true` marks the current
+// OFAC *comprehensive-embargo* countries (whole-country prohibition). The rest are
+// targeted/sectoral programs kept on the auto-reject set as a CONSERVATIVE default
+// for a security-testing business — over-rejecting a sanctioned-adjacent country
+// is the safe failure; under-rejecting is not.
+//
+// Current comprehensive country-level embargoes (July 2026): Cuba, Iran, North
+// Korea. (Syria's comprehensive program was REVOKED by EO 14312 on 30 Jun 2025 and
+// the SySR removed from the CFR by Aug 2025; targeted sanctions on specific Syrian
+// actors remain, so SY is retained on the conservative auto-reject set, not the
+// comprehensive set.) Crimea / Donetsk / Luhansk are comprehensively embargoed
+// REGIONS, not countries, so they have no ISO-3166 country code here.
+export interface SanctionCitation {
+  code: string;
+  name: string;
+  comprehensive: boolean;
+  regulator: string;
+  sourceUrl: string;
+  lastReviewed: string;
+  note?: string;
+}
+
+const OFAC_PROGRAMS_URL =
+  "https://ofac.treasury.gov/sanctions-programs-and-country-information";
+
+export const SANCTIONS_CITATIONS: readonly SanctionCitation[] = [
+  { code: "CU", name: "Cuba", comprehensive: true, regulator: "US OFAC — Cuban Assets Control Regulations (31 CFR 515)", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11" },
+  { code: "IR", name: "Iran", comprehensive: true, regulator: "US OFAC — Iranian Transactions and Sanctions Regulations (31 CFR 560)", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11" },
+  { code: "KP", name: "North Korea", comprehensive: true, regulator: "US OFAC — North Korea Sanctions Regulations (31 CFR 510)", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11" },
+  { code: "SY", name: "Syria", comprehensive: false, regulator: "US OFAC — targeted authorities (comprehensive SySR revoked by EO 14312, 30 Jun 2025)", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "No longer a comprehensive embargo; retained on conservative auto-reject set." },
+  { code: "RU", name: "Russia", comprehensive: false, regulator: "US OFAC — Russian Harmful Foreign Activities (EO 14024) + Ukraine/Russia programs", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "Targeted/sectoral, not comprehensive." },
+  { code: "BY", name: "Belarus", comprehensive: false, regulator: "US OFAC — Belarus Sanctions (EO 14038)", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "Targeted, not comprehensive." },
+  { code: "VE", name: "Venezuela", comprehensive: false, regulator: "US OFAC — Venezuela-related sanctions", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "Targeted, not comprehensive." },
+  { code: "MM", name: "Myanmar (Burma)", comprehensive: false, regulator: "US OFAC — Burma-related sanctions (EO 14014)", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "Targeted, not comprehensive." },
+  { code: "SD", name: "Sudan", comprehensive: false, regulator: "US OFAC — Sudan-related program", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "Targeted, not comprehensive." },
+  { code: "SS", name: "South Sudan", comprehensive: false, regulator: "US OFAC — South Sudan-related sanctions", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "Targeted, not comprehensive." },
+  { code: "YE", name: "Yemen", comprehensive: false, regulator: "US OFAC — Yemen-related sanctions", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "Targeted, not comprehensive." },
+  { code: "ZW", name: "Zimbabwe", comprehensive: false, regulator: "US OFAC — Zimbabwe-related program", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "Targeted, not comprehensive." },
+  { code: "AF", name: "Afghanistan", comprehensive: false, regulator: "US OFAC — Afghanistan-related (Taliban/SDGT) authorities", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "Targeted, not comprehensive." },
+  { code: "LY", name: "Libya", comprehensive: false, regulator: "US OFAC — Libya sanctions (31 CFR 570)", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "Targeted, not comprehensive." },
+  { code: "ML", name: "Mali", comprehensive: false, regulator: "US OFAC — Mali-related sanctions (EO 13882)", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "Targeted, not comprehensive." },
+  { code: "NI", name: "Nicaragua", comprehensive: false, regulator: "US OFAC — Nicaragua-related sanctions", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "Targeted, not comprehensive." },
+  { code: "SO", name: "Somalia", comprehensive: false, regulator: "US OFAC — Somalia sanctions (31 CFR 551)", sourceUrl: OFAC_PROGRAMS_URL, lastReviewed: "2026-07-11", note: "Targeted, not comprehensive." },
+];
+
+/** Current OFAC comprehensive-embargo country codes (whole-country prohibition). */
+export const COMPREHENSIVE_SANCTION_CODES: ReadonlySet<string> = new Set(
+  SANCTIONS_CITATIONS.filter((c) => c.comprehensive).map((c) => c.code),
+);
+
+export type JurisdictionAction = "reject" | "hold" | "allow";
+
+/**
+ * Server-side decision for a REQUESTER country code:
+ *   - sanctioned (OFAC auto-reject set)   → "reject"
+ *   - licence-required (SG/MY, hold list) → "hold"  (manual admin review, NOT reject)
+ *   - anything else                       → "allow"
+ * Sanctions outrank the licence hold. This encodes the §3 critical behavior in the
+ * policy module; lib/jurisdiction-review.ts wires the same order into the full review.
+ */
+export function classifyRequesterJurisdiction(
+  code: string | null | undefined,
+): JurisdictionAction {
+  if (isSanctionedCountry(code)) return "reject";
+  const c = code?.trim().toUpperCase() ?? null;
+  if (c && RESTRICTED_JURISDICTION_CODES.has(c as RestrictedJurisdictionCode)) {
+    return "hold";
+  }
+  return "allow";
+}
+
+/**
+ * Single policy handle other modules can read. `needsLegalReview` is intentionally
+ * hard-coded true: this file is engineering's best effort at encoding sanctions +
+ * licensing signals, NOT a legal determination.
+ *
+ * THIS IS NOT LEGAL ADVICE. The country lists and citations above must be reviewed
+ * and signed off by qualified counsel before they are relied on for any go/no-go
+ * decision. Sanctions and licensing regimes change; the lastReviewed dates say when
+ * each entry was last checked, not that it is currently authoritative.
+ */
+export const JURISDICTION_POLICY = {
+  needsLegalReview: true as const,
+  comprehensiveSanctions: COMPREHENSIVE_SANCTION_CODES,
+  conservativeAutoReject: OFAC_BLOCKED_COUNTRY_CODES,
+  licenceRequired: RESTRICTED_JURISDICTION_CODES,
+  sanctionsCitations: SANCTIONS_CITATIONS,
+  licenceCitations: LICENSE_RESTRICTED_JURISDICTIONS,
+} as const;
 
 export interface Country {
   code: string;

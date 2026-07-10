@@ -1,4 +1,4 @@
-import { getScan } from "@/lib/queries";
+import { getScan, scanOwnedByCaller } from "@/lib/queries";
 import { consumerOptionsFor, remediationStepsFor } from "@/lib/remediation-guidance";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 
@@ -14,6 +14,14 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
+
+  // IDOR guard: this endpoint is keyed only on the scan UUID. Serve the PDF only to
+  // the caller who owns the scan (their session cookie / user_id). 404 (not 403) so
+  // a non-owner can't even confirm the id exists.
+  if (!(await scanOwnedByCaller(id))) {
+    return new Response("Scan not found", { status: 404 });
+  }
+
   const scan = await getScan(id);
   if (!scan) {
     return new Response("Scan not found", { status: 404 });

@@ -141,9 +141,16 @@ export async function runTriage(input: {
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 5000);
+    // SSRF: the ssrfSafeTarget guard above only vetted `parsed.origin`. redirect:
+    // "manual" stops fetch from silently following a 3xx to an internal/metadata
+    // address (169.254.169.254, 127.0.0.1, …) that was never re-checked. A redirect
+    // now surfaces as its own 3xx status, not an internal-service reachability oracle.
+    // ponytail: does NOT close DNS rebinding between the guard's resolve and fetch's
+    // own resolve — a pinned-IP dispatcher/custom lookup is the upgrade if that
+    // threat matters; the reachability signal here is low-value and blind either way.
     const res = await fetch(parsed.origin, {
       signal: ctrl.signal,
-      redirect: "follow",
+      redirect: "manual",
       headers: { "user-agent": "ai-sec-tester-triage/1.0" },
     });
     clearTimeout(t);

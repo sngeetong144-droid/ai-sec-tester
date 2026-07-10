@@ -59,6 +59,36 @@ export async function getScan(id: string): Promise<ScanWithResults | null> {
   };
 }
 
+/**
+ * True when the current caller owns scan `id`, using the SAME ownership model as
+ * getScans: an authenticated caller owns rows with a matching user_id; an
+ * anonymous caller owns rows with a matching session cookie. Reads via the
+ * service-role client so it works regardless of the scans-table RLS policy.
+ *
+ * Gate for the public report route + scan detail page (both are keyed only on the
+ * scan UUID otherwise = IDOR). Admin/enterprise/paid delivery use their own routes
+ * (console report_url, /enterprise/report/[token]) and never this path.
+ * NOTE: the table-level anon-REST exposure (permissive RLS on scans/scan_results)
+ * is the separate lockdown flagged in the deliverable — this closes the app routes.
+ */
+export async function scanOwnedByCaller(id: string): Promise<boolean> {
+  const identity = await getRequestIdentity();
+  if (!identity.userId && !identity.sessionId) return false;
+
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("scans")
+    .select("session_id, user_id")
+    .eq("id", id)
+    .maybeSingle();
+  const row = data as { session_id: string | null; user_id: string | null } | null;
+  if (!row) return false;
+
+  if (identity.userId && row.user_id === identity.userId) return true;
+  if (identity.sessionId && row.session_id === identity.sessionId) return true;
+  return false;
+}
+
 export interface VerifiedOwnership {
   id: string;
   target_domain: string;

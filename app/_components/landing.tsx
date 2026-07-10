@@ -137,7 +137,7 @@ export function Landing() {
         <style dangerouslySetInnerHTML={{ __html: ".aist-landing [data-reveal]{opacity:1;transform:none}" }} />
       </noscript>
 
-      {/* NAV — anchor-only, fixed. No public "Sign in" link (login stays reachable
+      {/* NAV — anchor-only, fixed. No public login link (auth stays reachable
           only by directly visiting /auth/login). CTA + links point to in-page anchors. */}
       <nav className="nav" data-nav>
         <div className="nav-in">

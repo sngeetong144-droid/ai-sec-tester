@@ -137,9 +137,18 @@ export async function Drawer({ view }: { view: CaseView }) {
           </div>
         </Section>
 
-        {c.subscribed && (
+        {(c.subscribed || req?.subscribed_platform) && (
           <Section title="Third-party disclosure">
-            <Row k="Platform" v={c.platform ?? "—"} />
+            <Row k="Platform" v={c.platform ?? req?.provider_name ?? "—"} />
+            {req?.provider_notify_ref && <Row k="Notice ref" v={<Mono>{req.provider_notify_ref}</Mono>} />}
+            <Row
+              k="Requestor attested"
+              v={
+                <Badge kind={req?.provider_notified ? "ok" : "warn"}>
+                  {req?.provider_notified ? "Notified" : "Not attested"}
+                </Badge>
+              }
+            />
             <Row
               k="Status"
               v={
@@ -283,7 +292,7 @@ export async function Drawer({ view }: { view: CaseView }) {
           {c.status === "intake" && (
             <>
               <RejectButton caseId={c.id} />
-              {c.subscribed && c.disclosure_state !== "informed" && <DisclosureForm caseId={c.id} />}
+              {(c.subscribed || req?.subscribed_platform) && c.disclosure_state !== "informed" && <DisclosureForm caseId={c.id} />}
             </>
           )}
           {c.status === "approved" && <ActivateForm caseId={c.id} />}

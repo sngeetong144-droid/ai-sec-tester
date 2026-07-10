@@ -43,6 +43,25 @@ export interface ScanRequestRow {
   triage_verdict: string | null;
   triage_flags: TriageFlag[] | null;
   triage_recommendation: string | null;
+  // ── migration 0006: third-party disclosure + client geo + payment lifecycle ──
+  // Fetched by the existing select("*"); undefined at runtime until 0006 is
+  // applied, so every reader treats a missing value as "no proof / not set".
+  subscribed_platform: boolean;
+  provider_name: string | null;
+  provider_notify_ref: string | null;
+  provider_notified: boolean;
+  requestor_geo: GeoSignal | null;
+  target_geo: GeoSignal | null;
+  rejection_reason: string | null;
+  payment_link_sent_at: string | null;
+  report_url: string | null;
+}
+
+/** Client-submitted geo preview (soft signal; server re-resolves independently). */
+export interface GeoSignal {
+  cc?: string;
+  name?: string;
+  host?: string;
 }
 
 export interface TriageFlag {

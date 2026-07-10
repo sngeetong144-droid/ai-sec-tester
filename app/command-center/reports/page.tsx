@@ -29,6 +29,7 @@ export default async function ReportHistoryPage({
                     <th style={{ padding: "6px 8px" }}>Verdict</th>
                     <th style={{ padding: "6px 8px" }}>Delivered</th>
                     <th style={{ padding: "6px 8px" }}>Re-scan token</th>
+                    <th style={{ padding: "6px 8px" }}>Report</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -51,6 +52,15 @@ export default async function ReportHistoryPage({
                           <Badge kind={c.case.rescan_used ? "subtle" : "ok"}>
                             {c.case.rescan_used ? "Redeemed" : "Unused"}
                           </Badge>
+                        </td>
+                        <td style={{ padding: "8px" }}>
+                          {c.req?.report_url ? (
+                            <a href={c.req.report_url} target="_blank" rel="noopener noreferrer" style={{ color: COLORS.accent, textDecoration: "none", fontWeight: 700, fontSize: 12.5 }}>
+                              PDF →
+                            </a>
+                          ) : (
+                            <Badge kind="subtle">Not generated</Badge>
+                          )}
                         </td>
                       </tr>
                     );

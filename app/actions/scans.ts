@@ -33,9 +33,20 @@ export async function executeScan(input: {
   sessionId?: string | null;
   /** Optional connected chatbot endpoint for real interactive probes (feature-flagged). */
   chatbot?: ChatbotEndpointConfig | null;
+  /**
+   * Trusted server-to-server invocation secret (the cron dispatch job). This is a
+   * server action — a client could call it with a forged flag, so we do NOT accept a
+   * boolean "trusted": authorization is proven by presenting CRON_SECRET, which only
+   * server code (after verifying the inbound Bearer) knows. It substitutes for the
+   * admin-session check ONLY; the case must still be scanning + paid. Empty/unset
+   * never grants (falsy short-circuit), so deny-by-default is preserved.
+   */
+  cronSecret?: string;
 }): Promise<string> {
   // ── Authorization gate ──────────────────────────────────────────────────────
-  const isAdmin = await isAdminSession();
+  const cronOk =
+    Boolean(input.cronSecret) && input.cronSecret === process.env.CRON_SECRET;
+  const isAdmin = cronOk ? true : await isAdminSession();
   const caseRecord = await getCase(input.caseId);
   const decision = decideScanAuthorization({ isAdmin, caseRecord });
   if (!decision.authorized) {

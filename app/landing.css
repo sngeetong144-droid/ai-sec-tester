@@ -15,6 +15,7 @@
   --accent-ring: rgba(15, 157, 107, 0.26);
   --gold: #c99a2e;
   --alarm: #e2453d;
+  --alarm-soft: rgba(226, 69, 61, 0.08);
   --ink: #151321;
   --ink-2: #3b3950;
   --ink-3: #6d6a83;
@@ -293,3 +294,29 @@
   .aist-landing .req-grid { grid-template-columns: 1fr; gap: 30px; }
   .aist-landing .req-form .row2 { grid-template-columns: 1fr; }
 }
+
+/* field hint (under selects/inputs) */
+.aist-landing .req-form .field-hint { display: block; font-size: 11.5px; font-weight: 500; color: var(--ink-3); line-height: 1.45; margin-top: 6px; }
+
+/* geo / location check */
+.aist-landing .geo-check { background: var(--canvas); border: 1px solid var(--line); border-radius: 12px; padding: 14px 15px; margin-bottom: 16px; }
+.aist-landing .geo-check > label { margin-bottom: 10px !important; }
+.aist-landing .geo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.aist-landing .geo-box { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.aist-landing .geo-k { font-size: 10.5px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+.aist-landing .geo-v { font-size: 13.5px; font-weight: 700; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aist-landing .geo-v.ok { color: var(--accent); }
+.aist-landing .geo-v.warn { color: var(--gold); }
+.aist-landing .geo-v.bad { color: var(--alarm); }
+.aist-landing .geo-alert { display: none; margin-top: 11px; padding: 13px 14px; background: var(--alarm-soft); border: 1px solid rgba(226, 69, 61, 0.35); border-radius: 11px; font-size: 13px; color: var(--ink); line-height: 1.55; }
+.aist-landing .geo-alert.show { display: block; }
+.aist-landing .geo-note { display: none; margin-top: 11px; padding: 12px 14px; background: rgba(201, 154, 46, 0.1); border: 1px solid rgba(201, 154, 46, 0.35); border-radius: 11px; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+.aist-landing .geo-note.show { display: block; }
+
+/* inline checkbox error + liability note + third-party disclosure block */
+.aist-landing .checkbox-err { display: none; color: var(--alarm); font-size: 12.5px; font-weight: 700; margin: -8px 0 16px; padding: 8px 12px; background: var(--alarm-soft); border-radius: 8px; }
+.aist-landing .checkbox-err.show { display: block; }
+.aist-landing .liability-note { font-size: 12px; color: var(--ink-3); line-height: 1.6; margin: 2px 0 16px; padding: 12px 14px; background: var(--canvas); border: 1px solid var(--line); border-radius: 10px; }
+.aist-landing .liability-note a { color: var(--accent); font-weight: 600; }
+.aist-landing .disc-wrap { display: none; margin-top: 10px; padding: 12px 13px; background: var(--canvas); border: 1px solid var(--line); border-radius: 10px; }
+.aist-landing .disc-wrap.show { display: block; }
