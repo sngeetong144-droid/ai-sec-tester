@@ -5,9 +5,11 @@ import { readSessionId } from "@/lib/session";
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  // Only allow same-origin relative paths — reject "//evil.com", "https://…", etc.
-  const rawNext = searchParams.get("next") ?? "/";
-  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
+  // Admin login is the only auth flow, so default post-login to the console.
+  // Supabase does not reliably preserve the custom ?next param on its redirect,
+  // hence the default rather than relying on it. Still same-origin validated.
+  const rawNext = searchParams.get("next") ?? "/command-center";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/command-center";
 
   if (code) {
     const supabase = await createClient();
