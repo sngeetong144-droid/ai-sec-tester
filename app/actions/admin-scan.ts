@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ensureSessionId } from "@/lib/session";
 import { assertPublicTarget } from "@/lib/scan-engine";
 import { runEngineAndPersist } from "@/lib/scan-persistence";
+import type { ChatbotEndpointConfig } from "@/lib/real-scan-engine";
 import {
   isAdminSession,
   decideAdminSelfScan,
@@ -31,9 +32,27 @@ import {
 export async function runAdminSelfScan(input: {
   target: string;
   label?: string;
+  /**
+   * When true, the target is treated as a chatbot message endpoint and the
+   * interactive OWASP-LLM probes run against it (otherwise only the passive
+   * transport/secret checks run — the reason a plain website scores 0/0).
+   */
+  chatbot?: boolean;
+  /** Optional JSON body template with a {{prompt}} placeholder. Default: {"message":"{{prompt}}"} */
+  bodyTemplate?: string;
+  /** Optional bearer token for the endpoint. Secret — never persisted or logged. */
+  authToken?: string;
 }): Promise<string> {
   const target = String(input?.target ?? "").trim();
   const label = input?.label ? String(input.label).trim().slice(0, 200) : null;
+
+  const chatbot: ChatbotEndpointConfig | null = input?.chatbot
+    ? {
+        url: target,
+        bodyTemplate: input.bodyTemplate?.trim() || null,
+        authToken: input.authToken?.trim() || null,
+      }
+    : null;
 
   const decision = decideAdminSelfScan({ isAdmin: await isAdminSession() });
   if (!decision.authorized) {
@@ -66,6 +85,6 @@ export async function runAdminSelfScan(input: {
   }
   const scanId = created.id as string;
 
-  await runEngineAndPersist(supabase, scanId, target, null);
+  await runEngineAndPersist(supabase, scanId, target, chatbot);
   return scanId;
 }

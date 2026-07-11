@@ -15,6 +15,9 @@ export function ScanTool() {
   const router = useRouter();
   const [target, setTarget] = useState("");
   const [label, setLabel] = useState("");
+  const [chatbot, setChatbot] = useState(false);
+  const [bodyTemplate, setBodyTemplate] = useState("");
+  const [authToken, setAuthToken] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +29,9 @@ export function ScanTool() {
       const scanId = await runAdminSelfScan({
         target: target.trim(),
         label: label.trim() || undefined,
+        chatbot,
+        bodyTemplate: bodyTemplate.trim() || undefined,
+        authToken: authToken.trim() || undefined,
       });
       router.push(`/scans/${scanId}`);
     } catch (err) {
@@ -78,6 +84,57 @@ export function ScanTool() {
             style={inputStyle}
           />
         </div>
+
+        <div>
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 9, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              disabled={running}
+              checked={chatbot}
+              onChange={(e) => setChatbot(e.target.checked)}
+              style={{ marginTop: 2 }}
+            />
+            <span style={{ fontSize: 12.5, color: COLORS.ink2, lineHeight: 1.5 }}>
+              Target is a <strong>chatbot endpoint</strong> — run the interactive OWASP-LLM
+              probes (prompt injection, jailbreak, system-prompt leak, data exfiltration,
+              unsafe content). Leave off for passive transport/secret checks only.
+            </span>
+          </label>
+        </div>
+
+        {chatbot && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingLeft: 26 }}>
+            <div>
+              <label htmlFor="bodyTemplate" style={labelStyle}>
+                Request body template <span style={{ color: COLORS.faint, fontWeight: 500 }}>(optional)</span>
+              </label>
+              <input
+                id="bodyTemplate"
+                type="text"
+                disabled={running}
+                value={bodyTemplate}
+                onChange={(e) => setBodyTemplate(e.target.value)}
+                placeholder={`{"message":"{{prompt}}"}`}
+                style={{ ...inputStyle, fontFamily: "ui-monospace, monospace" }}
+              />
+            </div>
+            <div>
+              <label htmlFor="authToken" style={labelStyle}>
+                Bearer token <span style={{ color: COLORS.faint, fontWeight: 500 }}>(optional, not stored)</span>
+              </label>
+              <input
+                id="authToken"
+                type="password"
+                autoComplete="off"
+                disabled={running}
+                value={authToken}
+                onChange={(e) => setAuthToken(e.target.value)}
+                placeholder="sent as Authorization: Bearer …"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+        )}
 
         {error && (
           <div
