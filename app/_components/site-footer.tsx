@@ -7,8 +7,11 @@ import { usePathname } from "next/navigation";
 // ships its own fixed emerald nav. `active` is false for authenticated users, so
 // the authed home view (working scanner) keeps the global header + Sign out.
 export function HideOnHome({ active, children }: { active: boolean; children: ReactNode }) {
-  const isHome = usePathname() === "/";
-  if (active && isHome) return null;
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+  // Console (/command-center*) ships its own sidebar+content shell — suppress the global header there too.
+  const isConsole = pathname === "/command-center" || pathname.startsWith("/command-center/");
+  if ((active && isHome) || isConsole) return null;
   return <>{children}</>;
 }
 
@@ -16,7 +19,9 @@ export function HideOnHome({ active, children }: { active: boolean; children: Re
 // global thin footer is suppressed there to avoid a double footer. Every other
 // route (authed dashboard, /enterprise, command-center, …) keeps this footer.
 export function SiteFooter() {
-  if (usePathname() === "/") return null;
+  const pathname = usePathname();
+  if (pathname === "/") return null;
+  if (pathname === "/command-center" || pathname.startsWith("/command-center/")) return null;
 
   return (
     <footer className="bg-white/50 border-t border-violet-100 px-6 py-6 shrink-0">

@@ -305,11 +305,27 @@ async function probeTarget(
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch(targetUrl, {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: { "user-agent": "ai-sec-tester/1.0 (+security-scan)" },
-    });
+    // Manual redirect follow so every hop is re-validated by assertPublicTarget —
+    // closes the redirect-to-internal SSRF (a public URL that 302s to
+    // 169.254.169.254 / localhost / a private IP). undici (server runtime)
+    // returns the real 3xx + Location under redirect:"manual".
+    // ponytail: DNS-rebinding TOCTOU between this check and undici's own resolve
+    // remains (pre-existing, mitigated by the Vercel egress boundary); pin the IP
+    // if that boundary is ever removed.
+    let currentUrl = targetUrl;
+    let res: Response;
+    for (let hop = 0; ; hop++) {
+      res = await fetch(currentUrl, {
+        signal: controller.signal,
+        redirect: "manual",
+        headers: { "user-agent": "ai-sec-tester/1.0 (+security-scan)" },
+      });
+      const isRedirect = res.status >= 300 && res.status < 400;
+      const location = isRedirect ? res.headers.get("location") : null;
+      if (!location || hop >= 5) break;
+      currentUrl = new URL(location, currentUrl).toString();
+      await assertPublicTarget(currentUrl, options); // re-validate each hop
+    }
     clearTimeout(timeout);
 
     signals.reachable = true;

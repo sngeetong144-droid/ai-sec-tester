@@ -82,6 +82,22 @@ export function decideScanAuthorization(
   return { authorized: true, reason: "admin session; case activated and paid" };
 }
 
+/**
+ * Sibling gate for the admin's own-target scan tool. This path is SEPARATE from
+ * the customer paid-case flow: the admin scans a public target they supply,
+ * with no case and no payment. It authorizes ONLY for an admin session and
+ * never touches / weakens decideScanAuthorization — the customer path still
+ * requires status "scanning" + paid. Strict `=== true`; deny by default.
+ */
+export function decideAdminSelfScan(input: {
+  isAdmin: boolean;
+}): ScanAuthorizationDecision {
+  if (input?.isAdmin !== true) {
+    return { authorized: false, reason: "caller is not an admin session" };
+  }
+  return { authorized: true, reason: "admin self-scan; admin session" };
+}
+
 /** Thrown by the scan choke point when the gate denies. HTTP callers map to 403. */
 export class ScanAuthorizationError extends Error {
   readonly status = 403;

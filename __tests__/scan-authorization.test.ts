@@ -9,6 +9,7 @@
 import { test, expect } from "bun:test";
 import {
   decideScanAuthorization,
+  decideAdminSelfScan,
   isAdminEmail,
 } from "../lib/command-center/admin";
 
@@ -57,6 +58,33 @@ test("fails closed on garbage / non-boolean isAdmin", () => {
     });
     expect(d.authorized).toBe(false);
   }
+});
+
+// ── admin self-scan gate (separate from the customer paid-case path) ──────────
+
+test("admin self-scan: allows an admin session with no case", () => {
+  const d = decideAdminSelfScan({ isAdmin: true });
+  expect(d.authorized).toBe(true);
+});
+
+test("admin self-scan: denies a non-admin caller", () => {
+  const d = decideAdminSelfScan({ isAdmin: false });
+  expect(d.authorized).toBe(false);
+});
+
+test("admin self-scan: fails closed on garbage / non-boolean isAdmin", () => {
+  const junk: unknown[] = ["true", 1, {}, null, undefined];
+  for (const j of junk) {
+    const d = decideAdminSelfScan({ isAdmin: j as boolean });
+    expect(d.authorized).toBe(false);
+  }
+});
+
+test("customer paid-case path still requires status scanning + paid", () => {
+  // The self-scan gate must not weaken the customer path.
+  expect(decideScanAuthorization({ isAdmin: true, caseRecord: { status: "approved", paid: true } }).authorized).toBe(false);
+  expect(decideScanAuthorization({ isAdmin: true, caseRecord: { status: "scanning", paid: false } }).authorized).toBe(false);
+  expect(decideScanAuthorization({ isAdmin: true, caseRecord: activatedPaid }).authorized).toBe(true);
 });
 
 test("admin allowlist is deny-by-default and case-insensitive", () => {

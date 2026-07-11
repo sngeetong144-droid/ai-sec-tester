@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { COLORS } from "@/app/command-center/_ui";
 import type { Counts } from "@/app/command-center/_data";
+import { signOut } from "@/app/auth/login/actions";
 
 /**
  * Fixed 242px console sidebar (PRD SIDEBAR NAV). Client component only because it
@@ -27,6 +28,10 @@ export function Sidebar({ counts }: { counts: Counts }) {
         { label: "Overview", href: "/command-center" },
         { label: "Workflow", href: "/command-center/workflow" },
       ],
+    },
+    {
+      title: "Tools",
+      items: [{ label: "Scan tool", href: "/command-center/scan" }],
     },
     {
       title: "Pipeline",
@@ -147,6 +152,25 @@ export function Sidebar({ counts }: { counts: Counts }) {
         <div style={{ fontSize: 11, color: COLORS.ink3, marginTop: 6, lineHeight: 1.4 }}>
           Open access during build. Locks behind admin login + MFA before production.
         </div>
+        <form action={signOut}>
+          <button
+            type="submit"
+            style={{
+              marginTop: 12,
+              width: "100%",
+              padding: "7px 10px",
+              borderRadius: 8,
+              border: `1px solid ${COLORS.hairline}`,
+              background: "transparent",
+              color: COLORS.ink2,
+              fontSize: 12.5,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Sign out
+          </button>
+        </form>
       </div>
     </aside>
   );
