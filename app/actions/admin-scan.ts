@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { ensureSessionId } from "@/lib/session";
 import { assertPublicTarget } from "@/lib/scan-engine";
 import { runEngineAndPersist } from "@/lib/scan-persistence";
@@ -62,12 +63,15 @@ export async function runAdminSelfScan(input: {
   // SSRF guard BEFORE touching the DB or the engine — a rejection produces no row.
   await assertPublicTarget(target);
 
+  // Service-role for the DB writes (0007 drops anon policies); safe only
+  // behind the admin gate above. Anon client kept just for user_id stamping.
+  const db = createServiceClient();
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: created, error: insErr } = await supabase
+  const { data: created, error: insErr } = await db
     .from("scans")
     .insert({
       target_url: target,
@@ -85,6 +89,6 @@ export async function runAdminSelfScan(input: {
   }
   const scanId = created.id as string;
 
-  await runEngineAndPersist(supabase, scanId, target, chatbot);
+  await runEngineAndPersist(db, scanId, target, chatbot);
   return scanId;
 }

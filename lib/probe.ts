@@ -131,6 +131,32 @@ export async function assertPublicTarget(
   }
 }
 
+/**
+ * fetch() that re-validates every redirect hop against the SSRF guard.
+ * A public target can 302 to a private/metadata address (e.g. 169.254.169.254);
+ * redirect:"follow" would chase it and surface the body. We follow manually and
+ * assertPublicTarget() on each Location before continuing. One guard here covers
+ * every scan tier, since all engines probe through probeTarget.
+ */
+async function ssrfGuardedFetch(
+  startUrl: string,
+  init: RequestInit,
+  options: ProbeOptions,
+  maxHops = 5,
+): Promise<Response> {
+  let url = startUrl;
+  for (let hop = 0; hop <= maxHops; hop++) {
+    const res = await fetch(url, { ...init, redirect: "manual" });
+    if (res.status < 300 || res.status >= 400) return res;
+    const location = res.headers.get("location");
+    if (!location) return res;
+    const next = new URL(location, url).toString();
+    await assertPublicTarget(next, options);
+    url = next;
+  }
+  throw new Error("Too many redirects.");
+}
+
 // ── deterministic hash ───────────────────────────────────────────────────────
 
 /** djb2 string hash → unsigned 32-bit int. Stable across runs and platforms. */
@@ -220,11 +246,14 @@ export async function probeTarget(
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch(targetUrl, {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: { "user-agent": "ai-sec-tester/1.0 (+security-scan)" },
-    });
+    const res = await ssrfGuardedFetch(
+      targetUrl,
+      {
+        signal: controller.signal,
+        headers: { "user-agent": "ai-sec-tester/1.0 (+security-scan)" },
+      },
+      options,
+    );
     clearTimeout(timeout);
 
     signals.reachable = true;

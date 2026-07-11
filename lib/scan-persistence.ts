@@ -1,8 +1,11 @@
 import { runScanEngine } from "@/lib/scan-engine";
 import type { ChatbotEndpointConfig } from "@/lib/real-scan-engine";
-import type { createClient } from "@/lib/supabase/server";
+import type { createServiceClient } from "@/lib/supabase/service";
 
-type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+// Service-role client: RLS is bypassed here (0007 drops the anon policies), so
+// AUTHORIZATION IS THE CALLER'S JOB — both callers gate before invoking
+// (executeScan: admin/cron + paid case; runAdminSelfScan: admin session).
+type SupabaseServiceClient = ReturnType<typeof createServiceClient>;
 
 /**
  * Runs the scan engine against `target` and persists results into an existing
@@ -15,7 +18,7 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
  * engine run and its persistence, so the mapping/finalize logic lives in one place.
  */
 export async function runEngineAndPersist(
-  supabase: SupabaseServerClient,
+  supabase: SupabaseServiceClient,
   scanId: string,
   target: string,
   chatbot: ChatbotEndpointConfig | null,

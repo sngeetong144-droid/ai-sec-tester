@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { ensureSessionId } from "@/lib/session";
 import { runEngineAndPersist } from "@/lib/scan-persistence";
 import type { ChatbotEndpointConfig } from "@/lib/real-scan-engine";
@@ -54,6 +55,11 @@ export async function executeScan(input: {
     throw new ScanAuthorizationError(decision.reason);
   }
 
+  // DB writes go through the service-role client (0007 removes the anon
+  // policies). RLS is bypassed, which is safe ONLY because the gate above
+  // already denied non-admin/non-cron callers. The anon server client is kept
+  // solely to resolve the caller's auth user for user_id stamping.
+  const db = createServiceClient();
   const supabase = await createClient();
   const sessionId =
     input.sessionId !== undefined ? input.sessionId : await ensureSessionId();
@@ -80,13 +86,13 @@ export async function executeScan(input: {
   // when the rescan path goes live.
   let scanId = caseRecord?.scan_id ?? null;
   if (scanId) {
-    const { error: reuseErr } = await supabase
+    const { error: reuseErr } = await db
       .from("scans")
       .update(scanRow)
       .eq("id", scanId);
     if (reuseErr) throw new Error(reuseErr.message);
   } else {
-    const { data: created, error: insErr } = await supabase
+    const { data: created, error: insErr } = await db
       .from("scans")
       .insert(scanRow)
       .select("id")
@@ -97,7 +103,7 @@ export async function executeScan(input: {
     scanId = created.id as string;
   }
 
-  await runEngineAndPersist(supabase, scanId, input.target, input.chatbot ?? null);
+  await runEngineAndPersist(db, scanId, input.target, input.chatbot ?? null);
 
   return scanId;
 }
@@ -118,8 +124,10 @@ export async function deleteScan(formData: FormData): Promise<void> {
 
   const id = String(formData.get("id") ?? "");
   if (!id) return;
-  const supabase = await createClient();
-  await supabase.from("scans").delete().eq("id", id);
+  // Service-role delete (0007 drops anon policies); safe only behind the
+  // admin gate above — RLS no longer backstops this.
+  const db = createServiceClient();
+  await db.from("scans").delete().eq("id", id);
   revalidatePath("/");
   redirect("/");
 }

@@ -21,8 +21,29 @@
 --   client and ONTO the SERVICE-ROLE server client (server-only; the service key
 --   must never reach the browser) — OR require login and stamp every scan with a
 --   real auth.uid() owner. Apply this migration only AFTER that cutover is
---   deployed and verified. Until then this file exists purely as the reviewed
---   lockdown, not a live change.
+--   deployed and verified.
+--
+--   CUTOVER STATUS (2026-07-11): AUTHORED IN CODE. All scans/scan_results
+--   reads/writes now go through the service-role client, each behind an
+--   app-level gate: executeScan/deleteScan (admin/cron gate), runAdminSelfScan
+--   (admin gate), runEngineAndPersist (callers gate), getScans (identity
+--   eq-filter, fail-closed), getScan (callers gate via scanOwnedByCaller /
+--   HMAC token / ownership-domain match), auth-callback claim (verified user +
+--   own session cookie). That cutover code is UNCOMMITTED as of 2026-07-11.
+--
+--   MANDATORY APPLY ORDER (violating it breaks live scans mid-run):
+--     1. Commit + deploy the service-role cutover (lib/queries.ts,
+--        lib/scan-persistence.ts, app/actions/scans.ts,
+--        app/actions/admin-scan.ts, app/auth/callback/route.ts).
+--     2. Verify a live scan run + Ops Console read against production.
+--     3. ONLY THEN apply this migration. Applying first drops
+--        "demo public access on scan_results" while deployed code still
+--        inserts scan_results via the anon client → scans stuck in
+--        'running' with silently-empty reports.
+--
+--   Live policy drift note: the live scans table does NOT carry the 0001
+--   policy name; it carries out-of-band "anon session access" and "auth users
+--   own scans" (see drops below). Both are dropped explicitly.
 --
 -- Owner column note: public.scans has no user_id column in the committed
 -- migrations (0001 never added one; the app writes user_id at runtime). This
@@ -41,7 +62,14 @@ alter table public.scans        enable row level security;
 alter table public.scan_results enable row level security;
 
 -- ── scans: per-owner (authenticated) + service-role ──────────────────────────
+-- Drop ALL known-live and migration-defined anon/legacy policies. Live DB
+-- (xgpywicrgcqnmkvahoke, pg_policies verified 2026-07-11) carries out-of-band
+-- policies "anon session access" (anon, ALL, using true) and "auth users own
+-- scans" (authenticated) — NOT "demo public access on scans". Dropping only
+-- the 0001 name would be a silent no-op and leave anon with full table access.
 drop policy if exists "demo public access on scans" on public.scans;
+drop policy if exists "anon session access"         on public.scans;
+drop policy if exists "auth users own scans"        on public.scans;
 
 drop policy if exists "scans owner access" on public.scans;
 create policy "scans owner access"
