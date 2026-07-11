@@ -148,6 +148,13 @@ export function Landing() {
               AI Sec <b>Tester</b>
             </span>
           </a>
+          {/* CSS-only mobile hamburger (checkbox hack — no client JS) */}
+          <input type="checkbox" id="nav-toggle" className="nav-toggle" aria-hidden="true" />
+          <label htmlFor="nav-toggle" className="nav-burger" aria-label="Open menu">
+            <span />
+            <span />
+            <span />
+          </label>
           <div className="nav-links">
             <a href="#how">How it works</a>
             <a href="#checks">What we check</a>
