@@ -1,0 +1,69 @@
+# AI Sec Tester — Positioning & Messaging
+
+Grounded in: app/_components/landing.tsx, lib/payment-links.ts, public/llms.txt (pricing corrected to live values — llms.txt is stale, code is source of truth).
+
+## 1. ICP & Personas
+
+**Category:** Point-in-time AI/LLM security scanner (OWASP LLM Top-10 aligned), request-then-scan model — not a monitoring platform, not a general pentest firm.
+
+**ICP:** Small-to-mid teams that shipped a customer-facing chatbot/AI assistant and have no dedicated AppSec function testing it for LLM-specific failure modes.
+
+**Personas:**
+- **Founder/indie SaaS builder** — shipped a support or sales bot fast (often on top of an LLM API), no security background, needs a pass/fail answer before a customer or investor asks "is this safe?"
+- **Product/eng lead at a small-mid company** — owns the chatbot, knows regular AppSec but not prompt-injection specifics, needs evidence to hand to a developer, not a 40-page consultant report
+- **Security engineer/consultant** — already runs defensive assessments, wants a fast automated first pass (OWASP LLM01/02/06/07/08 + jailbreak) before or instead of manual review, values the evidence-per-finding format
+
+## 2. Core Value Prop
+
+One sentence: AI Sec Tester runs automated OWASP LLM Top-10 checks against a live chatbot and returns a Pass/Fail scorecard with evidence and remediation steps, so a non-security team can find and fix its bot's prompt-injection and data-leak risks before an attacker does.
+
+## 3. Category
+
+"AI chatbot security scanner" — sits between doing nothing and hiring a full LLM red-team engagement. Not a WAF, not a runtime guardrail product, not a continuous monitoring SaaS (current product is scan-on-request, not always-on).
+
+## 4. Competitive Angle vs Generic Pentest/DAST Tools
+
+- **Generic DAST/web scanners** (Burp, ZAP, Nessus-class) test HTTP/app-layer vulnerabilities — SQLi, XSS, headers. They have no concept of a system prompt, a jailbreak, or "did the model leak its instructions." They will pass a chatbot that leaks your entire prompt to anyone who asks nicely.
+- **Manual LLM red-team engagements** are accurate but slow and priced for enterprise budgets (five figures, weeks of lead time). A founder shipping this quarter can't wait on that.
+- **AI Sec Tester's angle:** OWASP LLM Top-10-aligned checks specifically built for the failure modes unique to LLM apps (prompt injection, system prompt leakage, excessive agency, jailbreak bypass) — automated, non-invasive, results in seconds, no security background required to read the report. It is a first-pass filter, explicitly positioned as narrower and faster than a full red-team, not a replacement for one at the Enterprise tier (which adds human review).
+
+## 5. Pricing Narrative (live pricing: $47 / $197 / $497 one-time — request-first, no self-serve checkout)
+
+All tiers route through a scan-request form; the team reviews and confirms authorization to test the target before issuing payment link and running anything. No charge until approved.
+
+- **Normal — $47/scan:** "Get a real answer today." 5 OWASP LLM checks, Pass/Fail scorecard, branded PDF report, evidence + remediation per finding, priority processing. Positioned as the entry point for anyone who just wants to know where they stand — cheaper than one hour of a security consultant's time.
+- **Advanced — $197/scan (most popular):** "Full OWASP LLM Top-10 coverage, not a sample." Everything in Normal plus full Top-10 coverage and deeper probes per category. The natural default for a team that's actually shipping this bot to real customers and wants the complete picture, not a partial one.
+- **Enterprise — $497/chatbot:** "Bring in a human before you ship." Everything in Advanced plus identity verification, automated risk triage, human review before the scan runs, a full report, and one free re-scan after fixes are made — closing the loop from finding to verified fix. Priced for teams where a chatbot incident is a real business/compliance risk, not just an inconvenience.
+
+Narrative arc across tiers: Normal answers "is there a problem," Advanced answers "where exactly and how deep," Enterprise answers "did we actually fix it" — each tier maps to how much the team has riding on the answer being right.
+
+## 6. Top 8 Objections + Rebuttals
+
+1. **"We already have a pentest firm / security vendor."** — Ask if that vendor's last report mentioned prompt injection, system prompt leakage, or jailbreak resistance by name. Most generic AppSec vendors don't test for LLM-specific failure modes; this is a narrow, fast complement, not a replacement.
+2. **"Our chatbot is just customer support, not high-risk."** — Support bots are the most common target because they're customer-facing, unmonitored, and often connected to backend tools or knowledge bases — the OWASP LLM06/LLM08 checks exist because "just support" bots are exactly where secrets and excessive tool access leak.
+3. **"How do I know this won't break our production bot?"** — Checks are explicitly non-invasive, aligned to OWASP LLM Top-10 probing methodology, and every scan requires authorization confirmation before it runs against the target.
+4. **"$497 for Enterprise seems steep for a one-time scan."** — It includes identity verification, human review before the scan runs, a full report, and one free re-scan after fixes — the re-scan alone closes the loop other one-shot scanners don't offer.
+5. **"Why do I have to request a scan instead of just paying and running it?"** — Scanning a system without proof of ownership/authorization is illegal; the review step (usually within one business day) protects the customer from liability and protects third parties from unauthorized testing.
+6. **"We don't have security expertise to act on the results."** — The report is a plain-language Pass/Fail scorecard with evidence per finding and remediation guidance meant to be handed directly to a developer — no security background required to read or act on it.
+7. **"Can't I just ask ChatGPT/an LLM to jailbreak-test my own bot for free?"** — Ad hoc manual prompts are unstructured and undocumented; this runs OWASP LLM Top-10-aligned checks with evidence captured per finding, in a report you can show a customer, investor, or auditor.
+8. **"What if the scan finds nothing — did we waste the money?"** — A clean Pass/Fail scorecard aligned to OWASP LLM Top-10 is itself the deliverable: documented proof of due diligence you can point to, not just a private "we didn't check."
+
+## 7. One-liner / Elevator / Tagline Options
+
+**One-liners:**
+- "Find out if your chatbot is easy to jailbreak — before an attacker does."
+- "OWASP LLM Top-10 checks for your chatbot, in seconds."
+- "A Pass/Fail security scorecard for AI chatbots."
+
+**Elevator pitch:**
+AI Sec Tester runs automated, OWASP LLM Top-10-aligned checks — prompt injection, system prompt leakage, sensitive data disclosure, excessive agency, jailbreak bypass — against a chatbot you own or are authorized to test. You get a Pass/Fail scorecard with evidence per finding and plain-language remediation guidance, so you can fix real risks before a customer or attacker finds them for you. No security background required, results in seconds, starting at $47 per scan.
+
+**Tagline options:**
+- "Know your chatbot's risks before attackers do."
+- "Security scorecards for AI chatbots."
+- "Test it before they do."
+
+## Notes / open questions for review
+- llms.txt currently states stale pricing ($10/$10 monthly/$499) — should be updated to match lib/payment-links.ts ($47/$197/$497) as a follow-up fix, flagged here not actioned.
+- No real customer testimonials/case studies exist yet — social-proof section for any funnel copy needs a placeholder structure, not fabricated quotes or stats (hard ban on hollow social proof applies).
+- "Results in seconds" and "usually within one business day" (for request review) are two different clocks in the actual flow (scan runtime vs. authorization review) — keep these separated in downstream copy to avoid an implied bait-and-switch on speed.
