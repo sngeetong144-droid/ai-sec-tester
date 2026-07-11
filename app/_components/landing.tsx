@@ -47,8 +47,9 @@ const FLOW = [
 ];
 
 // Inline FAQ (accordion). Copy from the static design drop. The SEO FAQPage
-// JSON-LD is emitted separately by <SeoJsonLd> (app/_components/faq.tsx).
-const FAQS = [
+// JSON-LD is emitted by <SeoJsonLd> (app/_components/faq.tsx), which imports
+// this exact array so the schema can never drift from what humans read.
+export const FAQS = [
   { q: "Do I need to be technical to run a scan?", a: "No. You point the scanner at your chatbot, it runs the checks, and you get a plain-language Pass/Fail report with fixes. No security background needed." },
   { q: "What is OWASP LLM Top-10?", a: "It's the industry-standard list of the most critical security risks for applications built on large language models — the same failure modes real attackers target." },
   { q: "Why do I have to request a scan first?", a: "Scanning a system you don't own is illegal. Every request is reviewed to confirm you own or are authorized to test the target before any payment link is issued or scan runs — it protects you and us." },

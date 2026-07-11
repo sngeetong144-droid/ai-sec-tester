@@ -28,6 +28,46 @@ import { executeScan } from "@/app/actions/scans";
 
 type Supa = ReturnType<typeof createServiceClient>;
 
+const REPORT_BUCKET = process.env.SCAN_REPORT_BUCKET ?? "reports";
+const REPORT_URL_TTL_SECONDS = 60 * 60 * 24 * 30; // 30d — matches the free-rescan window.
+
+/**
+ * Upload the report body to Supabase Storage and return a signed URL.
+ * Additive + fail-soft: any error (bucket missing, storage disabled, absent
+ * env) logs a warning and returns null so the finalize path is unchanged.
+ * ponytail: the artifact IS the composed report email body (plain text).
+ * Upgrade to a rendered PDF/HTML here once a report generator exists.
+ */
+async function storeReportArtifact(
+  supabase: Supa,
+  requestId: string,
+  body: string,
+): Promise<string | null> {
+  try {
+    const path = `${requestId}.txt`;
+    const { error: upErr } = await supabase.storage
+      .from(REPORT_BUCKET)
+      .upload(path, body, { contentType: "text/plain; charset=utf-8", upsert: true });
+    if (upErr) {
+      console.warn(`report artifact upload skipped: ${upErr.message}`);
+      return null;
+    }
+    const { data, error: signErr } = await supabase.storage
+      .from(REPORT_BUCKET)
+      .createSignedUrl(path, REPORT_URL_TTL_SECONDS);
+    if (signErr || !data?.signedUrl) {
+      console.warn(`report signed-url skipped: ${signErr?.message ?? "no url"}`);
+      return null;
+    }
+    return data.signedUrl;
+  } catch (e) {
+    console.warn(
+      `report artifact delivery failed: ${e instanceof Error ? e.message : String(e)}`,
+    );
+    return null;
+  }
+}
+
 /** Minimal shape runScanForRequest needs off a scan_requests row. */
 export type RunScanRow = {
   id: string;
@@ -117,8 +157,16 @@ export async function runScanForRequest(
   // Finalize: cc_case scanning → complete, queue report email, close the request.
   await completeCase(ccCase.id);
   const view = await loadCase(ccCase.id);
-  if (view) await queueEmail(ccCase.id, composeEmail("report", view));
-  // report_url intentionally left null — signed-URL upload infra MISSING (flagged).
-  await supabase.from("scan_requests").update({ status: "complete" }).eq("id", req.id);
+  let reportUrl: string | null = null;
+  if (view) {
+    const report = composeEmail("report", view);
+    await queueEmail(ccCase.id, report);
+    // Store the report artifact + sign it; email SEND stays gated/queued above.
+    reportUrl = await storeReportArtifact(supabase, req.id, report.body);
+  }
+  await supabase
+    .from("scan_requests")
+    .update({ status: "complete", report_url: reportUrl })
+    .eq("id", req.id);
   return { status: "dispatched" };
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/login/actions";
 import { SiteFooter, HideOnHome } from "@/app/_components/site-footer";
@@ -104,6 +105,7 @@ export default async function RootLayout({
 
         {/* Site footer — suppressed on the public landing ("/"), which ships its own. */}
         <SiteFooter />
+        <Analytics />
       </body>
     </html>
   );

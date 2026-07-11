@@ -23,9 +23,9 @@ per finding and plain-language remediation guidance — in seconds.
 
 ## Pricing at a glance
 
-- Basic — $10 one-time per scan: Level 1 automated scan, 5 OWASP LLM checks, scorecard + PDF
-- Pro — $10/month (or $50 one-time annual report): recurring monthly scans, history & trend tracking
-- Enterprise — $499 one-time per chatbot: authorization-gated human review, full report + 1 re-scan
+- Normal — $47 per scan: 5 OWASP LLM checks, Pass/Fail scorecard, branded PDF, evidence + remediation per finding, priority processing
+- Advanced — $197 per scan: full OWASP LLM Top-10 coverage with deeper probes per category (most popular)
+- Enterprise — $497 per chatbot: identity verification, automated risk triage, human review before the scan, full report + 1 free re-scan after fixes
 
 ## Compliance
 

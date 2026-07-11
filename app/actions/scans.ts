@@ -10,6 +10,7 @@ import { getCase } from "@/lib/command-center/queries";
 import {
   isAdminSession,
   decideScanAuthorization,
+  decideAdminSelfScan,
   ScanAuthorizationError,
 } from "@/lib/command-center/admin";
 
@@ -101,7 +102,20 @@ export async function executeScan(input: {
   return scanId;
 }
 
+/**
+ * Delete a scan row. This is a `use server` action reachable by anyone who can
+ * POST the form, so it enforces the SAME deny-by-default admin gate as the scan
+ * engine (mirrors executeScan): only an admin session may delete. Without this,
+ * any visitor could delete any scan by id. Fail closed — a non-admin throws 403
+ * before the delete runs. Deletion is not tied to a case, so it uses the admin
+ * self-scan sibling gate (admin session, no paid case required).
+ */
 export async function deleteScan(formData: FormData): Promise<void> {
+  const decision = decideAdminSelfScan({ isAdmin: await isAdminSession() });
+  if (!decision.authorized) {
+    throw new ScanAuthorizationError(decision.reason);
+  }
+
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const supabase = await createClient();
