@@ -24,6 +24,12 @@ import type { ChatbotEndpointConfig } from "@/lib/real-scan-engine";
 
 export interface ScanEngineOptions {
   allowPrivateTarget?: boolean;
+  /**
+   * Admin self-scan only: skip the SG/MY licensing + sanctions JURISDICTION
+   * checks. SSRF / private-IP / scheme guards are unaffected. The customer
+   * paid-case path (executeScan) never sets this, so its country gate is intact.
+   */
+  allowRestrictedJurisdiction?: boolean;
   /** When set AND realScanEnabled(), interactive tests run for real against this endpoint. */
   chatbot?: ChatbotEndpointConfig | null;
 }
@@ -205,7 +211,14 @@ export async function assertPublicTarget(
     throw new Error("Scanning localhost is not permitted.");
   }
 
-  await assertJurisdictionAllowed(hostname, [], lookupCountryCode);
+  // Jurisdiction (SG/MY licence + sanctions) is a separate axis from SSRF; the
+  // admin self-scan opts out via allowRestrictedJurisdiction. All SSRF /
+  // private-IP checks below still run unconditionally.
+  const jurisdiction = options.allowRestrictedJurisdiction
+    ? async () => {}
+    : assertJurisdictionAllowed;
+
+  await jurisdiction(hostname, [], lookupCountryCode);
 
   // IP literal — check directly, no DNS needed
   if (isIP(hostname) !== 0) {
@@ -213,7 +226,7 @@ export async function assertPublicTarget(
       if (options.allowPrivateTarget) return;
       throw new Error("Scanning private or internal IP addresses is not permitted.");
     }
-    await assertJurisdictionAllowed(hostname, [hostname], lookupCountryCode);
+    await jurisdiction(hostname, [hostname], lookupCountryCode);
     return;
   }
 
@@ -225,7 +238,7 @@ export async function assertPublicTarget(
       if (options.allowPrivateTarget) return;
       throw new Error("Target hostname resolves to a private or internal IP address.");
     }
-    await assertJurisdictionAllowed(hostname, addresses, lookupCountryCode);
+    await jurisdiction(hostname, addresses, lookupCountryCode);
   } catch (err) {
     // Re-throw only our own security errors; DNS failures are handled gracefully by probeTarget
     if (

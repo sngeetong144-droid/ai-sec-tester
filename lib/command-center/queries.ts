@@ -94,6 +94,11 @@ async function transition(
   return data as CaseRecord;
 }
 
+/** intake -> approval. Triage review cleared; hands the case to the decision step. */
+export function advanceToApproval(id: string): Promise<CaseRecord | null> {
+  return transition(id, "approval", {}, { eventType: "SENT_TO_DECISION" });
+}
+
 /** approval -> approved. Opens the payment gate (paid stays false until activate). */
 export function approveCase(id: string): Promise<CaseRecord | null> {
   return transition(id, "approved", { paid: false }, { eventType: "REQUEST_APPROVED" });

@@ -23,6 +23,7 @@
  */
 
 import { assertPublicTarget, type ScanEngineOptions } from "@/lib/scan-engine";
+import { ssrfGuardedFetch } from "@/lib/probe";
 
 // Judge models — both cheap tiers. Judge calls are the only external cost.
 const OPENAI_JUDGE_MODEL = "gpt-4o-mini";
@@ -269,6 +270,71 @@ export function realScanEnabled(): boolean {
 
 type SendResult = { ok: true; reply: string } | { ok: false; error: string };
 
+// Field names chatbots commonly return the assistant text under. Order = priority.
+const REPLY_KEYS = [
+  "reply",
+  "output",
+  "text",
+  "message",
+  "answer",
+  "response",
+  "content",
+  "result",
+  "completion",
+  "data",
+];
+
+/**
+ * Pull the assistant's text out of an already-parsed JSON value, walking common
+ * envelopes (reply/output/text/…, OpenAI choices[0].message.content, arrays,
+ * one nesting layer). Returns null when nothing string-like is found.
+ */
+function pluckReply(value: unknown, depth = 0): string | null {
+  if (typeof value === "string") return value;
+  if (value == null || depth > 5) return null;
+  if (Array.isArray(value)) {
+    for (const el of value) {
+      const r = pluckReply(el, depth + 1);
+      if (r && r.trim()) return r;
+    }
+    return null;
+  }
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    for (const key of REPLY_KEYS) {
+      if (key in obj) {
+        const r = pluckReply(obj[key], depth + 1);
+        if (r && r.trim()) return r;
+      }
+    }
+    if ("choices" in obj) {
+      const r = pluckReply(obj.choices, depth + 1); // OpenAI: choices[].message.content / .text
+      if (r && r.trim()) return r;
+    }
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Auto-detect the chatbot's reply text. Plain-text bodies (e.g. n8n "Respond to
+ * Webhook") pass through; JSON bodies are unwrapped from their common shapes so
+ * the judge scores the actual message, not the envelope. Falls back to the raw
+ * body when the JSON has no recognizable reply field (better than silent empty).
+ */
+export function extractReply(raw: string): string {
+  const t = raw.trim();
+  if (!t) return "";
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(t);
+  } catch {
+    return t; // not JSON → plain-text reply
+  }
+  const plucked = pluckReply(parsed);
+  return plucked && plucked.trim() ? plucked : t;
+}
+
 /**
  * POST one probe to the chatbot endpoint. Reuses the SSRF guard before any
  * request. Never logs the auth token or the reply body.
@@ -304,18 +370,20 @@ export async function sendProbe(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.timeoutMs ?? PROBE_TIMEOUT_MS);
   try {
-    const res = await fetch(config.url, {
-      method: config.method || "POST",
-      headers,
-      body,
-      signal: controller.signal,
-      redirect: "follow",
-    });
+    // SSRF: follow redirects MANUALLY, re-validating each hop against
+    // assertPublicTarget — a public endpoint can 302 into a private/metadata
+    // address (169.254.169.254, localhost). redirect:"follow" would chase it and
+    // reflect the internal body into the report. Shared guard, same as probe.ts.
+    const res = await ssrfGuardedFetch(
+      config.url,
+      { method: config.method || "POST", headers, body, signal: controller.signal },
+      options,
+    );
     const text = (await res.text()).slice(0, MAX_REPLY_CHARS);
     if (!res.ok) {
       return { ok: false, error: `Endpoint returned HTTP ${res.status}.` };
     }
-    return { ok: true, reply: text };
+    return { ok: true, reply: extractReply(text) };
   } catch {
     return { ok: false, error: "Endpoint request failed (offline, blocked, or timed out)." };
   } finally {

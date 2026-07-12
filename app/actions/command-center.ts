@@ -5,17 +5,25 @@ import { requireAdmin } from "@/lib/command-center/access";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import { recordCaseAudit } from "@/lib/audit-log";
-import { runScanForRequest, type RunScanRow } from "@/lib/command-center/run-scan";
+import {
+  runScanForRequest,
+  deliverCaseReport,
+  type RunScanRow,
+} from "@/lib/command-center/run-scan";
 import {
   approveCase,
   rejectCase,
-  activateCase,
+  advanceToApproval,
   completeCase,
 } from "@/lib/command-center/queries";
 import { loadCase } from "@/app/command-center/_data";
 import { composeEmail, queueEmail } from "@/app/command-center/_email";
+import { deliverComposedEmail } from "@/lib/email-templates";
 import { executeScan } from "@/app/actions/scans";
-import { approveScanRequestPayment } from "@/app/actions/scan-request-lifecycle";
+import {
+  approveScanRequestPayment,
+  markRequestPaid,
+} from "@/app/actions/scan-request-lifecycle";
 
 /**
  * Command-center mutations (server actions). EVERY action calls requireAdmin()
@@ -67,6 +75,19 @@ export async function ingestIntakeAction(formData: FormData): Promise<void> {
 }
 
 /**
+ * intake → approval. A freshly-ingested case lands in `intake` (triage review);
+ * the Approve/Reject decision only renders at `approval`. This is the missing
+ * link that made the whole downstream lifecycle unreachable — it clears triage
+ * and hands the case to the decision step. Audit-logged via the transition.
+ */
+export async function advanceToApprovalAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("caseId") ?? "");
+  await advanceToApproval(id);
+  revalidateConsole();
+}
+
+/**
  * approval → approved; stamp the linked scan_request with its payment link
  * (status approved_awaiting_payment + stripe_client_reference_id +
  * payment_link_sent_at), then queue the approval email carrying that EXACT
@@ -98,6 +119,7 @@ export async function approveCaseAction(formData: FormData): Promise<void> {
     if (pay) composed.body = composed.body.replace(pay.baseUrl, pay.url);
   }
   await queueEmail(id, composed);
+  await deliverComposedEmail(composed);
   revalidateConsole();
 }
 
@@ -110,45 +132,11 @@ export async function rejectCaseAction(formData: FormData): Promise<void> {
   const updated = await rejectCase(id, reason);
   if (!updated) return;
   const view = await loadCase(id);
-  if (view) await queueEmail(id, composeEmail("reject", view, { reason }));
-  revalidateConsole();
-}
-
-/**
- * approved → scanning. Confirms payment (simulates the Stripe webhook), creates
- * the linked scans record in `pending`, and activates the case. No email, no
- * charge. The scan engine is a separate gated component — it is NOT run here;
- * the scans row stays `pending` until an activated case invokes the engine.
- */
-export async function activateCaseAction(formData: FormData): Promise<void> {
-  await requireAdmin();
-  const id = String(formData.get("caseId") ?? "");
-  const view = await loadCase(id);
-  if (!view) return;
-
-  let scanId = view.case.scan_id;
-  if (!scanId) {
-    const supabase = createServiceClient();
-    const { data: scan, error } = await supabase
-      .from("scans")
-      .insert({
-        target_url: view.req?.target_url ?? "",
-        target_label: view.req?.company ?? null,
-        email: view.req?.email ?? null,
-        authorized: true,
-        status: "pending",
-        tests_total: 5,
-      })
-      .select("id")
-      .maybeSingle();
-    if (error || !scan) {
-      console.error("activateCaseAction scan insert error:", error?.message);
-      return;
-    }
-    scanId = scan.id as string;
+  if (view) {
+    const composed = composeEmail("reject", view, { reason });
+    await queueEmail(id, composed);
+    await deliverComposedEmail(composed);
   }
-
-  await activateCase(id, scanId);
   revalidateConsole();
 }
 
@@ -242,6 +230,12 @@ export async function manualActivateScanAction(formData: FormData): Promise<void
     return;
   }
 
+  // Mark the request paid — idempotent: flips approved_awaiting_payment →
+  // paid_scanning only (a duplicate or any other status no-ops). Keeps the
+  // scan_requests payment lifecycle in sync with this manual activation even
+  // though runScanForRequest itself keys off the cc_cases state.
+  await markRequestPaid(requestId);
+
   try {
     const who = await adminEmail();
     const outcome = await runScanForRequest(supabase, req as RunScanRow, {});
@@ -261,14 +255,31 @@ export async function manualActivateScanAction(formData: FormData): Promise<void
   revalidateConsole();
 }
 
-/** scanning → complete; stamp report delivery; queue the report email. */
+/**
+ * scanning → complete; store the report artifact (fail-soft → signed URL),
+ * stamp scan_requests.report_url, queue + deliver the report email. Routes
+ * through the SAME deliverCaseReport helper the cron/manual finalize uses, so
+ * the pure-console "Generate & email report" button now also produces a
+ * downloadable report_url instead of leaving it null.
+ */
 export async function deliverCaseAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("caseId") ?? "");
   const updated = await completeCase(id);
   if (!updated) return;
   const view = await loadCase(id);
-  if (view) await queueEmail(id, composeEmail("report", view));
+  if (!view) {
+    revalidateConsole();
+    return;
+  }
+  const supabase = createServiceClient();
+  const reportUrl = await deliverCaseReport(supabase, view);
+  if (view.req?.id) {
+    await supabase
+      .from("scan_requests")
+      .update({ status: "complete", report_url: reportUrl })
+      .eq("id", view.req.id);
+  }
   revalidateConsole();
 }
 
@@ -287,6 +298,10 @@ export async function requestDisclosureAction(formData: FormData): Promise<void>
   }
   await recordCaseAudit({ caseId: id, eventType: "DISCLOSURE_REQUESTED" });
   const view = await loadCase(id);
-  if (view) await queueEmail(id, composeEmail("disclosure", view));
+  if (view) {
+    const composed = composeEmail("disclosure", view);
+    await queueEmail(id, composed);
+    await deliverComposedEmail(composed);
+  }
   revalidateConsole();
 }

@@ -1,8 +1,9 @@
 import "server-only";
 import type { createServiceClient } from "@/lib/supabase/service";
 import { activateCase, completeCase } from "@/lib/command-center/queries";
-import { loadCase } from "@/app/command-center/_data";
+import { loadCase, type CaseView } from "@/app/command-center/_data";
 import { composeEmail, queueEmail } from "@/app/command-center/_email";
+import { deliverComposedEmail } from "@/lib/email-templates";
 import { executeScan } from "@/app/actions/scans";
 
 /**
@@ -38,7 +39,7 @@ const REPORT_URL_TTL_SECONDS = 60 * 60 * 24 * 30; // 30d — matches the free-re
  * ponytail: the artifact IS the composed report email body (plain text).
  * Upgrade to a rendered PDF/HTML here once a report generator exists.
  */
-async function storeReportArtifact(
+export async function storeReportArtifact(
   supabase: Supa,
   requestId: string,
   body: string,
@@ -154,19 +155,38 @@ export async function runScanForRequest(
     cronSecret: opts.cronSecret,
   });
 
-  // Finalize: cc_case scanning → complete, queue report email, close the request.
+  // Finalize: cc_case scanning → complete, queue+deliver report email, close request.
   await completeCase(ccCase.id);
   const view = await loadCase(ccCase.id);
-  let reportUrl: string | null = null;
-  if (view) {
-    const report = composeEmail("report", view);
-    await queueEmail(ccCase.id, report);
-    // Store the report artifact + sign it; email SEND stays gated/queued above.
-    reportUrl = await storeReportArtifact(supabase, req.id, report.body);
-  }
+  const reportUrl = view ? await deliverCaseReport(supabase, view) : null;
   await supabase
     .from("scan_requests")
     .update({ status: "complete", report_url: reportUrl })
     .eq("id", req.id);
   return { status: "dispatched" };
+}
+
+/**
+ * COMPLETE → REPORT: the single report-delivery step, shared by the cron/manual
+ * finalize (runScanForRequest) and the pure-console "Generate & email report"
+ * button (deliverCaseAction). Composes the report email, stores the report
+ * artifact to Storage (fail-soft → signed URL or null when the bucket is
+ * absent), queues it to cc_email_log (audit), and attempts live delivery
+ * (behind the CC_EMAIL_SEND_ENABLED + RESEND_API_KEY gate). Returns the signed
+ * report URL, or null when no bucket/artifact — the email still sends with the
+ * inline verdict summary (graceful degrade). Does NOT mutate scan_requests;
+ * the caller decides how to stamp report_url/status.
+ */
+export async function deliverCaseReport(
+  supabase: Supa,
+  view: CaseView,
+): Promise<string | null> {
+  const report = composeEmail("report", view);
+  const requestId = view.req?.id ?? null;
+  const reportUrl = requestId
+    ? await storeReportArtifact(supabase, requestId, report.body)
+    : null;
+  await queueEmail(view.case.id, report);
+  await deliverComposedEmail(report, reportUrl ? { reportUrl } : undefined);
+  return reportUrl;
 }

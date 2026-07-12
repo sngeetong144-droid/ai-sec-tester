@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { COLORS } from "@/app/command-center/_ui";
-import { runAdminSelfScan } from "@/app/actions/admin-scan";
+import { runAdminSelfScan, type AdminScanMode } from "@/app/actions/admin-scan";
 
 /**
  * Admin scan tool: runs the real OWASP engine against a public target the
@@ -15,7 +15,7 @@ export function ScanTool() {
   const router = useRouter();
   const [target, setTarget] = useState("");
   const [label, setLabel] = useState("");
-  const [chatbot, setChatbot] = useState(false);
+  const [mode, setMode] = useState<AdminScanMode>("passive");
   const [bodyTemplate, setBodyTemplate] = useState("");
   const [authToken, setAuthToken] = useState("");
   const [running, setRunning] = useState(false);
@@ -29,7 +29,7 @@ export function ScanTool() {
       const scanId = await runAdminSelfScan({
         target: target.trim(),
         label: label.trim() || undefined,
-        chatbot,
+        mode,
         bodyTemplate: bodyTemplate.trim() || undefined,
         authToken: authToken.trim() || undefined,
       });
@@ -65,9 +65,20 @@ export function ScanTool() {
             disabled={running}
             value={target}
             onChange={(e) => setTarget(e.target.value)}
-            placeholder="https://example.com"
+            placeholder={
+              mode === "endpoint"
+                ? "https://api.example.com/chat"
+                : "https://example.com"
+            }
             style={inputStyle}
           />
+          <p style={{ margin: "6px 0 0", fontSize: 11.5, color: COLORS.ink3, lineHeight: 1.5 }}>
+            {mode === "endpoint"
+              ? "Direct chatbot message endpoint (webhook / API that takes a message and returns a reply)."
+              : mode === "website"
+                ? "A page that hosts a chatbot — the endpoint is auto-discovered from the page; if none is found the scan fails loudly."
+                : "Any public page — transport headers and exposed-secret checks only, no chatbot probing."}
+          </p>
         </div>
 
         <div>
@@ -86,23 +97,23 @@ export function ScanTool() {
         </div>
 
         <div>
-          <label style={{ display: "flex", alignItems: "flex-start", gap: 9, cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              disabled={running}
-              checked={chatbot}
-              onChange={(e) => setChatbot(e.target.checked)}
-              style={{ marginTop: 2 }}
-            />
-            <span style={{ fontSize: 12.5, color: COLORS.ink2, lineHeight: 1.5 }}>
-              Target is a <strong>chatbot endpoint</strong> — run the interactive OWASP-LLM
-              probes (prompt injection, jailbreak, system-prompt leak, data exfiltration,
-              unsafe content). Leave off for passive transport/secret checks only.
-            </span>
+          <label htmlFor="mode" style={labelStyle}>
+            Scan mode
           </label>
+          <select
+            id="mode"
+            disabled={running}
+            value={mode}
+            onChange={(e) => setMode(e.target.value as AdminScanMode)}
+            style={inputStyle}
+          >
+            <option value="passive">Passive — transport &amp; secret checks only</option>
+            <option value="endpoint">Chatbot endpoint — probe this URL directly</option>
+            <option value="website">Website — discover the chatbot on this page</option>
+          </select>
         </div>
 
-        {chatbot && (
+        {mode !== "passive" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingLeft: 26 }}>
             <div>
               <label htmlFor="bodyTemplate" style={labelStyle}>

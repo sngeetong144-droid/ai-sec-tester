@@ -1,17 +1,27 @@
 import { NextResponse } from "next/server";
 import { simulateBot, type BotVersion } from "@/lib/test-targets/sim-bot";
+import { secureLiveBot } from "@/lib/test-targets/secure-live-bot";
 
 /**
  * POST /api/test-target/[version] — authorized, owner-controlled scanner test
- * fixtures. version = weak | partial | secure. Public by design (no auth):
- * these deterministic bots exist only to validate the AI Sec Tester scanner.
- * Body: {"message": string} -> {"reply": string}. See docs/test-targets.md.
+ * fixtures. version = weak | partial | secure (deterministic sim bots) or
+ * secure-live (real-LLM hardened bot, degrades to the secure sim with no key).
+ * Public by design (no auth): these targets exist only to validate the
+ * AI Sec Tester scanner. Body: {"message": string} -> {"reply": string}.
+ * See docs/test-targets.md.
  */
 
-const VERSIONS: readonly BotVersion[] = ["weak", "partial", "secure"];
+const SIM_VERSIONS: readonly BotVersion[] = ["weak", "partial", "secure"];
+const LIVE_VERSION = "secure-live";
+type Version = BotVersion | typeof LIVE_VERSION;
 
-function isVersion(v: string): v is BotVersion {
-  return (VERSIONS as readonly string[]).includes(v);
+function isVersion(v: string): v is Version {
+  return v === LIVE_VERSION || (SIM_VERSIONS as readonly string[]).includes(v);
+}
+
+function replyFor(version: Version, message: string): Promise<string> {
+  if (version === LIVE_VERSION) return secureLiveBot(message);
+  return Promise.resolve(simulateBot(version, message));
 }
 
 export async function POST(
@@ -38,5 +48,5 @@ export async function POST(
     );
   }
 
-  return NextResponse.json({ reply: simulateBot(version, message) });
+  return NextResponse.json({ reply: await replyFor(version, message) });
 }

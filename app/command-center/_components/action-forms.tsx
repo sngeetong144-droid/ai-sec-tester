@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import {
   approveCaseAction,
-  activateCaseAction,
+  advanceToApprovalAction,
   runScanAction,
   deliverCaseAction,
   requestDisclosureAction,
@@ -47,11 +47,11 @@ export function ApproveForm({ caseId }: { caseId: string }) {
   );
 }
 
-export function ActivateForm({ caseId }: { caseId: string }) {
+export function AdvanceForm({ caseId }: { caseId: string }) {
   return (
-    <form action={activateCaseAction} style={{ display: "inline" }}>
+    <form action={advanceToApprovalAction} style={{ display: "inline" }}>
       <input type="hidden" name="caseId" value={caseId} />
-      <SubmitButton variant="accent">Confirm payment &amp; activate</SubmitButton>
+      <SubmitButton variant="accent">Clear triage &amp; send to decision</SubmitButton>
     </form>
   );
 }

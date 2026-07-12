@@ -4,13 +4,16 @@ import { resolvePaymentLink } from "@/lib/payment-links";
 import type { CaseView } from "@/app/command-center/_data";
 
 /**
- * Email composition + QUEUE for the console (server-only).
+ * Email composition + QUEUE (audit log) for the console (server-only).
  *
- * HARD GATE: nothing here sends. composeEmail() renders the body from the PRD
- * template + resolved merge tokens; queueEmail() writes ONE cc_email_log row with
- * the composed text. Real outbound (SES/Resend) is a Creator-gated action wired
- * later — the console only records "QUEUED — NOT SENT". From address is fixed to
- * the SES sender the PRD specifies.
+ * composeEmail() renders the body from the PRD template + resolved merge tokens.
+ * queueEmail() writes ONE cc_email_log row — the retained audit trail — and does
+ * NOT send. Actual delivery is owned by ONE sender, deliverComposedEmail
+ * (lib/email-templates.ts), behind the CC_EMAIL_SEND_ENABLED + RESEND_API_KEY
+ * launch gate. Every lifecycle path that queues also calls deliverComposedEmail,
+ * so there is exactly one send per email and the customer-facing gate governs it.
+ * (queueEmail previously also sent via lib/email.sendEmail — that caused
+ * double-sends and bypassed the launch gate; removed.)
  */
 
 export const FROM_ADDRESS = "no-reply@thesoulsofai.com";
@@ -144,7 +147,12 @@ export function composeEmail(
   };
 }
 
-/** Write the composed email to cc_email_log (QUEUED — never sent). */
+/**
+ * Record the composed email to cc_email_log (audit trail). Log-only — it does
+ * NOT send. Delivery is owned by deliverComposedEmail (the single gated sender);
+ * every caller that queues also delivers. The log insert is the durable source of
+ * truth for "what the console fired". Never throws on a missing recipient.
+ */
 export async function queueEmail(caseId: string, composed: ComposedEmail): Promise<void> {
   const supabase = createServiceClient();
   const { error } = await supabase.from("cc_email_log").insert({

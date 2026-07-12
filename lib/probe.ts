@@ -11,6 +11,13 @@ import { assertJurisdictionAllowed } from "@/lib/jurisdiction-policy";
 
 export interface ProbeOptions {
   allowPrivateTarget?: boolean;
+  /**
+   * Admin self-scan only: skip the SG/MY licensing + sanctions JURISDICTION
+   * checks (the operator is scanning a target they chose). SSRF / private-IP /
+   * scheme guards are NOT affected — those always run. Never set on the
+   * customer path.
+   */
+  allowRestrictedJurisdiction?: boolean;
 }
 
 // ── SSRF guard ────────────────────────────────────────────────────────────────
@@ -100,14 +107,20 @@ export async function assertPublicTarget(
     throw new Error("Scanning localhost is not permitted.");
   }
 
-  await assertJurisdictionAllowed(hostname, [], lookupCountryCode);
+  // Jurisdiction (SG/MY licence + sanctions) is a SEPARATE axis from SSRF; the
+  // admin self-scan opts out of it. SSRF/private-IP guards below always run.
+  const jurisdiction = options.allowRestrictedJurisdiction
+    ? async () => {}
+    : assertJurisdictionAllowed;
+
+  await jurisdiction(hostname, [], lookupCountryCode);
 
   if (isIP(hostname) !== 0) {
     if (isPrivateIp(hostname)) {
       if (options.allowPrivateTarget) return;
       throw new Error("Scanning private or internal IP addresses is not permitted.");
     }
-    await assertJurisdictionAllowed(hostname, [hostname], lookupCountryCode);
+    await jurisdiction(hostname, [hostname], lookupCountryCode);
     return;
   }
 
@@ -118,7 +131,7 @@ export async function assertPublicTarget(
       if (options.allowPrivateTarget) return;
       throw new Error("Target hostname resolves to a private or internal IP address.");
     }
-    await assertJurisdictionAllowed(hostname, addresses, lookupCountryCode);
+    await jurisdiction(hostname, addresses, lookupCountryCode);
   } catch (err) {
     if (
       err instanceof Error &&
@@ -138,7 +151,7 @@ export async function assertPublicTarget(
  * assertPublicTarget() on each Location before continuing. One guard here covers
  * every scan tier, since all engines probe through probeTarget.
  */
-async function ssrfGuardedFetch(
+export async function ssrfGuardedFetch(
   startUrl: string,
   init: RequestInit,
   options: ProbeOptions,

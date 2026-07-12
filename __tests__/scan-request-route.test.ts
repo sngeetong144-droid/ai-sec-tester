@@ -23,6 +23,8 @@ import * as realTriage from "../lib/triage";
 let targetCountry: string | null = null;
 let lastInsert: Record<string, unknown> | null = null;
 let insertCalled = 0;
+let alertCalls: Array<Record<string, unknown>> = [];
+let alertShouldThrow = false;
 
 mock.module("next/headers", () => ({
   headers: async () => new Headers({ "x-forwarded-for": "203.0.113.9", "user-agent": "test-agent" }),
@@ -61,6 +63,14 @@ mock.module("@/lib/supabase/service", () => ({
 
 mock.module("@/lib/audit-log", () => ({ recordScanAudit: async () => {} }));
 
+mock.module("@/lib/email", () => ({
+  sendNewRequestAlert: async (params: Record<string, unknown>) => {
+    alertCalls.push(params);
+    if (alertShouldThrow) throw new Error("resend down");
+    return { ok: true };
+  },
+}));
+
 // Dynamic import AFTER mocks so the whole route graph binds to the mocked registry.
 const { POST } = await import("../app/api/scan-request/route");
 const { __resetRateLimit } = await import("../lib/rate-limit");
@@ -83,6 +93,8 @@ beforeEach(() => {
   targetCountry = null;
   lastInsert = null;
   insertCalled = 0;
+  alertCalls = [];
+  alertShouldThrow = false;
   __resetRateLimit();
 });
 
@@ -134,6 +146,35 @@ test("licence-required target → pending_review, NOT rejected", async () => {
   expect(lastInsert?.status).toBe("pending_review");
   const flags = lastInsert?.triage_flags as Array<{ code: string }>;
   expect(flags.some((f) => f.code === "LICENSE_RESTRICTED_TARGET")).toBe(true);
+});
+
+test("successful insert → exactly one operator alert with request fields", async () => {
+  targetCountry = "US";
+  const res = await callPost({ ...VALID });
+  expect(res.status).toBe(200);
+  expect(insertCalled).toBe(1);
+  expect(alertCalls.length).toBe(1);
+  expect(alertCalls[0]?.requestId).toBe("test-id");
+  expect(alertCalls[0]?.requesterEmail).toBe(VALID.email);
+  expect(alertCalls[0]?.status).toBe("pending_review");
+});
+
+test("operator alert failure does NOT break the 200 (best-effort)", async () => {
+  targetCountry = "US";
+  alertShouldThrow = true;
+  const res = await callPost({ ...VALID });
+  expect(res.status).toBe(200);
+  expect(insertCalled).toBe(1);
+  expect(alertCalls.length).toBe(1);
+});
+
+test("failed insert → no operator alert", async () => {
+  // Force the insert to error by pointing target at a comprehensively-sanctioned
+  // country is still a successful insert; instead assert the alert is gated behind
+  // insert success: a 400 (missing consent) never reaches the alert.
+  const res = await callPost({ ...VALID, authorized: false });
+  expect(res.status).toBe(400);
+  expect(alertCalls.length).toBe(0);
 });
 
 test("clean request → pending_review with server-resolved + claimed geo persisted", async () => {

@@ -11,7 +11,7 @@ import { Badge, COLORS, Label, Mono } from "@/app/command-center/_ui";
 import { DrawerCloseLink } from "@/app/command-center/_components/drawer-close";
 import {
   ApproveForm,
-  ActivateForm,
+  AdvanceForm,
   RunScanForm,
   DeliverForm,
   DisclosureForm,
@@ -292,14 +292,16 @@ export async function Drawer({ view }: { view: CaseView }) {
           )}
           {c.status === "intake" && (
             <>
+              <AdvanceForm caseId={c.id} />
               <RejectButton caseId={c.id} />
               {(c.subscribed || req?.subscribed_platform) && c.disclosure_state !== "informed" && <DisclosureForm caseId={c.id} />}
             </>
           )}
           {c.status === "approved" && (
             <>
-              <ActivateForm caseId={c.id} />
-              {/* Fallback when the payment webhook never fired (stuck in approved). */}
+              {/* Marks the case paid AND runs the scan end-to-end. This is the
+                  reliable path when the payment webhook never fired (external
+                  FastPayDirect links) — admin confirms out-of-band payment. */}
               <ManualActivateButton caseId={c.id} />
             </>
           )}

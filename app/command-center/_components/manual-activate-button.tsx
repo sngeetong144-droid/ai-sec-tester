@@ -40,7 +40,7 @@ export function ManualActivateButton({ caseId }: { caseId: string }) {
           cursor: "pointer",
         }}
       >
-        Payment confirmed — activate scan manually
+        Confirm payment &amp; run scan
       </button>
     </form>
   );

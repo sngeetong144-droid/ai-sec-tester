@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { queueEmail } from "@/app/command-center/_email";
+import { deliverComposedEmail } from "@/lib/email-templates";
 import { runScanForRequest } from "@/lib/command-center/run-scan";
 import { resolvePaymentLink } from "@/lib/payment-links";
 import { buildPaymentUrl, paymentCountdown } from "@/app/actions/scan-request-lifecycle";
@@ -148,8 +149,8 @@ async function handleStale(supabase: Supa, req: Row): Promise<"auto_closed" | "r
       ? buildPaymentUrl(link.url, req.id, req.email)
       : "(payment link unavailable)";
     const ref = `CASE-${caseId.slice(0, 8)}`;
-    await queueEmail(caseId, {
-      kind: "approval", // cc_email_log CHECK allows approval|reject|report|disclosure
+    const composed = {
+      kind: "approval" as const, // cc_email_log CHECK allows approval|reject|report|disclosure
       toEmail: req.email ?? "",
       subject: `Reminder: your AI security test payment is pending (${ref})`,
       body:
@@ -159,7 +160,9 @@ async function handleStale(supabase: Supa, req: Row): Promise<"auto_closed" | "r
         `Reference: ${ref}\n\n` +
         `This request auto-closes if payment isn't received within 14 days of approval.\n\n` +
         `— AI Sec Tester`,
-    });
+    };
+    await queueEmail(caseId, composed);
+    await deliverComposedEmail(composed);
     return "reminded";
   }
 

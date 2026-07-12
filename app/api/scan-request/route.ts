@@ -16,6 +16,7 @@ import {
 } from "@/lib/jurisdiction-review";
 import { resolveTargetGeo } from "@/lib/geo";
 import { rateLimitScanRequest } from "@/lib/rate-limit";
+import { sendNewRequestAlert } from "@/lib/email";
 
 /**
  * POST /api/scan-request — public scan-request intake for the
@@ -289,6 +290,23 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[scan-request] audit log failed:", err);
+  }
+
+  // Notify the operator (one send per request, inline — no retry loop). Best-effort:
+  // an email failure must never turn a saved request into a 500.
+  try {
+    await sendNewRequestAlert({
+      requestId: inserted.id as string,
+      requesterName: name,
+      requesterEmail: email,
+      company: body.company?.trim() || null,
+      targetUrl: target,
+      status,
+      triageVerdict: triage.verdict,
+      triageScore: triage.score,
+    });
+  } catch (err) {
+    console.error("[scan-request] operator alert failed:", err);
   }
 
   // Uniform response: never reveal auto-decline/hold to the public page. The id
