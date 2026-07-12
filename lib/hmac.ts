@@ -31,6 +31,10 @@ export function makeReportToken(requestId: string): string {
   return sign(`report:${requestId}`);
 }
 
+export function verifyReportToken(requestId: string, token: string): boolean {
+  return verify(`report:${requestId}`, token);
+}
+
 export function makeReScanToken(requestId: string): string {
   return sign(`rescan:${requestId}`);
 }

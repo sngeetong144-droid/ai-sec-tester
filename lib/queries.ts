@@ -1,7 +1,33 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { readSessionId } from "@/lib/session";
+import { verifyReportToken } from "@/lib/hmac";
 import type { Scan, ScanResultRow, ScanWithResults } from "@/lib/types";
+
+/**
+ * Resolve the enterprise request an HMAC report token authorizes, or null.
+ * The token IS the authorization: an enterprise customer viewing their report
+ * is not logged in (no session cookie), so the report page and the PDF route
+ * both trust this signed token instead of scanOwnedByCaller. Verifies the HMAC
+ * before returning so a forged token maps to nothing. Shared by the report page
+ * and /api/scans/[id]/report.
+ */
+export async function enterpriseRequestForReportToken(
+  token: string,
+): Promise<{ id: string; scan_id: string | null } | null> {
+  const supabase = await createClient();
+  const { data: rows } = await supabase.rpc(
+    "get_enterprise_request_by_report_token",
+    { p_token: token },
+  );
+  const req = (Array.isArray(rows) ? rows[0] : rows) as
+    | { id: string; scan_id: string | null }
+    | null
+    | undefined;
+  if (!req) return null;
+  if (!verifyReportToken(req.id, token)) return null;
+  return req;
+}
 
 /**
  * Recent scans for the current visitor.

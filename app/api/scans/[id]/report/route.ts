@@ -1,4 +1,4 @@
-import { getScan, scanOwnedByCaller } from "@/lib/queries";
+import { getScan, scanOwnedByCaller, enterpriseRequestForReportToken } from "@/lib/queries";
 import { consumerOptionsFor, remediationStepsFor } from "@/lib/remediation-guidance";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 
@@ -10,15 +10,24 @@ export const dynamic = "force-dynamic";
  * "Download PDF report" link produces an actual .pdf file.
  */
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
 
-  // IDOR guard: this endpoint is keyed only on the scan UUID. Serve the PDF only to
-  // the caller who owns the scan (their session cookie / user_id). 404 (not 403) so
-  // a non-owner can't even confirm the id exists.
-  if (!(await scanOwnedByCaller(id))) {
+  // Authorization — two paths, both 404 (not 403) on failure so a non-owner can't
+  // even confirm the id exists (this endpoint is keyed only on the scan UUID = IDOR):
+  //   1. HMAC report token (?token=...): the enterprise customer is NOT logged in,
+  //      so the report email's signed token authorizes their own scan's PDF. Valid
+  //      only when the token resolves to a request whose scan_id === this id.
+  //   2. Session ownership: an in-app caller (session cookie / user_id) who owns it.
+  const token = new URL(req.url).searchParams.get("token");
+  let authorized = false;
+  if (token) {
+    const owner = await enterpriseRequestForReportToken(token);
+    authorized = owner?.scan_id === id;
+  }
+  if (!authorized && !(await scanOwnedByCaller(id))) {
     return new Response("Scan not found", { status: 404 });
   }
 

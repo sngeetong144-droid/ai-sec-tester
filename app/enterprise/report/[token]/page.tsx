@@ -76,7 +76,7 @@ export default async function ReportPage({
             </p>
           </div>
           <a
-            href={`/api/scans/${scan.id}/report`}
+            href={`/api/scans/${scan.id}/report?token=${token}`}
             className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 shrink-0"
           >
             Download PDF

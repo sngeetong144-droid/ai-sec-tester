@@ -29,6 +29,11 @@ import { executeScan } from "@/app/actions/scans";
 
 type Supa = ReturnType<typeof createServiceClient>;
 
+// Bounded auto-retry for a paid scan whose engine run failed. A transient failure
+// (target blip, LLM-judge timeout) previously stuck the case in 'failed' forever
+// with no retry; a permanent failure must still stop and fall to manual review.
+const MAX_SCAN_ATTEMPTS = 3;
+
 const REPORT_BUCKET = process.env.SCAN_REPORT_BUCKET ?? "reports";
 const REPORT_URL_TTL_SECONDS = 60 * 60 * 24 * 30; // 30d — matches the free-rescan window.
 
@@ -115,8 +120,32 @@ export async function runScanForRequest(
   // ponytail: no distributed lock — relies on 5-min cron spacing + this status check.
   // Upgrade path: a SELECT ... FOR UPDATE claim if scans ever run concurrently.
   if (scanStatus === "running") return { status: "in_flight" };
+
+  // How many times this request's scan has already been attempted (bounds retry).
+  const { data: reqRow } = await supabase
+    .from("scan_requests")
+    .select("scan_attempts")
+    .eq("id", req.id)
+    .maybeSingle();
+  const attempts = (reqRow as { scan_attempts: number } | null)?.scan_attempts ?? 0;
+
   if (scanStatus === "failed") {
-    return { status: "skipped", reason: "linked scan failed — manual review, no auto-retry" };
+    if (attempts >= MAX_SCAN_ATTEMPTS) {
+      return {
+        status: "skipped",
+        reason: `linked scan failed after ${attempts} attempts — manual review`,
+      };
+    }
+    // Bounded retry: clear the stale (partial/empty) results and reset the failed
+    // row to 'pending' so the scanning path below reuses it (executeScan reuses the
+    // case's linked scan_id, and that reuse assumes no prior results — hence the
+    // delete). cc_case stays 'scanning' from the original activate, so the branch
+    // below falls straight through to executeScan.
+    await supabase.from("scan_results").delete().eq("scan_id", ccCase.scan_id as string);
+    await supabase
+      .from("scans")
+      .update({ status: "pending", summary: null })
+      .eq("id", ccCase.scan_id as string);
   }
 
   if (ccCase.status === "approved") {
@@ -141,6 +170,13 @@ export async function runScanForRequest(
   } else if (ccCase.status !== "scanning") {
     return { status: "skipped", reason: `cc_case not runnable (status ${ccCase.status})` };
   }
+
+  // Record the attempt BEFORE running so a mid-run crash still counts against the
+  // cap (a run that throws in executeScan never returns here to increment).
+  await supabase
+    .from("scan_requests")
+    .update({ scan_attempts: attempts + 1 })
+    .eq("id", req.id);
 
   // THE single authorized engine path. cronSecret (when present) substitutes for
   // the admin session; when absent, executeScan falls through to isAdminSession().
