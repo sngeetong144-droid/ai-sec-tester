@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { runTriage } from "@/lib/triage";
 import { sendOwnerAlert } from "@/lib/email";
 import { makeApprovalToken, makeReportToken, makeReScanToken } from "@/lib/hmac";
@@ -67,7 +67,9 @@ export async function submitEnterpriseRequest(
     ip_address: ip,
   });
 
-  const supabase = await createClient();
+  // Service client: this server action owns the write, so anon needs no INSERT
+  // policy on enterprise_requests (and insert().select() needs a read anon lacks).
+  const supabase = createServiceClient();
 
   const { data: req, error: insErr } = await supabase
     .from("enterprise_requests")

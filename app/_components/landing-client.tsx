@@ -64,16 +64,37 @@ export function RevealScripts() {
 export function ChatBubble() {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
     const name = (form.elements.namedItem("name") as HTMLInputElement).value.trim();
     const email = (form.elements.namedItem("email") as HTMLInputElement).value.trim();
     const message = (form.elements.namedItem("message") as HTMLTextAreaElement).value.trim();
     if (!name || !email || !message) return;
-    // ponytail: local ack only — live chat inbox not built yet (matches design).
-    setSent(true);
+
+    setBusy(true);
+    setErr("");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, message }),
+      });
+      const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      // Only claim success when the message actually landed.
+      if (!res.ok || !data?.ok) {
+        setErr(data?.error || "Could not send your message. Please try again.");
+        return;
+      }
+      setSent(true);
+    } catch {
+      setErr("Could not send your message. Please check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -89,20 +110,38 @@ export function ChatBubble() {
             we&rsquo;ll get back to you by email.
           </div>
           {sent ? (
-            <div className="thx show">Thanks! We&rsquo;ll be in touch soon. 🙌</div>
+            <div className="thx show">
+              Got it — we&rsquo;ll reply to your email address. 🙌
+            </div>
           ) : (
             <form onSubmit={handleSubmit} autoComplete="on">
               <div className="cfield">
-                <input type="text" name="name" required placeholder="Your name" />
+                <input type="text" name="name" required maxLength={80} placeholder="Your name" />
               </div>
               <div className="cfield">
-                <input type="email" name="email" required placeholder="Email address" />
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  maxLength={160}
+                  placeholder="Email address"
+                />
               </div>
               <div className="cfield">
-                <textarea name="message" required placeholder="How can we help?" />
+                <textarea
+                  name="message"
+                  required
+                  maxLength={2000}
+                  placeholder="How can we help?"
+                />
               </div>
-              <button type="submit" className="btn btn-accent">
-                Send message
+              {err && (
+                <p className="req-note err" role="alert">
+                  {err}
+                </p>
+              )}
+              <button type="submit" className="btn btn-accent" disabled={busy}>
+                {busy ? "Sending…" : "Send message"}
               </button>
             </form>
           )}

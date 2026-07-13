@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export interface ScanAuditInput {
@@ -17,7 +16,9 @@ export interface ScanAuditInput {
  * (e.g. the dev-only local scanner) should catch and continue explicitly.
  */
 export async function recordScanAudit(input: ScanAuditInput): Promise<void> {
-  const supabase = await createClient();
+  // Service client: audit rows are server-owned, so anon needs no INSERT policy
+  // on scan_audit_log (an anon-writable audit log can be poisoned).
+  const supabase = createServiceClient();
   const { error } = await supabase.from("scan_audit_log").insert({
     scan_id: input.scanId,
     email: input.email,
