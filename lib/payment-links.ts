@@ -1,15 +1,23 @@
 /**
- * payment-links.ts — canonical tier → FastPayDirect payment-link map.
+ * payment-links.ts — canonical tier → NATIVE STRIPE payment-link map.
  *
- * These are PUBLIC checkout URLs (shareable by design, like Stripe payment
- * links) — NOT secret keys. They are the single source of truth for the
- * "Products & links" console surface and the {{payLink}} merge token in the
- * approval email. Provided by Creator 2026-07-06.
+ * These are PUBLIC checkout URLs (shareable by design) — NOT secret keys. They
+ * are the single source of truth for the "Products & links" console surface and
+ * the {{payLink}} merge token in the approval email.
+ *
+ * MIGRATED 2026-07-13 off FastPayDirect/Scalendo. Those links were GoHighLevel-
+ * hosted and settled through a Connect app that creates PaymentIntents directly —
+ * they NEVER produced a `checkout.session.completed` event, so the settlement
+ * webhook could not fire and auto-dispatch was structurally impossible. Native
+ * Stripe payment links do emit that event and forward ?client_reference_id, which
+ * is what app/api/stripe/webhooks matches on.
+ *
+ * Each link carries metadata.tier on the Stripe side, so the purchased tier is a
+ * property of the payment and cannot be forged by the buyer.
  *
  * GATE REMINDER: storing/serving these is LOCAL config. Actually emailing a
  * link to a customer (outbound send) and taking payment are gated live actions
- * — do not auto-send. The approval flow must stay behind the human/MFA gate and
- * the AI Sec Tester launch-block (T-07) until Creator lifts it.
+ * — do not auto-send.
  */
 
 export type ScanTier = "basic" | "advanced" | "enterprise";
@@ -26,19 +34,22 @@ export const PAYMENT_LINKS: Record<ScanTier, TierPaymentLink> = {
     tier: "basic",
     label: "Normal — $47",
     priceUsd: 47,
-    url: "https://link.fastpaydirect.com/payment-link/6a2d547c03b17c94f57161ea",
+    // plink_1TscyqIkRttsy2y6XTKiVNm4 — metadata.tier = "normal"
+    url: "https://buy.stripe.com/eVqcN58uZ7NK2XAe1A1Jm02",
   },
   advanced: {
     tier: "advanced",
     label: "Advanced — $197",
     priceUsd: 197,
-    url: "https://link.fastpaydirect.com/payment-link/6a2d578503b17c94f57161ee",
+    // plink_1TscytIkRttsy2y6pmGyAutb — metadata.tier = "advanced"
+    url: "https://buy.stripe.com/cNi14n4eJ2tq1TwbTs1Jm03",
   },
   enterprise: {
     tier: "enterprise",
     label: "Enterprise — $497",
     priceUsd: 497,
-    url: "https://link.fastpaydirect.com/payment-link/6a2d57be71a0aa761e464949",
+    // plink_1Tscz2IkRttsy2y6nuAluBgs — metadata.tier = "enterprise"
+    url: "https://buy.stripe.com/8x26oHbHb0ligOqcXw1Jm04",
   },
 };
 
