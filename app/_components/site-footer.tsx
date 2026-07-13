@@ -3,15 +3,23 @@
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
+// The console (/command-center*) ships its own sidebar+content shell, and its
+// gate (/auth/login) is a private admin surface — neither wears the public chrome.
+function isConsoleSurface(pathname: string): boolean {
+  return (
+    pathname === "/command-center" ||
+    pathname.startsWith("/command-center/") ||
+    pathname === "/auth/login"
+  );
+}
+
 // Hides the global layout header on the anonymous public landing ("/"), which
 // ships its own fixed emerald nav. `active` is false for authenticated users, so
 // the authed home view (working scanner) keeps the global header + Sign out.
 export function HideOnHome({ active, children }: { active: boolean; children: ReactNode }) {
   const pathname = usePathname();
   const isHome = pathname === "/";
-  // Console (/command-center*) ships its own sidebar+content shell — suppress the global header there too.
-  const isConsole = pathname === "/command-center" || pathname.startsWith("/command-center/");
-  if ((active && isHome) || isConsole) return null;
+  if ((active && isHome) || isConsoleSurface(pathname)) return null;
   return <>{children}</>;
 }
 
@@ -21,7 +29,7 @@ export function HideOnHome({ active, children }: { active: boolean; children: Re
 export function SiteFooter() {
   const pathname = usePathname();
   if (pathname === "/") return null;
-  if (pathname === "/command-center" || pathname.startsWith("/command-center/")) return null;
+  if (isConsoleSurface(pathname)) return null;
 
   return (
     <footer className="bg-white/50 border-t border-violet-100 px-6 py-6 shrink-0">
