@@ -5,6 +5,7 @@ import { loadCase, type CaseView } from "@/app/command-center/_data";
 import { composeEmail, queueEmail } from "@/app/command-center/_email";
 import { deliverComposedEmail } from "@/lib/email-templates";
 import { executeScan } from "@/app/actions/scans";
+import { resolvePaymentLink } from "@/lib/payment-links";
 
 /**
  * The SINGLE activate→run→finalize flow, shared by the two callers that need it:
@@ -80,6 +81,8 @@ export type RunScanRow = {
   target_url: string;
   company: string | null;
   email: string | null;
+  /** Purchased plan string ("Advanced — $197") from scan_requests; resolves to the check-set tier. */
+  plan?: string | null;
 };
 
 export interface DispatchOutcome {
@@ -188,6 +191,7 @@ export async function runScanForRequest(
     label: req.company ?? null,
     email: req.email ?? null,
     sessionId: null,
+    tier: resolvePaymentLink(req.plan)?.tier ?? "basic",
     cronSecret: opts.cronSecret,
   });
 

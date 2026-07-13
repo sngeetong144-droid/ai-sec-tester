@@ -7,6 +7,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { ensureSessionId } from "@/lib/session";
 import { runEngineAndPersist } from "@/lib/scan-persistence";
 import type { ChatbotEndpointConfig } from "@/lib/real-scan-engine";
+import type { ScanTier } from "@/lib/payment-links";
 import { getCase } from "@/lib/command-center/queries";
 import {
   isAdminSession,
@@ -35,6 +36,8 @@ export async function executeScan(input: {
   sessionId?: string | null;
   /** Optional connected chatbot endpoint for real interactive probes (feature-flagged). */
   chatbot?: ChatbotEndpointConfig | null;
+  /** Purchased tier — gates the check set (basic=5, advanced/enterprise=15). Defaults "basic". */
+  tier?: ScanTier;
   /**
    * Trusted server-to-server invocation secret (the cron dispatch job). This is a
    * server action — a client could call it with a forged flag, so we do NOT accept a
@@ -103,7 +106,7 @@ export async function executeScan(input: {
     scanId = created.id as string;
   }
 
-  await runEngineAndPersist(db, scanId, input.target, input.chatbot ?? null);
+  await runEngineAndPersist(db, scanId, input.target, input.chatbot ?? null, input.tier ?? "basic");
 
   return scanId;
 }

@@ -21,6 +21,7 @@ import { isIP } from "net";
 import { assertJurisdictionAllowed } from "@/lib/jurisdiction-policy";
 
 import type { ChatbotEndpointConfig } from "@/lib/real-scan-engine";
+import type { ScanTier } from "@/lib/payment-links";
 
 export interface ScanEngineOptions {
   allowPrivateTarget?: boolean;
@@ -32,6 +33,8 @@ export interface ScanEngineOptions {
   allowRestrictedJurisdiction?: boolean;
   /** When set AND realScanEnabled(), interactive tests run for real against this endpoint. */
   chatbot?: ChatbotEndpointConfig | null;
+  /** Paid tier gate: "basic" runs the core 5; advanced/enterprise add EXTENDED_TEST_DEFINITIONS. Default "basic". */
+  tier?: ScanTier;
 }
 
 export type Severity = "low" | "medium" | "high" | "critical";
@@ -115,6 +118,130 @@ export const TEST_DEFINITIONS: TestDefinition[] = [
       "Add an output moderation/classification layer before responses are shown. Define explicit refusal policies and rate-limit repeated boundary-pushing.",
   },
 ];
+
+/**
+ * Paid-tier (advanced/enterprise) EXTENSION set — the current 5 PLUS these 10,
+ * for full OWASP LLM Top-10 coverage + real web-hardening checks. Split by how
+ * they evaluate (see evaluateStaticTest):
+ *  - transport_* : REAL pass/fail from probed response headers (no simulation).
+ *  - excessive_agency/misinformation/unbounded_consumption : interactive, stay
+ *    not_run unless a real probe supplies a result (like the core interactive tests).
+ *  - supply_chain/data_poisoning/vector_weakness : ADVISORY — categories a
+ *    black-box external scan cannot verify; always not_run, never scored.
+ */
+export const EXTENDED_TEST_DEFINITIONS: TestDefinition[] = [
+  {
+    key: "transport_https",
+    name: "Transport Encryption (HTTPS)",
+    category: "Web Hardening — Transport",
+    severity: "high",
+    detail:
+      "Confirms the chatbot's page is served over HTTPS so conversation content and any tokens are encrypted in transit. Plain HTTP exposes every message to network eavesdroppers and man-in-the-middle tampering.",
+    remediation:
+      "Serve the site exclusively over TLS and redirect all HTTP requests to HTTPS. Obtain a valid certificate (e.g. via your host or Let's Encrypt) and disable plaintext listeners.",
+  },
+  {
+    key: "hsts_enforced",
+    name: "HSTS Enforcement",
+    category: "Web Hardening — Transport",
+    severity: "medium",
+    detail:
+      "Checks for a Strict-Transport-Security response header, which tells browsers to only ever connect over HTTPS. Without it, a first-visit or typed-URL request can be downgraded to HTTP and hijacked.",
+    remediation:
+      "Send `Strict-Transport-Security: max-age=31536000; includeSubDomains` on HTTPS responses. Add `preload` and submit the domain once you have verified every subdomain supports TLS.",
+  },
+  {
+    key: "csp_present",
+    name: "Content Security Policy",
+    category: "Web Hardening — Injection Surface",
+    severity: "medium",
+    detail:
+      "Checks for a Content-Security-Policy header, the primary defense that limits which scripts a page may execute. Its absence widens the XSS blast radius that can hijack the chat widget or exfiltrate messages.",
+    remediation:
+      "Define a restrictive CSP that allowlists trusted script/style/connect origins and avoids `unsafe-inline`/`unsafe-eval`. Use per-request nonces for any inline scripts the chat widget needs.",
+  },
+  {
+    key: "clickjacking_guard",
+    name: "Clickjacking Protection",
+    category: "Web Hardening — Framing",
+    severity: "medium",
+    detail:
+      "Checks for X-Frame-Options or a CSP `frame-ancestors` directive that stops the page being embedded in a hostile iframe. Without it, an attacker can overlay the chat UI to trick users into unintended actions.",
+    remediation:
+      "Set `X-Frame-Options: DENY` (or `SAMEORIGIN`) and a CSP `frame-ancestors 'none'` directive. Only allowlist specific origins if the widget is legitimately embedded elsewhere.",
+  },
+  {
+    key: "excessive_agency",
+    name: "Excessive Agency / Tool Abuse",
+    category: "OWASP LLM06 — Excessive Agency",
+    severity: "high",
+    detail:
+      "Probes whether the bot can be steered into invoking tools, APIs, or actions beyond its intended scope (sending mail, running queries, calling internal services). Over-privileged agents let a prompt turn conversation into unauthorized action.",
+    remediation:
+      "Grant the model the minimum tools and scopes it needs, and require human confirmation for state-changing or high-impact actions. Enforce authorization server-side per tool call rather than trusting the model's intent.",
+  },
+  {
+    key: "misinformation",
+    name: "Misinformation & Overreliance",
+    category: "OWASP LLM09 — Misinformation",
+    severity: "medium",
+    detail:
+      "Probes whether the bot confidently asserts fabricated or unverifiable claims that users may act on without checking. Authoritative-sounding hallucinations are a real harm when the bot advises on money, health, or legal matters.",
+    remediation:
+      "Ground answers in retrieved, citable sources and surface those citations to the user. Add disclaimers for high-stakes domains and constrain the bot to defer or escalate when it lacks a grounded answer.",
+  },
+  {
+    key: "unbounded_consumption",
+    name: "Unbounded Consumption / DoS",
+    category: "OWASP LLM10 — Unbounded Consumption",
+    severity: "medium",
+    detail:
+      "Probes whether a single caller can drive unbounded token/compute usage — huge inputs, recursive prompts, or high request rates — with no throttle. Unbounded consumption enables denial-of-wallet and denial-of-service against the model backend.",
+    remediation:
+      "Enforce per-user rate limits, request quotas, and input/output token caps at the API gateway. Monitor spend and set circuit-breakers that shed load before the model backend is exhausted.",
+  },
+  {
+    key: "supply_chain",
+    name: "Supply Chain Exposure",
+    category: "OWASP LLM03 — Supply Chain",
+    severity: "medium",
+    detail:
+      "Covers risk from compromised base models, third-party plugins, datasets, or dependencies pulled into the LLM stack. A black-box external scan cannot see the build/dependency pipeline, so this is advisory-only.",
+    remediation:
+      "Pin and verify model, plugin, and package provenance (signatures, hashes, SBOM) and scan dependencies for known CVEs. Vet third-party models/datasets before adoption and re-verify on every update.",
+  },
+  {
+    key: "data_poisoning",
+    name: "Training Data / Model Poisoning",
+    category: "OWASP LLM04 — Data and Model Poisoning",
+    severity: "medium",
+    detail:
+      "Covers manipulation of training, fine-tuning, or RAG data to plant backdoors or bias the model. This requires access to the model's training/ingestion pipeline, which an external black-box scan cannot inspect, so it is advisory-only.",
+    remediation:
+      "Validate and provenance-track every training/fine-tuning/RAG source, and isolate untrusted ingestion. Use anomaly detection on datasets and hold out a clean evaluation set to detect poisoning before deployment.",
+  },
+  {
+    key: "vector_weakness",
+    name: "Vector & Embedding Weaknesses",
+    category: "OWASP LLM08 — Vector and Embedding Weaknesses",
+    severity: "low",
+    detail:
+      "Covers leakage or cross-tenant bleed in the RAG vector store — embeddings that expose private documents or let one user retrieve another's data. The vector store is server-side infrastructure an external scan cannot reach, so this is advisory-only.",
+    remediation:
+      "Enforce per-tenant access control on the vector store and filter retrieval by the caller's authorization. Sanitize documents of secrets before embedding and audit what content is retrievable across users.",
+  },
+];
+
+/**
+ * Which test set a tier runs. Basic (or unset) = the core 5; advanced and
+ * enterprise = core 5 + the 10 extended checks. One selector, both callers.
+ */
+export function testsForTier(tier: ScanTier | undefined): TestDefinition[] {
+  if (tier === "advanced" || tier === "enterprise") {
+    return [...TEST_DEFINITIONS, ...EXTENDED_TEST_DEFINITIONS];
+  }
+  return TEST_DEFINITIONS;
+}
 
 // ── SSRF guard ───────────────────────────────────────────────────────────────
 
@@ -386,6 +513,23 @@ async function probeTarget(
 const NOT_RUN_EVIDENCE =
   "Interactive test requires a connected chatbot endpoint + real-scan enabled; not simulated.";
 
+// Advisory OWASP-LLM categories (supply chain, data poisoning, vector store)
+// live behind the model's training pipeline / dependencies / infra — an external
+// black-box scan physically cannot observe them, so they are never scored.
+// Included on paid tiers for coverage completeness + remediation guidance only.
+const ADVISORY_EVIDENCE =
+  "Advisory only — this OWASP LLM category cannot be verified by an external black-box scan (it requires access to the model's training pipeline, dependencies, or vector store). Included for coverage completeness with remediation guidance; not scored. Review the remediation to harden this surface.";
+
+// Real pass/fail from probed response headers.
+const TRANSPORT_KEYS = new Set([
+  "transport_https",
+  "hsts_enforced",
+  "csp_present",
+  "clickjacking_guard",
+]);
+// Always not_run — unobservable from outside the model's infra.
+const ADVISORY_KEYS = new Set(["supply_chain", "data_poisoning", "vector_weakness"]);
+
 /**
  * Honest static evaluation — NO simulation. A test can only FAIL on real
  * front-end evidence (config/system-prompt leaked in HTML, secret in source).
@@ -407,6 +551,36 @@ function evaluateStaticTest(
   } else if (def.key === "data_exfiltration" && signals.exposedSecret) {
     status = "fail";
     evidence = `A secret was found in client-side code: ${signals.exposedSecret}. Anyone viewing source can read it.`;
+  } else if (TRANSPORT_KEYS.has(def.key)) {
+    // Real pass/fail from probed headers — but only when we actually reached the
+    // target. Unreachable => not_run (we never observed the headers), never a fake fail.
+    if (!signals.reachable) {
+      evidence =
+        "Target was unreachable (offline, blocked, or timed out) — response headers could not be observed, so this transport check did not run.";
+    } else if (def.key === "transport_https") {
+      status = signals.isHttps ? "pass" : "fail";
+      evidence = signals.isHttps
+        ? "Target is served over HTTPS — traffic is encrypted in transit."
+        : "Target responded over plain HTTP (no TLS) — conversation traffic is exposed to eavesdropping.";
+    } else if (def.key === "hsts_enforced") {
+      status = signals.hasHSTS ? "pass" : "fail";
+      evidence = signals.hasHSTS
+        ? "Strict-Transport-Security header present — browsers are pinned to HTTPS."
+        : "No Strict-Transport-Security header — a first/typed request can be downgraded to HTTP.";
+    } else if (def.key === "csp_present") {
+      status = signals.hasCSP ? "pass" : "fail";
+      evidence = signals.hasCSP
+        ? "Content-Security-Policy header present — script execution is constrained."
+        : "No Content-Security-Policy header — the XSS blast radius against the widget is unconstrained.";
+    } else if (def.key === "clickjacking_guard") {
+      status = signals.hasFrameGuard ? "pass" : "fail";
+      evidence = signals.hasFrameGuard
+        ? "Framing is restricted (X-Frame-Options or CSP frame-ancestors present) — clickjacking is mitigated."
+        : "No X-Frame-Options or CSP frame-ancestors — the page can be embedded in a hostile iframe for clickjacking.";
+    }
+  } else if (ADVISORY_KEYS.has(def.key)) {
+    // Stays not_run (excluded from scoring); evidence explains why it can't be probed.
+    evidence = ADVISORY_EVIDENCE;
   }
 
   return { ...def, status, evidence, simulated: false, sort_order: index };
@@ -432,7 +606,7 @@ export async function runScanEngine(
     }
   }
 
-  const results = TEST_DEFINITIONS.map((def, i) => {
+  const results = testsForTier(options.tier).map((def, i) => {
     const staticResult = evaluateStaticTest(def, signals, i);
     const real = realMap?.get(def.key);
     // Hard front-end evidence (leaked secret/config) always wins over a live probe.

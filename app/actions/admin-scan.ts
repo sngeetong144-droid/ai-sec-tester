@@ -139,7 +139,7 @@ export async function runAdminSelfScan(input: AdminSelfScanInput): Promise<strin
   // Run + persist inline (see ponytail note above). allowRestrictedJurisdiction
   // propagates through probeTarget and every probe re-check inside the engine.
   try {
-    const engine = await runScanEngine(target, { chatbot, ...ADMIN_TARGET_OPTS });
+    const engine = await runScanEngine(target, { chatbot, tier: "enterprise", ...ADMIN_TARGET_OPTS });
 
     const rows = engine.results.map((r) => ({
       scan_id: scanId,

@@ -1,5 +1,6 @@
 import { runScanEngine } from "@/lib/scan-engine";
 import type { ChatbotEndpointConfig } from "@/lib/real-scan-engine";
+import type { ScanTier } from "@/lib/payment-links";
 import type { createServiceClient } from "@/lib/supabase/service";
 
 // Service-role client: RLS is bypassed here (0007 drops the anon policies), so
@@ -22,9 +23,10 @@ export async function runEngineAndPersist(
   scanId: string,
   target: string,
   chatbot: ChatbotEndpointConfig | null,
+  tier: ScanTier,
 ): Promise<void> {
   try {
-    const engine = await runScanEngine(target, { chatbot });
+    const engine = await runScanEngine(target, { chatbot, tier });
 
     const rows = engine.results.map((r) => ({
       scan_id: scanId,
