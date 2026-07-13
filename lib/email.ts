@@ -118,6 +118,37 @@ export async function sendNewRequestAlert(params: {
   });
 }
 
+/**
+ * Confirm to the requester that their scan request landed and is awaiting
+ * authorization review. Sent for every non-rejected request (the caller gates on
+ * status) — auto-declined requests get nothing, keeping the public response
+ * uniform. Best-effort via the shared sendEmail gate; a failure never blocks the
+ * intake 200. No turnaround promise — dispatch is a daily cron, not "seconds".
+ */
+export async function sendRequesterAck(params: {
+  requesterName: string;
+  requesterEmail: string;
+  targetUrl: string;
+  requestId: string;
+}): Promise<SendResult> {
+  const html = `<!DOCTYPE html>
+<html><body style="background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;padding:32px;max-width:580px">
+<h2 style="color:#a78bfa;margin-top:0">We received your scan request</h2>
+<p>Hi ${esc(params.requesterName)},</p>
+<p>Thanks — your request to scan <strong>${esc(params.targetUrl)}</strong> has been received and is awaiting authorization review.</p>
+<p>If it's approved, you'll receive a secure payment link by email. Once the scan completes, your graded PDF report is emailed to you.</p>
+<p style="color:#64748b;font-size:13px;margin-top:20px">Request ID: <span style="font-family:monospace">${esc(params.requestId)}</span></p>
+<p style="color:#94a3b8;margin-top:24px">AI Sec Tester · The Souls of AI</p>
+</body></html>`;
+
+  return sendEmail({
+    from: "AI Sec Tester <alerts@thesoulsofai.com>",
+    to: params.requesterEmail,
+    subject: "We received your AI Sec Tester scan request",
+    html,
+  });
+}
+
 export async function sendOwnerAlert(params: {
   requestId: string;
   requesterName: string;

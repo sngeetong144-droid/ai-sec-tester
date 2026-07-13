@@ -178,8 +178,7 @@ export function Landing() {
             </h1>
             <p className="dek">
               Run OWASP-aligned prompt-injection and jailbreak checks against your
-              chatbot. Get a Pass/Fail security scorecard with remediation guidance —
-              in seconds.
+              chatbot.
             </p>
             <div className="s-actions">
               <a href={REQUEST_HREF} className="btn btn-accent">
@@ -195,7 +194,7 @@ export function Landing() {
             <div className="s-ticks">
               <span>OWASP-aligned</span>
               <span>Pass/Fail scorecard</span>
-              <span>Results in seconds</span>
+              <span>Automated OWASP-aligned scan</span>
             </div>
           </div>
 
@@ -404,7 +403,7 @@ export function Landing() {
               Find out before an attacker does
             </span>
             <h2>Scan your chatbot today.</h2>
-            <p>Get a security scorecard and fixes in seconds — starting at ${NORMAL.priceUsd} per scan.</p>
+            <p>Get a security scorecard and fixes — starting at ${NORMAL.priceUsd} per scan.</p>
             <a href={REQUEST_HREF} className="btn btn-accent" style={{ fontSize: 16, padding: "15px 28px" }}>
               Request a scan
             </a>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { COLORS } from "@/app/command-center/_ui";
 import { runAdminSelfScan, type AdminScanMode } from "@/app/actions/admin-scan";
+import type { ScanTier } from "@/lib/payment-links";
 
 /**
  * Admin scan tool: runs the real OWASP engine against a public target the
@@ -16,6 +17,7 @@ export function ScanTool() {
   const [target, setTarget] = useState("");
   const [label, setLabel] = useState("");
   const [mode, setMode] = useState<AdminScanMode>("passive");
+  const [tier, setTier] = useState<ScanTier>("enterprise");
   const [bodyTemplate, setBodyTemplate] = useState("");
   const [authToken, setAuthToken] = useState("");
   const [running, setRunning] = useState(false);
@@ -30,6 +32,7 @@ export function ScanTool() {
         target: target.trim(),
         label: label.trim() || undefined,
         mode,
+        tier,
         bodyTemplate: bodyTemplate.trim() || undefined,
         authToken: authToken.trim() || undefined,
       });
@@ -110,6 +113,23 @@ export function ScanTool() {
             <option value="passive">Passive — transport &amp; secret checks only</option>
             <option value="endpoint">Chatbot endpoint — probe this URL directly</option>
             <option value="website">Website — discover the chatbot on this page</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="tier" style={labelStyle}>
+            Tier
+          </label>
+          <select
+            id="tier"
+            disabled={running}
+            value={tier}
+            onChange={(e) => setTier(e.target.value as ScanTier)}
+            style={inputStyle}
+          >
+            <option value="basic">Normal — 5 core checks</option>
+            <option value="advanced">Advanced — full OWASP Top-10 (15)</option>
+            <option value="enterprise">Enterprise — full OWASP Top-10 (15)</option>
           </select>
         </div>
 

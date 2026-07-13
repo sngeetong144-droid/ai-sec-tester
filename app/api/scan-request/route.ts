@@ -16,7 +16,7 @@ import {
 } from "@/lib/jurisdiction-review";
 import { resolveTargetGeo } from "@/lib/geo";
 import { rateLimitScanRequest } from "@/lib/rate-limit";
-import { sendNewRequestAlert } from "@/lib/email";
+import { sendNewRequestAlert, sendRequesterAck } from "@/lib/email";
 
 /**
  * POST /api/scan-request — public scan-request intake for the
@@ -307,6 +307,22 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[scan-request] operator alert failed:", err);
+  }
+
+  // Acknowledge the requester — but NOT for auto-declined requests: a "we're
+  // reviewing" note would break the deliberately uniform public response.
+  // Best-effort, same as the operator alert — an email failure never 500s.
+  if (status !== "rejected") {
+    try {
+      await sendRequesterAck({
+        requesterName: name,
+        requesterEmail: email,
+        targetUrl: target,
+        requestId: inserted.id as string,
+      });
+    } catch (err) {
+      console.error("[scan-request] requester ack failed:", err);
+    }
   }
 
   // Uniform response: never reveal auto-decline/hold to the public page. The id

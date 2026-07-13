@@ -50,7 +50,8 @@ mock.module("@/lib/supabase/service", () => ({
   }),
 }));
 
-const { sendEmail, resolveOperatorEmail, sendNewRequestAlert } = await import("../lib/email");
+const { sendEmail, resolveOperatorEmail, sendNewRequestAlert, sendRequesterAck } =
+  await import("../lib/email");
 const { queueEmail } = await import("../app/command-center/_email");
 
 beforeEach(() => {
@@ -136,6 +137,24 @@ test("sendNewRequestAlert is a no-op skip in dev (no key) — never a loop of se
   });
   expect(r.skipped).toBe(true);
   expect(fetchCalls.length).toBe(0);
+});
+
+// ── requester ack ────────────────────────────────────────────────────────────
+test("sendRequesterAck emails the requester from the verified domain with the request id", async () => {
+  process.env.RESEND_API_KEY = "re_test";
+  const r = await sendRequesterAck({
+    requesterName: "Ada",
+    requesterEmail: "ada@corp.example",
+    targetUrl: "https://example.com",
+    requestId: "req-123",
+  });
+  expect(r.ok).toBe(true);
+  const body = fetchCalls[0].body;
+  expect(body.to).toBe("ada@corp.example");
+  expect(String(body.from)).toContain("@thesoulsofai.com");
+  expect(String(body.html)).toContain("req-123");
+  // No fabricated turnaround promise.
+  expect(String(body.html)).not.toContain("seconds");
 });
 
 // ── queueEmail: LOG-ONLY (audit row always, never sends) ─────────────────────

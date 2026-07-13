@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { ensureSessionId } from "@/lib/session";
 import { assertPublicTarget, runScanEngine } from "@/lib/scan-engine";
+import type { ScanTier } from "@/lib/payment-links";
 import type { ChatbotEndpointConfig } from "@/lib/real-scan-engine";
 import { realScanEnabled } from "@/lib/real-scan-engine";
 import { discoverChatbotEndpoint } from "@/lib/chatbot-discovery";
@@ -57,6 +58,8 @@ export interface AdminSelfScanInput {
   bodyTemplate?: string;
   /** Optional bearer token for the endpoint. Secret — never persisted or logged. */
   authToken?: string;
+  /** Test set to run: "basic" = core 5; advanced/enterprise = full OWASP-10 (15). Default "enterprise". */
+  tier?: ScanTier;
 }
 
 // Admin scans are exempt from the country/jurisdiction gate; SSRF stays on.
@@ -68,6 +71,7 @@ export async function runAdminSelfScan(input: AdminSelfScanInput): Promise<strin
   const bodyTemplate = input?.bodyTemplate?.trim() || null;
   const authToken = input?.authToken?.trim() || null;
   const mode: AdminScanMode = input?.mode ?? (input?.chatbot ? "endpoint" : "passive");
+  const tier: ScanTier = input?.tier ?? "enterprise";
 
   const decision = decideAdminSelfScan({ isAdmin: await isAdminSession() });
   if (!decision.authorized) {
@@ -139,7 +143,7 @@ export async function runAdminSelfScan(input: AdminSelfScanInput): Promise<strin
   // Run + persist inline (see ponytail note above). allowRestrictedJurisdiction
   // propagates through probeTarget and every probe re-check inside the engine.
   try {
-    const engine = await runScanEngine(target, { chatbot, tier: "enterprise", ...ADMIN_TARGET_OPTS });
+    const engine = await runScanEngine(target, { chatbot, tier, ...ADMIN_TARGET_OPTS });
 
     const rows = engine.results.map((r) => ({
       scan_id: scanId,
