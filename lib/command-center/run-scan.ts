@@ -5,6 +5,7 @@ import { loadCase, type CaseView } from "@/app/command-center/_data";
 import { composeEmail, queueEmail } from "@/app/command-center/_email";
 import { deliverComposedEmail } from "@/lib/email-templates";
 import { executeScan } from "@/app/actions/scans";
+import { discoverChatbotEndpoint } from "@/lib/chatbot-discovery";
 import { resolvePaymentLink } from "@/lib/payment-links";
 
 /**
@@ -185,12 +186,25 @@ export async function runScanForRequest(
   // the admin session; when absent, executeScan falls through to isAdminSession().
   // Either way the gate still requires the case be scanning + paid (both true
   // after activate). Passing undefined is deny-by-default-safe (falsy short-circuit).
+  // A paid scan MUST attempt the interactive chatbot probes it is sold as. The
+  // customer gives a website URL, so resolve the widget's message endpoint here;
+  // when it cannot be resolved the engine records those tests as not-run (the
+  // report says so) rather than scoring a chatbot that was never tested.
+  let chatbot = null;
+  try {
+    const found = await discoverChatbotEndpoint(req.target_url);
+    if (found.endpoint) chatbot = { url: found.endpoint };
+  } catch {
+    chatbot = null; // discovery failure is never fatal to the transport checks
+  }
+
   await executeScan({
     caseId: ccCase.id,
     target: req.target_url,
     label: req.company ?? null,
     email: req.email ?? null,
     sessionId: null,
+    chatbot,
     tier: resolvePaymentLink(req.plan)?.tier ?? "basic",
     cronSecret: opts.cronSecret,
   });

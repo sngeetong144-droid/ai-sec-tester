@@ -260,8 +260,12 @@ export const PROBES: Probe[] = [
 
 /** Real scan is OFF unless explicitly enabled AND a judge key exists. */
 export function realScanEnabled(): boolean {
+  // Whitespace/case tolerant, but still ONLY the literal word "true" — a stray
+  // "1" or "yes" must not switch active probing on by accident. A trailing space
+  // pasted into a dashboard field silently disabled this once; hence the trim.
+  const flag = String(process.env.REAL_SCAN_ENABLED ?? "").trim().toLowerCase();
   return (
-    process.env.REAL_SCAN_ENABLED === "true" &&
+    flag === "true" &&
     (!!process.env.OPENAI_API_KEY || !!process.env.ANTHROPIC_API_KEY)
   );
 }
