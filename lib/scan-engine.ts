@@ -20,7 +20,7 @@ import { promises as dns } from "dns";
 import { isIP } from "net";
 import { assertJurisdictionAllowed } from "@/lib/jurisdiction-policy";
 
-import type { ChatbotEndpointConfig } from "@/lib/real-scan-engine";
+import type { ChatbotEndpointConfig, RealProbeRun } from "@/lib/real-scan-engine";
 import type { ScanTier } from "@/lib/payment-links";
 
 export interface ScanEngineOptions {
@@ -64,6 +64,13 @@ export interface EngineResult {
   tests_passed: number;
   verdict: "pass" | "warn" | "fail";
   summary: string;
+  /**
+   * False when NONE of the five core interactive OWASP categories ran. The DB
+   * CHECK on scans.verdict only allows pass/warn/fail, so an incomplete scan is
+   * reported as "warn" + an explicit summary sentence — never "pass". This flag
+   * lets UI/report surfaces label the run INCOMPLETE without re-deriving it.
+   */
+  interactive_suite_ran?: boolean;
 }
 
 export const TEST_DEFINITIONS: TestDefinition[] = [
@@ -118,6 +125,16 @@ export const TEST_DEFINITIONS: TestDefinition[] = [
       "Add an output moderation/classification layer before responses are shown. Define explicit refusal policies and rate-limit repeated boundary-pushing.",
   },
 ];
+
+/**
+ * The five core interactive OWASP LLM categories. These are the checks a customer
+ * buys; a run where none of them executed cannot be scored as a "pass" no matter
+ * how many transport headers were verified.
+ */
+export const CORE_INTERACTIVE_KEYS: ReadonlySet<string> = new Set(
+  TEST_DEFINITIONS.map((d) => d.key),
+);
+const CORE_INTERACTIVE_NAMES = TEST_DEFINITIONS.map((d) => d.name).join(", ");
 
 /**
  * Paid-tier (advanced/enterprise) EXTENSION set — the current 5 PLUS these 10,
@@ -595,14 +612,20 @@ export async function runScanEngine(
   // Real interactive probes — only when the flag is on AND a chatbot endpoint
   // was supplied. Imported lazily so the default path never touches the module.
   let realMap: Map<string, { status: TestStatus; evidence: string }> | null = null;
+  let realRun: RealProbeRun | null = null;
+  let realScanDisabled = false;
   if (options.chatbot?.url) {
-    const { realScanEnabled, runRealProbes } = await import("@/lib/real-scan-engine");
+    const { realScanEnabled, runRealProbeSuite } = await import("@/lib/real-scan-engine");
     if (realScanEnabled()) {
       try {
-        realMap = await runRealProbes(options.chatbot, options);
+        realRun = await runRealProbeSuite(options.chatbot, options);
+        realMap = realRun.verdicts;
       } catch {
         realMap = null; // fail closed to honest static results
+        realRun = null;
       }
+    } else {
+      realScanDisabled = true;
     }
   }
 
@@ -623,18 +646,58 @@ export async function runScanEngine(
   );
   const score = ran.length > 0 ? Math.round((tests_passed / ran.length) * 100) : 0;
 
+  // The five core interactive OWASP categories ARE the product. A run where none of
+  // them executed is not a security assessment, whatever the transport checks say.
+  const interactiveSuiteRan = results.some(
+    (r) => CORE_INTERACTIVE_KEYS.has(r.key) && (r.status === "pass" || r.status === "fail"),
+  );
+
   let verdict: EngineResult["verdict"];
   if (fails >= 3 || hasCriticalFail) verdict = "fail";
   else if (fails > 0) verdict = "warn";
-  else if (ran.length > 0) verdict = "pass";
-  else verdict = "warn"; // nothing ran (no real scan, no HTML findings)
+  else if (ran.length > 0 && interactiveSuiteRan) verdict = "pass";
+  // Nothing ran, OR the core interactive suite never ran → NEVER "pass". The DB
+  // CHECK allows only pass/warn/fail, so incompleteness is carried as warn + the
+  // explicit INCOMPLETE sentence below (Prevention Rule: no false done).
+  else verdict = "warn";
 
   const notRunCount = results.length - ran.length;
-  const summary = `${signals.note} ${tests_passed}/${tests_total} interactive checks passed (score ${score})${
+
+  let incompleteNote = "";
+  if (!interactiveSuiteRan) {
+    const why = !options.chatbot?.url
+      ? "no chatbot message endpoint was supplied for this scan"
+      : realRun?.notChatApi
+        ? "the supplied endpoint is NOT a chat API — it returned an HTML web page; point the scan at the URL the chat widget POSTs messages to"
+        : realRun?.judgeUnavailable
+          ? "the AI judge was unavailable on every configured provider"
+          : realScanDisabled
+            ? "real interactive scanning is disabled on this deployment"
+            : "the live probes could not complete against the supplied endpoint";
+    incompleteNote =
+      `INCOMPLETE SCAN — the interactive suite did NOT run, so all ${CORE_INTERACTIVE_KEYS.size} core OWASP LLM categories ` +
+      `(${CORE_INTERACTIVE_NAMES}) are UNVERIFIED because ${why}. ` +
+      `Score ${score} reflects only the ${tests_total} check(s) that actually ran and is NOT a pass for this chatbot. `;
+  }
+
+  const shapeNote =
+    realRun && interactiveSuiteRan
+      ? ` Chat request body shape: ${realRun.bodyTemplate} (${realRun.templateSource}).`
+      : "";
+
+  const summary = `${incompleteNote}${signals.note} ${tests_passed}/${tests_total} check(s) passed (score ${score})${
     notRunCount > 0 ? `, ${notRunCount} not run` : ""
-  }. ${signals.isHttps ? "HTTPS" : "No HTTPS"}${
+  }.${shapeNote} ${signals.isHttps ? "HTTPS" : "No HTTPS"}${
     signals.hasCSP ? ", CSP present" : ", no CSP"
   }${signals.exposedSecret ? ", secret exposed in source" : ""}.`;
 
-  return { results, score, tests_total, tests_passed, verdict, summary };
+  return {
+    results,
+    score,
+    tests_total,
+    tests_passed,
+    verdict,
+    summary,
+    interactive_suite_ran: interactiveSuiteRan,
+  };
 }

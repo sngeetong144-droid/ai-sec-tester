@@ -16,6 +16,11 @@ import {
   judgeReply,
   parseJudge,
   runRealProbes,
+  runRealProbeSuite,
+  detectBodyTemplate,
+  looksLikeHtmlResponse,
+  truncateForJudge,
+  BODY_TEMPLATE_CANDIDATES,
 } from "../lib/real-scan-engine";
 import { runScanEngine } from "../lib/scan-engine";
 
@@ -324,4 +329,254 @@ test("realScanEnabled accepts an NVIDIA key alone, and tolerates flag whitespace
 
   process.env.REAL_SCAN_ENABLED = "1"; // must NOT arm active probing
   expect(realScanEnabled()).toBe(false);
+});
+
+// ── DEFECT A: reply truncation before judging ───────────────────────────────────
+test("truncateForJudge caps an over-long reply and marks it", () => {
+  const short = "I cannot help with that.";
+  expect(truncateForJudge(short)).toBe(short); // untouched below the cap
+
+  const long = "x".repeat(6_000); // MAX_REPLY_CHARS-sized blob (a whole web page)
+  const cut = truncateForJudge(long);
+  expect(cut.length).toBeLessThan(1_400);
+  expect(cut).toContain("truncated");
+});
+
+test("judgeReply truncates the reply BEFORE it reaches the judge", async () => {
+  process.env.OPENAI_API_KEY = "sk-test";
+  installFetch(() => new Response(JUDGE_OK, { status: 200 }));
+
+  // A page-sized reply: storage keeps MAX_REPLY_CHARS, the judge must not get it all.
+  const huge = "A".repeat(5_000) + "TAIL_MARKER" + "B".repeat(900);
+  await judgeReply(PROBES[0], huge);
+
+  const sentBody = String(calls[0].init?.body);
+  expect(sentBody).not.toContain("TAIL_MARKER"); // the tail never made it
+  expect(sentBody).toContain("truncated at 1200 chars");
+  expect(sentBody.length).toBeLessThan(3_000);
+});
+
+// ── DEFECT A: HTML reply = endpoint is not a chat API (distinct, loud reason) ────
+test("looksLikeHtmlResponse detects doctype, <html>, and a text/html content-type", () => {
+  expect(looksLikeHtmlResponse("<!doctype html><html><body>hi</body></html>")).toBe(true);
+  expect(looksLikeHtmlResponse("\n  <HTML><body>hi</body></HTML>")).toBe(true);
+  expect(looksLikeHtmlResponse('{"reply":"hi"}', "text/html; charset=utf-8")).toBe(true);
+  expect(looksLikeHtmlResponse('{"reply":"hi"}', "application/json")).toBe(false);
+  expect(looksLikeHtmlResponse("plain text answer")).toBe(false);
+});
+
+test("sendProbe reports an HTML page as notChatApi, never as a reply to judge", async () => {
+  installFetch(
+    () => new Response("<!doctype html><html><body>landing page</body></html>", { status: 200 }),
+  );
+  const res = await sendProbe(
+    { url: CHATBOT, bodyTemplate: '{"message":"{{prompt}}"}' },
+    "probe",
+    LOCAL,
+  );
+  expect(res.ok).toBe(false);
+  if (!res.ok) {
+    expect(res.notChatApi).toBe(true);
+    expect(res.error).toContain("NOT a chat API");
+  }
+});
+
+test("runRealProbeSuite surfaces 'not a chat API' instead of a judge failure", async () => {
+  process.env.OPENAI_API_KEY = "sk-test";
+  process.env.REAL_SCAN_ENABLED = "true";
+  installFetch((url) =>
+    url.includes("openai.com")
+      ? new Response(JUDGE_OK, { status: 200 })
+      : new Response("<!doctype html><html><body>web page</body></html>", { status: 200 }),
+  );
+
+  const run = await runRealProbeSuite({ url: CHATBOT }, LOCAL);
+  expect(run.notChatApi).toBe(true);
+  for (const v of run.verdicts.values()) {
+    expect(v.status).toBe("not_run");
+    expect(v.evidence).toContain("NOT a chat API");
+    expect(v.evidence).not.toContain("judge error");
+  }
+  // The judge was never consulted about a web page.
+  expect(calls.some((c) => c.url.includes("openai.com"))).toBe(false);
+});
+
+// ── DEFECT A: unparseable judge output is a PROVIDER failure → failover ──────────
+test("unparseable judge output fails over to the second provider", async () => {
+  process.env.NVIDIA_API_KEY = "nvapi-test";
+  process.env.OPENAI_API_KEY = "sk-test";
+  installFetch((url) =>
+    url.includes("nvidia.com")
+      ? // prose, no JSON — exactly what produced "Judge returned no JSON."
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: "The chatbot appears to have refused politely." } }],
+          }),
+          { status: 200 },
+        )
+      : new Response(JUDGE_OK, { status: 200 }),
+  );
+
+  const r = await judgeReply(PROBES[0], "I cannot help with that.");
+  expect(r.outcome).toBe("refused"); // the verdict lands on provider #2
+  expect(r.unavailable).toBeUndefined();
+  expect(calls.length).toBe(2);
+  expect(calls[0].url).toContain("integrate.api.nvidia.com");
+  expect(calls[1].url).toContain("api.openai.com");
+});
+
+test("'unavailable' is reported only after EVERY provider returns garbage", async () => {
+  process.env.NVIDIA_API_KEY = "nvapi-test";
+  process.env.OPENAI_API_KEY = "sk-test";
+  installFetch(
+    () =>
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: "no json at all, just prose" } }] }),
+        { status: 200 },
+      ),
+  );
+
+  const r = await judgeReply(PROBES[0], "anything");
+  expect(r.outcome).toBe("error");
+  expect(r.unavailable).toBe(true);
+  expect(r.rationale).toContain("unavailable");
+  expect(calls.length).toBe(2); // both providers were tried
+});
+
+// ── DEFECT B: request body shape autodetection ───────────────────────────────────
+test("detectBodyTemplate finds the messages[] shape when {message} is rejected", async () => {
+  installFetch((url, init) => {
+    const body = String(init?.body ?? "");
+    if (url !== CHATBOT) return new Response("nope", { status: 404 });
+    // Only the OpenAI-style messages[] envelope is accepted by this bot.
+    if (body.includes('"messages"')) return new Response('{"reply":"Hello there."}', { status: 200 });
+    return new Response("Bad Request", { status: 400 });
+  });
+
+  const d = await detectBodyTemplate({ url: CHATBOT }, LOCAL);
+  expect(d.source).toBe("detected");
+  expect(d.template).toBe('{"messages":[{"role":"user","content":"{{prompt}}"}]}');
+  expect(d.notChatApi).toBe(false);
+  expect(calls.length).toBe(2); // {message} tried first, then messages[]
+});
+
+test("detectBodyTemplate finds the n8n chatInput shape", async () => {
+  installFetch((_url, init) => {
+    const body = String(init?.body ?? "");
+    if (body.includes('"chatInput"'))
+      return new Response('{"output":"n8n says hi"}', { status: 200 });
+    return new Response("{}", { status: 200 }); // JSON with no reply field → not usable
+  });
+
+  const d = await detectBodyTemplate({ url: CHATBOT }, LOCAL);
+  expect(d.template).toBe('{"chatInput":"{{prompt}}"}');
+  expect(d.source).toBe("detected");
+  expect(BODY_TEMPLATE_CANDIDATES).toContain('{"chatInput":"{{prompt}}"}');
+});
+
+test("an explicit operator bodyTemplate ALWAYS wins and skips detection", async () => {
+  installFetch(() => new Response('{"reply":"hi"}', { status: 200 }));
+  const d = await detectBodyTemplate({ url: CHATBOT, bodyTemplate: '{"q":"{{prompt}}"}' }, LOCAL);
+  expect(d.source).toBe("operator");
+  expect(d.template).toBe('{"q":"{{prompt}}"}');
+  expect(calls.length).toBe(0); // ZERO detection requests
+});
+
+test("detectBodyTemplate flags an HTML endpoint instead of picking a shape", async () => {
+  installFetch(() => new Response("<!doctype html><html>page</html>", { status: 200 }));
+  const d = await detectBodyTemplate({ url: CHATBOT }, LOCAL);
+  expect(d.source).toBe("fallback");
+  expect(d.notChatApi).toBe(true);
+  expect(d.note).toContain("NOT a chat API");
+});
+
+test("runRealProbeSuite probes with the AUTODETECTED shape and records it", async () => {
+  process.env.OPENAI_API_KEY = "sk-test";
+  installFetch((url, init) => {
+    if (url.includes("openai.com")) return new Response(OPENAI_VERDICT("refused"), { status: 200 });
+    const body = String(init?.body ?? "");
+    if (body.includes('"chatInput"'))
+      return new Response('{"output":"I must decline."}', { status: 200 });
+    return new Response("Bad Request", { status: 400 });
+  });
+
+  const run = await runRealProbeSuite({ url: CHATBOT }, LOCAL);
+  expect(run.templateSource).toBe("detected");
+  expect(run.bodyTemplate).toBe('{"chatInput":"{{prompt}}"}');
+  for (const v of run.verdicts.values()) {
+    expect(v.status).toBe("pass"); // every probe reached the bot with the right shape
+    expect(v.evidence).toContain('{"chatInput":"{{prompt}}"}');
+  }
+});
+
+// ── DEFECT C: no "pass" verdict when the core categories did not run ─────────────
+test("runScanEngine never verdicts 'pass' when no core category ran", async () => {
+  // Transport checks pass (HTTPS target, headers present) but the interactive suite
+  // cannot run — this is the shape that reported score 100 / verdict pass.
+  installFetch(
+    () =>
+      new Response("<html>clean</html>", {
+        status: 200,
+        headers: {
+          "content-security-policy": "default-src 'self'; frame-ancestors 'none'",
+          "strict-transport-security": "max-age=31536000",
+        },
+      }),
+  );
+  const result = await runScanEngine("https://127.0.0.1/", {
+    ...LOCAL,
+    tier: "enterprise",
+  });
+
+  expect(result.interactive_suite_ran).toBe(false);
+  expect(result.verdict).not.toBe("pass");
+  expect(result.verdict).toBe("warn");
+  expect(result.summary).toContain("INCOMPLETE SCAN");
+  expect(result.summary).toContain("UNVERIFIED");
+  expect(result.summary).toContain("no chatbot message endpoint was supplied");
+  expect(result.summary).toContain("NOT a pass for this chatbot");
+});
+
+test("runScanEngine says WHY: endpoint is a web page, not a chat API", async () => {
+  process.env.OPENAI_API_KEY = "sk-test";
+  process.env.REAL_SCAN_ENABLED = "true";
+  installFetch((url) => {
+    if (url.includes("openai.com")) return new Response(JUDGE_OK, { status: 200 });
+    return new Response("<!doctype html><html>page</html>", { status: 200 });
+  });
+
+  const result = await runScanEngine(TARGET, {
+    ...LOCAL,
+    tier: "enterprise",
+    chatbot: { url: CHATBOT },
+  });
+
+  expect(result.verdict).not.toBe("pass");
+  expect(result.interactive_suite_ran).toBe(false);
+  expect(result.summary).toContain("NOT a chat API");
+  expect(result.summary).toContain("INCOMPLETE SCAN");
+});
+
+test("runScanEngine still verdicts 'pass' when the core suite DID run clean", async () => {
+  process.env.OPENAI_API_KEY = "sk-test";
+  process.env.REAL_SCAN_ENABLED = "true";
+  installFetch((url) => {
+    if (url.includes("openai.com")) return new Response(OPENAI_VERDICT("refused"), { status: 200 });
+    if (url === CHATBOT) return new Response('{"reply":"I must decline."}', { status: 200 });
+    return new Response("<html>clean</html>", { status: 200 });
+  });
+
+  const result = await runScanEngine(TARGET, { ...LOCAL, chatbot: { url: CHATBOT } });
+  expect(result.interactive_suite_ran).toBe(true);
+  expect(result.verdict).toBe("pass");
+  expect(result.summary).not.toContain("INCOMPLETE SCAN");
+  expect(result.summary).toContain("Chat request body shape");
+});
+
+test("the 'N not run' arithmetic is preserved", async () => {
+  installFetch(() => new Response("<html>clean</html>", { status: 200 }));
+  const result = await runScanEngine(TARGET, { ...LOCAL, tier: "enterprise" });
+  const notRun = result.results.filter((r) => r.status === "not_run").length;
+  expect(notRun).toBeGreaterThan(0);
+  expect(result.summary).toContain(`${notRun} not run`);
 });
