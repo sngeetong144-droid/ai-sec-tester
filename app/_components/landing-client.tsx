@@ -42,16 +42,8 @@ export function RevealScripts() {
     return () => io.disconnect();
   }, []);
 
-  // Fixed-nav scroll state: add `.scrolled` once the page moves (ported from
-  // soul-site.js). Solid backdrop appears as soon as content scrolls under it.
-  useEffect(() => {
-    const nav = document.querySelector<HTMLElement>(".aist-landing [data-nav]");
-    if (!nav) return;
-    const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 12);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  // Fixed-nav scroll state now belongs to <SiteNav> (app/_components/site-nav.tsx),
+  // which owns `.scrolled` as React state on every route — not just this page.
 
   return null;
 }

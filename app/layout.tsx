@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+// Every rule in landing.css is scoped under `.aist-landing`, so importing it at
+// the root is inert for other markup — it only lights up the shared SiteNav (and
+// the landing itself), which is what makes one nav possible on every route.
+import "./landing.css";
 import { Analytics } from "@vercel/analytics/next";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/login/actions";
-import { SiteFooter, HideOnHome } from "@/app/_components/site-footer";
+import { SiteFooter } from "@/app/_components/site-footer";
+import { SiteNav, SiteNavOffset } from "@/app/_components/site-nav";
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
@@ -66,42 +71,30 @@ export default async function RootLayout({
         suppressHydrationWarning
         className={`${jakarta.className} antialiased bg-[#F0EEFF] text-slate-800 flex flex-col min-h-screen`}
       >
-        {/* Site header — hidden on the anonymous landing ("/"), which ships its
-            own fixed emerald nav. Authenticated users keep it (Sign out lives here). */}
-        <HideOnHome active={!user}>
-        <div className="bg-white/70 backdrop-blur-sm border-b border-violet-100 px-4 py-3 shrink-0 sm:px-6">
-          <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-            <a
-              href="https://thesoulsofai.com"
-              className="text-sm font-semibold text-violet-700 hover:text-violet-900 transition-colors"
-            >
-              ← The Souls of AI
-            </a>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-400">
-              <a href="/" className="hover:text-slate-600 transition-colors">Scanner</a>
-              <a href="/enterprise" className="hover:text-slate-600 transition-colors">Enterprise</a>
-              {user && (
-                <div className="flex items-center gap-3">
-                  <span className="max-w-[45vw] truncate text-slate-500 sm:max-w-none">{user.email}</span>
-                  <form action={signOut}>
-                    <button
-                      type="submit"
-                      className="rounded-full border border-violet-200 px-3 py-1 text-xs text-violet-600 hover:bg-violet-50 transition-colors"
-                    >
-                      Sign out
-                    </button>
-                  </form>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        </HideOnHome>
+        {/* The ONE site header — the emerald fixed nav, on every public route.
+            SiteNav suppresses itself on the console surfaces (/auth/login and
+            /command-center**), which ship their own chrome. The sign-out control
+            is passed in as a slot so the nav never has to touch Supabase: the
+            token-gated customer report is unauthenticated and must render for
+            anonymous visitors. */}
+        <SiteNav
+          signOut={
+            user ? (
+              <form action={signOut}>
+                <button
+                  type="submit"
+                  className="btn btn-ghost"
+                  style={{ padding: "10px 18px", fontSize: 14.5 }}
+                >
+                  Sign out
+                </button>
+              </form>
+            ) : null
+          }
+        />
 
-        {/* Page content */}
-        <div className="flex-1">
-          {children}
-        </div>
+        {/* Page content — offset below the 70px fixed nav where one is shown. */}
+        <SiteNavOffset>{children}</SiteNavOffset>
 
         {/* Site footer — suppressed on the public landing ("/"), which ships its own. */}
         <SiteFooter />

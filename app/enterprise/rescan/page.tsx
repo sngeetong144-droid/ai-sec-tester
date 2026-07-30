@@ -14,14 +14,14 @@ export default function RescanPage() {
   return (
     <main className="grid-bg min-h-screen flex items-center justify-center">
       <div className="mx-auto max-w-lg px-5 py-16 text-center">
-        <h1 className="text-2xl font-bold text-slate-100 mb-3">
+        <h1 className="text-2xl font-bold text-slate-800 mb-3">
           Re-scans moved to the Command Center
         </h1>
-        <p className="text-slate-400">
+        <p className="text-slate-500">
           Complimentary re-scans are now activated by an operator in the private
           Command Center. This one-click email re-scan link has been retired.
           Contact{" "}
-          <a href="mailto:hello@thesoulsofai.com" className="text-brand-400">
+          <a href="mailto:hello@thesoulsofai.com" className="text-brand-600 hover:underline">
             support
           </a>{" "}
           to schedule your re-scan.

@@ -138,35 +138,9 @@ export function Landing() {
         <style dangerouslySetInnerHTML={{ __html: ".aist-landing [data-reveal]{opacity:1;transform:none}" }} />
       </noscript>
 
-      {/* NAV — anchor-only, fixed. No public login link (auth stays reachable
-          only by directly visiting /auth/login). CTA + links point to in-page anchors. */}
-      <nav className="nav" data-nav>
-        <div className="nav-in">
-          <a href="https://thesoulsofai.com" className="brand">
-            <img src="/assets/thesoulsofai_watermark.png" alt="The Souls of AI" />
-            <span>
-              AI Sec <b>Tester</b>
-            </span>
-          </a>
-          {/* CSS-only mobile hamburger (checkbox hack — no client JS) */}
-          <input type="checkbox" id="nav-toggle" className="nav-toggle" aria-hidden="true" />
-          <label htmlFor="nav-toggle" className="nav-burger" aria-label="Open menu">
-            <span />
-            <span />
-            <span />
-          </label>
-          <div className="nav-links">
-            <a href="#how">How it works</a>
-            <a href="#checks">What we check</a>
-            <a href="#pricing">Pricing</a>
-          </div>
-          <div className="nav-cta">
-            <a href="#pricing" className="btn btn-accent" style={{ padding: "11px 20px" }}>
-              Scan my chatbot
-            </a>
-          </div>
-        </div>
-      </nav>
+      {/* NAV lives in app/_components/site-nav.tsx, rendered once by the root
+          layout so every route wears the same header. It used to be inlined
+          here, which is why signed-in visitors saw two navs stacked. */}
 
       {/* HERO */}
       <header className="s-hero">

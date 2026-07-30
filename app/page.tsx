@@ -1,4 +1,5 @@
-import "./landing.css";
+// landing.css is imported by app/layout.tsx (its rules are all scoped under
+// `.aist-landing`) so the shared SiteNav is styled on every route, not just here.
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/command-center/admin";
