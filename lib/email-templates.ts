@@ -69,12 +69,23 @@ export interface DeliveryResult {
  * change + audit + queue. Delivery is best-effort by design; the queued
  * cc_email_log row is the durable record.
  */
+/**
+ * Report delivery is ON only when the operator wrote the literal word "true".
+ * Whitespace/case tolerant — a value pasted into a dashboard field with a trailing
+ * space silently muted every report email once, and a muted delivery is invisible
+ * to the customer AND to us. Still only "true": "1"/"yes" must not enable sending.
+ * Exported so /api/health can report the real state (Vercel hides Sensitive values).
+ */
+export function emailSendEnabled(): boolean {
+  return String(process.env.CC_EMAIL_SEND_ENABLED ?? "").trim().toLowerCase() === "true";
+}
+
 export async function deliverComposedEmail(
   composed: ComposedEmail,
   opts?: { reportUrl?: string },
 ): Promise<DeliveryResult> {
   const key = process.env.RESEND_API_KEY;
-  const enabled = process.env.CC_EMAIL_SEND_ENABLED === "true";
+  const enabled = emailSendEnabled();
   if (!key || !enabled) {
     console.log(
       `[cc-email] gated — not sent (${composed.kind} → ${composed.toEmail}); ` +

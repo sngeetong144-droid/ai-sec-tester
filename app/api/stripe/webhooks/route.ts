@@ -6,6 +6,37 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 /**
+ * Kick the dispatcher the moment money lands, so a paid scan starts in seconds
+ * instead of waiting for the next cron tick (the customer promise is
+ * request → approve → pay → scan → report, with no human in the loop).
+ *
+ * Fire-and-DON'T-await: /api/cron/dispatch-scans runs scans synchronously and can
+ * take minutes, which would blow Stripe's webhook timeout and trigger retries. We
+ * abort the CLIENT side after a moment — that only drops our end of the socket;
+ * the dispatch invocation Vercel already started keeps running to completion.
+ * Cron remains the backstop for anything this misses.
+ */
+async function kickDispatch(): Promise<void> {
+  const base = process.env.NEXT_PUBLIC_APP_URL;
+  const secret = process.env.CRON_SECRET;
+  if (!base || !secret) return; // not configured → cron still picks it up
+
+  const controller = new AbortController();
+  const cut = setTimeout(() => controller.abort(), 1_500);
+  try {
+    await fetch(`${base.replace(/\/$/, "")}/api/cron/dispatch-scans`, {
+      headers: { authorization: `Bearer ${secret}` },
+      signal: controller.signal,
+    });
+  } catch {
+    // Abort/network failure is expected and harmless — the run is already underway
+    // server-side, and the cron backstop covers a genuine miss.
+  } finally {
+    clearTimeout(cut);
+  }
+}
+
+/**
  * POST /api/stripe/webhooks
  *
  * Receives and processes Stripe webhook events.
@@ -57,7 +88,11 @@ export async function POST(request: Request) {
         if (clientRef && session.payment_status === "paid") {
           // Pass amount_total so markRequestPaid rejects underpayment (a basic-tier
           // checkout carrying an enterprise request's client_reference_id).
-          await markRequestPaid(clientRef, session.amount_total);
+          const paid = await markRequestPaid(clientRef, session.amount_total);
+          // Only kick when THIS delivery performed the transition (markRequestPaid
+          // returns false for a duplicate/underpaid delivery), so a replayed webhook
+          // cannot start a second dispatch run.
+          if (paid) await kickDispatch();
         }
 
         // ── Legacy cc_cases metadata activation (kept; never fires for FastPayDirect
