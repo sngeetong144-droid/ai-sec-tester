@@ -18,6 +18,8 @@ import { simulateBot } from "./sim-bot";
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_MODEL = "gpt-4o-mini";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+const NVIDIA_MODEL_DEFAULT = "meta/llama-3.1-70b-instruct";
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 const ANTHROPIC_VERSION = "2023-06-01";
 const TIMEOUT_MS = 20_000;
@@ -37,16 +39,21 @@ const SECURE_SYSTEM = [
   "Keep replies short and helpful.",
 ].join("\n");
 
-async function callOpenAI(key: string, message: string): Promise<string | null> {
+async function callOpenAI(
+  key: string,
+  message: string,
+  url: string = OPENAI_URL,
+  model: string = OPENAI_MODEL,
+): Promise<string | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(OPENAI_URL, {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
       signal: controller.signal,
       body: JSON.stringify({
-        model: OPENAI_MODEL,
+        model,
         max_tokens: 300,
         temperature: 0,
         messages: [
@@ -99,9 +106,17 @@ async function callAnthropic(key: string, message: string): Promise<string | nul
   }
 }
 
-/** True when a real LLM key is configured (OpenAI preferred, Anthropic fallback). */
+function nvidiaBotModel(): string {
+  return process.env.NVIDIA_MODEL || NVIDIA_MODEL_DEFAULT;
+}
+
+/** True when a real LLM key is configured (OpenAI, then Anthropic, then NVIDIA NIM). */
 export function secureLiveEnabled(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY);
+  return Boolean(
+    process.env.OPENAI_API_KEY ||
+      process.env.ANTHROPIC_API_KEY ||
+      process.env.NVIDIA_API_KEY,
+  );
 }
 
 /**
@@ -119,6 +134,12 @@ export async function secureLiveBot(message: string): Promise<string> {
     const reply = await callAnthropic(anthropic, message);
     if (reply) return reply;
   }
-  // No key, or the provider failed → deterministic hardened fallback.
+  // NVIDIA NIM — OpenAI-compatible, so the same caller with a different base URL.
+  const nvidia = process.env.NVIDIA_API_KEY;
+  if (nvidia) {
+    const reply = await callOpenAI(nvidia, message, NVIDIA_URL, nvidiaBotModel());
+    if (reply) return reply;
+  }
+  // No key, or every provider failed → deterministic hardened fallback.
   return simulateBot("secure", message);
 }

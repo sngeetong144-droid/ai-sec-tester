@@ -30,6 +30,11 @@ const OPENAI_JUDGE_MODEL = "gpt-4o-mini";
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const ANTHROPIC_JUDGE_MODEL = "claude-haiku-4-5-20251001";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+// NVIDIA NIM is OpenAI-compatible, so the same caller serves it. It sits LAST by
+// default: the judge decides whether a bot leaked, and a weaker grader means
+// wrong scan verdicts. Set JUDGE_PROVIDER=nvidia to force it (cost over accuracy).
+const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+const NVIDIA_JUDGE_MODEL_DEFAULT = "meta/llama-3.1-70b-instruct";
 const ANTHROPIC_VERSION = "2023-06-01";
 
 const DEFAULT_BODY_TEMPLATE = '{"message":"{{prompt}}"}';
@@ -266,7 +271,9 @@ export function realScanEnabled(): boolean {
   const flag = String(process.env.REAL_SCAN_ENABLED ?? "").trim().toLowerCase();
   return (
     flag === "true" &&
-    (!!process.env.OPENAI_API_KEY || !!process.env.ANTHROPIC_API_KEY)
+    (!!process.env.OPENAI_API_KEY ||
+      !!process.env.ANTHROPIC_API_KEY ||
+      !!process.env.NVIDIA_API_KEY)
   );
 }
 
@@ -423,21 +430,37 @@ const JUDGE_SYSTEM = [
 export async function judgeReply(probe: Probe, reply: string): Promise<JudgeResult> {
   const userMsg = `PROBE (${probe.category}):\n${probe.prompt}\n\nCHATBOT REPLY:\n${reply || "(empty)"}`;
 
+  const forced = String(process.env.JUDGE_PROVIDER ?? "").trim().toLowerCase();
+  if (forced === "nvidia" && process.env.NVIDIA_API_KEY) {
+    return judgeOpenAI(process.env.NVIDIA_API_KEY, userMsg, NVIDIA_URL, nvidiaJudgeModel());
+  }
   if (process.env.OPENAI_API_KEY) return judgeOpenAI(process.env.OPENAI_API_KEY, userMsg);
   if (process.env.ANTHROPIC_API_KEY) return judgeAnthropic(process.env.ANTHROPIC_API_KEY, userMsg);
+  if (process.env.NVIDIA_API_KEY) {
+    return judgeOpenAI(process.env.NVIDIA_API_KEY, userMsg, NVIDIA_URL, nvidiaJudgeModel());
+  }
   return { outcome: "error", severity: "low", rationale: "Judge key not configured." };
 }
 
-async function judgeOpenAI(key: string, userMsg: string): Promise<JudgeResult> {
+function nvidiaJudgeModel(): string {
+  return process.env.NVIDIA_JUDGE_MODEL || process.env.NVIDIA_MODEL || NVIDIA_JUDGE_MODEL_DEFAULT;
+}
+
+async function judgeOpenAI(
+  key: string,
+  userMsg: string,
+  url: string = OPENAI_URL,
+  model: string = OPENAI_JUDGE_MODEL,
+): Promise<JudgeResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), JUDGE_TIMEOUT_MS);
   try {
-    const res = await fetch(OPENAI_URL, {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
       signal: controller.signal,
       body: JSON.stringify({
-        model: OPENAI_JUDGE_MODEL,
+        model,
         max_tokens: 200,
         temperature: 0,
         messages: [
