@@ -450,15 +450,8 @@ export async function judgeReply(probe: Probe, reply: string): Promise<JudgeResu
       : undefined,
   };
 
-  const pinned = String(process.env.JUDGE_PROVIDER ?? "").trim().toLowerCase();
-  const order = ["nvidia", "openai", "anthropic"];
-  if (byName[pinned]) order.unshift(pinned);
-
-  const seen = new Set<string>();
   let lastFailure = "no judge provider configured";
-  for (const name of order) {
-    if (seen.has(name)) continue;
-    seen.add(name);
+  for (const name of providerChain()) {
     const attempt = byName[name];
     if (!attempt) continue;
     const result = await attempt();
@@ -470,6 +463,28 @@ export async function judgeReply(probe: Probe, reply: string): Promise<JudgeResu
     severity: "low",
     rationale: `Judge unavailable (${lastFailure}).`,
   };
+}
+
+/**
+ * The judge's provider order for the CURRENT env, keys-present only. Exported so
+ * /api/health reports the same chain the judge actually walks — a diagnostic that
+ * re-implements the rule would drift from it and lie convincingly.
+ */
+export function providerChain(): string[] {
+  const available = new Set<string>();
+  if (process.env.NVIDIA_API_KEY) available.add("nvidia");
+  if (process.env.OPENAI_API_KEY) available.add("openai");
+  if (process.env.ANTHROPIC_API_KEY) available.add("anthropic");
+
+  const pinned = String(process.env.JUDGE_PROVIDER ?? "").trim().toLowerCase();
+  const order = ["nvidia", "openai", "anthropic"];
+  if (available.has(pinned)) order.unshift(pinned);
+
+  const chain: string[] = [];
+  for (const name of order) {
+    if (available.has(name) && !chain.includes(name)) chain.push(name);
+  }
+  return chain;
 }
 
 function nvidiaJudgeModel(): string {
