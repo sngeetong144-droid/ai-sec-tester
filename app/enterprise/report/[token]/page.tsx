@@ -49,6 +49,21 @@ export default async function ReportPage({
   if (!scan) return notFound();
 
   const failCount = scan.results.filter((r) => r.status === "fail").length;
+  // A check that never ran is stored as "pending". The score is computed only from
+  // checks that DID run, so a page showing a bare "100 / SECURE" while the five
+  // interactive OWASP categories were skipped reads as an all-clear the scan never
+  // earned. Name the gap next to the score, not in a footnote.
+  const CORE_INTERACTIVE = [
+    "system_prompt_leak",
+    "instruction_override",
+    "jailbreak_persona",
+    "data_exfiltration",
+    "unsafe_content",
+  ];
+  const notRun = scan.results.filter((r) => r.status === "pending");
+  const coreSkipped = CORE_INTERACTIVE.filter((k) =>
+    notRun.some((r) => r.test_key === k),
+  ).length;
 
   return (
     <main className="grid-bg min-h-screen">
@@ -91,6 +106,20 @@ export default async function ReportPage({
             <p className="mt-2 text-sm text-slate-500">{scan.summary}</p>
           </div>
         </div>
+
+        {/* Incomplete banner — must sit ABOVE the failure banner: "we could not
+            test this" outranks "we found N issues" when deciding what the score means. */}
+        {coreSkipped > 0 && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <span className="font-semibold">
+              Incomplete scan — {coreSkipped} of 5 interactive checks did not run.
+            </span>{" "}
+            The score above covers only the {scan.results.length - notRun.length} checks that
+            completed, so it is not an all-clear for prompt-injection resistance. The usual cause
+            is that the scan was pointed at a web page rather than the chatbot&rsquo;s message
+            endpoint — re-run against the URL the chat widget posts to.
+          </div>
+        )}
 
         {/* Failure banner */}
         {failCount > 0 && (
