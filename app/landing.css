@@ -277,8 +277,25 @@
 .aist-landing .chatw .pbody .btn { width: 100%; justify-content: center; margin-top: 4px; }
 .aist-landing .chatw .thx { display: none; text-align: center; font-size: 14px; font-weight: 600; color: var(--accent); padding: 8px 0; }
 .aist-landing .chatw .thx.show { display: block; }
+
+/* live assistant: scrollable transcript + composer (reuses .msg as the bubble) */
+.aist-landing .chatw .chatlog { display: flex; flex-direction: column; gap: 8px; max-height: min(300px, 42vh); overflow-y: auto; overscroll-behavior: contain; margin-bottom: 12px; padding-right: 2px; }
+.aist-landing .chatw .chatlog .msg { margin-bottom: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.aist-landing .chatw .chatlog .msg.bot { align-self: flex-start; max-width: 94%; border-bottom-left-radius: 4px; }
+.aist-landing .chatw .chatlog .msg.me { align-self: flex-end; max-width: 88%; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+.aist-landing .chatw .chatlog .msg.pending { color: var(--ink-3); font-style: italic; }
+.aist-landing .chatw .crow { display: flex; align-items: flex-end; gap: 8px; }
+.aist-landing .chatw .crow .cinput { flex: 1; min-width: 0; font-family: "Inter"; font-size: 14px; line-height: 1.45; color: var(--ink); background: var(--canvas); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; outline: none; resize: none; min-height: 42px; max-height: 92px; transition: 0.2s; }
+.aist-landing .chatw .crow .cinput:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.aist-landing .chatw .crow .send { flex: 0 0 auto; width: 42px; height: 42px; border: none; border-radius: 10px; background: var(--accent); color: #fff; cursor: pointer; display: grid; place-items: center; transition: 0.2s; }
+.aist-landing .chatw .crow .send svg { width: 18px; height: 18px; }
+.aist-landing .chatw .crow .send:disabled { opacity: 0.45; cursor: not-allowed; }
+.aist-landing .chatw .altlink { display: block; width: 100%; margin-top: 10px; padding: 0; background: none; border: none; font-family: "Inter"; font-size: 12.5px; color: var(--ink-3); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.aist-landing .chatw .altlink:hover { color: var(--accent); }
+.aist-landing .chatw .pbody .req-note.err { margin: 0 0 10px; padding: 10px 12px; font-size: 12.5px; }
 @media (max-width: 520px) {
   .aist-landing .chatw .panel { width: min(320px, calc(100vw - 40px)); }
+  .aist-landing .chatw .chatlog { max-height: min(260px, 38vh); }
 }
 
 /* request form */

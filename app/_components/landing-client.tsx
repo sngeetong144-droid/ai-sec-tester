@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FocusEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FocusEvent, type FormEvent } from "react";
 import { PAYMENT_LINKS } from "@/lib/payment-links";
 import { COUNTRIES } from "@/lib/jurisdiction-policy";
 
@@ -56,16 +56,96 @@ export function RevealScripts() {
   return null;
 }
 
+type ChatMsg = { role: "user" | "assistant"; content: string };
+
+const CHAT_GREETING =
+  "Hi 👋 I'm the AI Sec Tester assistant. Ask me what a scan covers, the tiers and pricing, how to start one, or how to read your report. For anything else, use the message form and a human will reply by email.";
+
+// Only the tail of the conversation is sent; the server caps it again server-side.
+const CHAT_SEND_TURNS = 12;
+
 /**
- * Floating "chat with us" bubble, ported from soul-site.js. Live chat is not
- * wired yet ("coming soon") — submitting shows a local acknowledgement only,
- * exactly like the static design. No network call, no dead promise.
+ * Floating "chat with us" bubble, ported from soul-site.js — now a REAL chat.
+ *
+ * Each turn POSTs the recent history to /api/chat (lib/chat-assistant.ts, scoped
+ * strictly to AI Sec Tester topics). Model output is rendered as TEXT through JSX
+ * only — no dangerouslySetInnerHTML anywhere in this file, deliberately: the reply
+ * is influenced by visitor input and must never become markup.
+ *
+ * The old contact form is NOT removed, it is the fallback: it appears automatically
+ * when the assistant reports unconfigured/unavailable, and is always one click away
+ * behind "Email us instead". Message capture never depends on the LLM working.
  */
 export function ChatBubble() {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+
+  // Chat state
+  const [messages, setMessages] = useState<ChatMsg[]>([
+    { role: "assistant", content: CHAT_GREETING },
+  ]);
+  const [input, setInput] = useState("");
+  const [thinking, setThinking] = useState(false);
+  const [chatErr, setChatErr] = useState("");
+  // assistantDown: the API said unconfigured/unavailable — stop offering the chat
+  // input and keep the visitor on the path that still works (email capture).
+  const [assistantDown, setAssistantDown] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const logRef = useRef<HTMLDivElement>(null);
+
+  // Keep the newest turn in view, including while "Thinking…" is showing.
+  useEffect(() => {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, thinking, showForm, open]);
+
+  async function handleSend(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const text = input.trim();
+    if (!text || thinking) return;
+
+    const next: ChatMsg[] = [...messages, { role: "user", content: text }];
+    setMessages(next);
+    setInput("");
+    setChatErr("");
+    setThinking(true);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: next.slice(-CHAT_SEND_TURNS) }),
+      });
+      const data = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        reply?: string;
+        reason?: string;
+        error?: string;
+      } | null;
+
+      if (res.ok && data?.ok && typeof data.reply === "string" && data.reply.trim()) {
+        const reply = data.reply.trim();
+        setMessages((m) => [...m, { role: "assistant", content: reply }]);
+        return;
+      }
+      // Assistant genuinely off/down → hand the visitor to the form that works.
+      if (data?.reason === "unconfigured" || data?.reason === "unavailable") {
+        setAssistantDown(true);
+        setShowForm(true);
+        setChatErr(
+          data.error ||
+            "Our assistant isn't available right now. Leave a message and we'll reply by email.",
+        );
+        return;
+      }
+      setChatErr(data?.error || "Could not get a reply. Please try again.");
+    } catch {
+      setChatErr("Could not reach the assistant. Please check your connection and try again.");
+    } finally {
+      setThinking(false);
+    }
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -102,48 +182,118 @@ export function ChatBubble() {
       <div className="panel">
         <div className="phead">
           <b>Chat with us</b>
-          <p>Live chat is coming soon</p>
+          <p>
+            {showForm
+              ? "Leave a message — we reply by email"
+              : "Ask about scans, tiers & reports"}
+          </p>
         </div>
         <div className="pbody">
-          <div className="msg">
-            👋 Our AI assistant is on its way. In the meantime, leave a message and
-            we&rsquo;ll get back to you by email.
-          </div>
-          {sent ? (
-            <div className="thx show">
-              Got it — we&rsquo;ll reply to your email address. 🙌
-            </div>
+          {showForm ? (
+            <>
+              <div className="msg">
+                {assistantDown
+                  ? chatErr ||
+                    "Our assistant isn’t available right now. Leave a message and we’ll reply by email."
+                  : "Leave a message and we’ll get back to you by email. Support hours are 9am–6pm ET, Mon–Fri."}
+              </div>
+              {sent ? (
+                <div className="thx show">
+                  Got it — we&rsquo;ll reply to your email address. 🙌
+                </div>
+              ) : (
+                <>
+                  <form onSubmit={handleSubmit} autoComplete="on">
+                    <div className="cfield">
+                      <input
+                        type="text"
+                        name="name"
+                        required
+                        maxLength={80}
+                        placeholder="Your name"
+                      />
+                    </div>
+                    <div className="cfield">
+                      <input
+                        type="email"
+                        name="email"
+                        required
+                        maxLength={160}
+                        placeholder="Email address"
+                      />
+                    </div>
+                    <div className="cfield">
+                      <textarea
+                        name="message"
+                        required
+                        maxLength={2000}
+                        placeholder="How can we help?"
+                      />
+                    </div>
+                    {err && (
+                      <p className="req-note err" role="alert">
+                        {err}
+                      </p>
+                    )}
+                    <button type="submit" className="btn btn-accent" disabled={busy}>
+                      {busy ? "Sending…" : "Send message"}
+                    </button>
+                  </form>
+                  {!assistantDown && (
+                    <button type="button" className="altlink" onClick={() => setShowForm(false)}>
+                      Back to the assistant
+                    </button>
+                  )}
+                </>
+              )}
+            </>
           ) : (
-            <form onSubmit={handleSubmit} autoComplete="on">
-              <div className="cfield">
-                <input type="text" name="name" required maxLength={80} placeholder="Your name" />
+            <>
+              <div className="chatlog" ref={logRef} role="log" aria-live="polite">
+                {messages.map((m, i) => (
+                  <div key={i} className={`msg ${m.role === "user" ? "me" : "bot"}`}>
+                    {m.content}
+                  </div>
+                ))}
+                {thinking && <div className="msg bot pending">Thinking…</div>}
               </div>
-              <div className="cfield">
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  maxLength={160}
-                  placeholder="Email address"
-                />
-              </div>
-              <div className="cfield">
-                <textarea
-                  name="message"
-                  required
-                  maxLength={2000}
-                  placeholder="How can we help?"
-                />
-              </div>
-              {err && (
+              {chatErr && (
                 <p className="req-note err" role="alert">
-                  {err}
+                  {chatErr}
                 </p>
               )}
-              <button type="submit" className="btn btn-accent" disabled={busy}>
-                {busy ? "Sending…" : "Send message"}
+              <form onSubmit={handleSend} className="crow">
+                <textarea
+                  className="cinput"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Enter sends, Shift+Enter makes a new line.
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      e.currentTarget.form?.requestSubmit();
+                    }
+                  }}
+                  rows={1}
+                  maxLength={1500}
+                  placeholder="Ask about a scan…"
+                  aria-label="Message the AI Sec Tester assistant"
+                />
+                <button
+                  type="submit"
+                  className="send"
+                  disabled={thinking || !input.trim()}
+                  aria-label="Send message"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 12h15M13 6l6 6-6 6" />
+                  </svg>
+                </button>
+              </form>
+              <button type="button" className="altlink" onClick={() => setShowForm(true)}>
+                Email us instead
               </button>
-            </form>
+            </>
           )}
         </div>
       </div>
