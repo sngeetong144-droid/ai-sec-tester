@@ -423,35 +423,66 @@ const JUDGE_SYSTEM = [
 ].join("\n");
 
 /**
- * LLM judge via raw fetch (no SDK dependency). Provider is picked by whichever
- * key is present — OpenAI preferred, Anthropic fallback. Never called when
- * disabled (no key => "error" outcome, no request).
+ * LLM judge via raw fetch (no SDK dependency).
+ *
+ * Provider order is NVIDIA NIM → OpenAI → Anthropic (Creator directive: spend the
+ * owned NIM quota first, pay per-token only after it is exhausted). Failover is
+ * automatic on PROVIDER FAILURE ONLY — a rate-limit/quota/5xx/timeout moves to the
+ * next key. A successful call that legitimately verdicts "error" (the bot replied
+ * empty or unintelligibly) is a REAL result and is returned as-is: retrying it on
+ * a paid provider would burn money to re-derive the same answer.
+ * JUDGE_PROVIDER=openai|anthropic|nvidia pins the first attempt.
  */
 export async function judgeReply(probe: Probe, reply: string): Promise<JudgeResult> {
   const userMsg = `PROBE (${probe.category}):\n${probe.prompt}\n\nCHATBOT REPLY:\n${reply || "(empty)"}`;
 
-  const forced = String(process.env.JUDGE_PROVIDER ?? "").trim().toLowerCase();
-  if (forced === "nvidia" && process.env.NVIDIA_API_KEY) {
-    return judgeOpenAI(process.env.NVIDIA_API_KEY, userMsg, NVIDIA_URL, nvidiaJudgeModel());
+  type Attempt = () => Promise<JudgeResult | null>;
+  const byName: Record<string, Attempt | undefined> = {
+    nvidia: process.env.NVIDIA_API_KEY
+      ? () =>
+          judgeOpenAI(process.env.NVIDIA_API_KEY as string, userMsg, NVIDIA_URL, nvidiaJudgeModel())
+      : undefined,
+    openai: process.env.OPENAI_API_KEY
+      ? () => judgeOpenAI(process.env.OPENAI_API_KEY as string, userMsg)
+      : undefined,
+    anthropic: process.env.ANTHROPIC_API_KEY
+      ? () => judgeAnthropic(process.env.ANTHROPIC_API_KEY as string, userMsg)
+      : undefined,
+  };
+
+  const pinned = String(process.env.JUDGE_PROVIDER ?? "").trim().toLowerCase();
+  const order = ["nvidia", "openai", "anthropic"];
+  if (byName[pinned]) order.unshift(pinned);
+
+  const seen = new Set<string>();
+  let lastFailure = "no judge provider configured";
+  for (const name of order) {
+    if (seen.has(name)) continue;
+    seen.add(name);
+    const attempt = byName[name];
+    if (!attempt) continue;
+    const result = await attempt();
+    if (result) return result; // real verdict (including a legitimate "error")
+    lastFailure = `${name} unavailable`; // provider failed — try the next key
   }
-  if (process.env.OPENAI_API_KEY) return judgeOpenAI(process.env.OPENAI_API_KEY, userMsg);
-  if (process.env.ANTHROPIC_API_KEY) return judgeAnthropic(process.env.ANTHROPIC_API_KEY, userMsg);
-  if (process.env.NVIDIA_API_KEY) {
-    return judgeOpenAI(process.env.NVIDIA_API_KEY, userMsg, NVIDIA_URL, nvidiaJudgeModel());
-  }
-  return { outcome: "error", severity: "low", rationale: "Judge key not configured." };
+  return {
+    outcome: "error",
+    severity: "low",
+    rationale: `Judge unavailable (${lastFailure}).`,
+  };
 }
 
 function nvidiaJudgeModel(): string {
   return process.env.NVIDIA_JUDGE_MODEL || process.env.NVIDIA_MODEL || NVIDIA_JUDGE_MODEL_DEFAULT;
 }
 
+/** Returns null on PROVIDER failure (so the caller fails over); a verdict otherwise. */
 async function judgeOpenAI(
   key: string,
   userMsg: string,
   url: string = OPENAI_URL,
   model: string = OPENAI_JUDGE_MODEL,
-): Promise<JudgeResult> {
+): Promise<JudgeResult | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), JUDGE_TIMEOUT_MS);
   try {
@@ -469,17 +500,20 @@ async function judgeOpenAI(
         ],
       }),
     });
-    if (!res.ok) return { outcome: "error", severity: "low", rationale: `Judge HTTP ${res.status}.` };
+    if (!res.ok) return null; // exhausted quota / rate limited / down → fail over
     const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    return parseJudge(data.choices?.[0]?.message?.content ?? "");
+    const text = data.choices?.[0]?.message?.content ?? "";
+    if (!text.trim()) return null; // empty completion is a provider failure, not a verdict
+    return parseJudge(text);
   } catch {
-    return { outcome: "error", severity: "low", rationale: "Judge request failed." };
+    return null;
   } finally {
     clearTimeout(timeout);
   }
 }
 
-async function judgeAnthropic(key: string, userMsg: string): Promise<JudgeResult> {
+/** Returns null on PROVIDER failure (so the caller fails over); a verdict otherwise. */
+async function judgeAnthropic(key: string, userMsg: string): Promise<JudgeResult | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), JUDGE_TIMEOUT_MS);
   try {
@@ -499,11 +533,13 @@ async function judgeAnthropic(key: string, userMsg: string): Promise<JudgeResult
         messages: [{ role: "user", content: userMsg }],
       }),
     });
-    if (!res.ok) return { outcome: "error", severity: "low", rationale: `Judge HTTP ${res.status}.` };
+    if (!res.ok) return null; // exhausted quota / rate limited / down → fail over
     const data = (await res.json()) as { content?: Array<{ text?: string }> };
-    return parseJudge(data.content?.[0]?.text ?? "");
+    const text = data.content?.[0]?.text ?? "";
+    if (!text.trim()) return null;
+    return parseJudge(text);
   } catch {
-    return { outcome: "error", severity: "low", rationale: "Judge request failed." };
+    return null;
   } finally {
     clearTimeout(timeout);
   }

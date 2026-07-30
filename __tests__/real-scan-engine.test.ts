@@ -44,6 +44,12 @@ function clearKeys(): void {
   delete process.env.OPENAI_API_KEY;
   delete process.env.ANTHROPIC_API_KEY;
   delete process.env.REAL_SCAN_ENABLED;
+  // Provider order is env-driven, so a key left in the ambient shell would
+  // silently change which provider a test exercises.
+  delete process.env.NVIDIA_API_KEY;
+  delete process.env.NVIDIA_MODEL;
+  delete process.env.NVIDIA_JUDGE_MODEL;
+  delete process.env.JUDGE_PROVIDER;
 }
 
 beforeEach(() => {
@@ -230,4 +236,92 @@ test("runScanEngine (flag ON) runs real probes and returns real, non-simulated v
   expect(result.results.some((r) => r.status === "pass")).toBe(true);
   expect(calls.some((c) => c.url.includes("openai.com"))).toBe(true);
   expect(calls.some((c) => c.url === CHATBOT)).toBe(true);
+});
+
+// ── provider order + failover (NVIDIA NIM first, paid providers after) ─────────
+const JUDGE_OK = JSON.stringify({
+  choices: [
+    { message: { content: '{"outcome":"refused","severity":"low","rationale":"declined"}' } },
+  ],
+});
+
+test("judgeReply prefers NVIDIA NIM over OpenAI when both keys exist", async () => {
+  process.env.NVIDIA_API_KEY = "nvapi-test";
+  process.env.OPENAI_API_KEY = "sk-test";
+  installFetch(() => new Response(JUDGE_OK, { status: 200 }));
+
+  const r = await judgeReply(PROBES[0], "I cannot help with that.");
+  expect(r.outcome).toBe("refused");
+  expect(calls.length).toBe(1);
+  expect(calls[0].url).toContain("integrate.api.nvidia.com");
+});
+
+test("judgeReply fails over to OpenAI when NIM is exhausted (429)", async () => {
+  process.env.NVIDIA_API_KEY = "nvapi-test";
+  process.env.OPENAI_API_KEY = "sk-test";
+  installFetch((url) =>
+    url.includes("nvidia.com")
+      ? new Response("rate limited", { status: 429 })
+      : new Response(JUDGE_OK, { status: 200 }),
+  );
+
+  const r = await judgeReply(PROBES[0], "I cannot help with that.");
+  expect(r.outcome).toBe("refused"); // the verdict still lands
+  expect(calls.length).toBe(2);
+  expect(calls[0].url).toContain("integrate.api.nvidia.com");
+  expect(calls[1].url).toContain("api.openai.com");
+});
+
+test("a legitimate 'error' verdict does NOT burn a paid provider", async () => {
+  process.env.NVIDIA_API_KEY = "nvapi-test";
+  process.env.OPENAI_API_KEY = "sk-test";
+  installFetch(
+    () =>
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: '{"outcome":"error","severity":"low","rationale":"empty reply"}',
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+  );
+
+  const r = await judgeReply(PROBES[0], "");
+  expect(r.outcome).toBe("error");
+  expect(calls.length).toBe(1); // NIM answered; OpenAI must NOT be called
+});
+
+test("judgeReply reports unavailable only after every provider fails", async () => {
+  process.env.NVIDIA_API_KEY = "nvapi-test";
+  process.env.OPENAI_API_KEY = "sk-test";
+  installFetch(() => new Response("down", { status: 500 }));
+
+  const r = await judgeReply(PROBES[0], "anything");
+  expect(r.outcome).toBe("error");
+  expect(r.rationale).toContain("unavailable");
+  expect(calls.length).toBe(2);
+});
+
+test("JUDGE_PROVIDER pins the first attempt", async () => {
+  process.env.NVIDIA_API_KEY = "nvapi-test";
+  process.env.OPENAI_API_KEY = "sk-test";
+  process.env.JUDGE_PROVIDER = "openai";
+  installFetch(() => new Response(JUDGE_OK, { status: 200 }));
+
+  await judgeReply(PROBES[0], "I cannot help with that.");
+  expect(calls[0].url).toContain("api.openai.com");
+});
+
+test("realScanEnabled accepts an NVIDIA key alone, and tolerates flag whitespace", () => {
+  process.env.REAL_SCAN_ENABLED = " TRUE ";
+  process.env.NVIDIA_API_KEY = "nvapi-test";
+  expect(realScanEnabled()).toBe(true);
+
+  process.env.REAL_SCAN_ENABLED = "1"; // must NOT arm active probing
+  expect(realScanEnabled()).toBe(false);
 });

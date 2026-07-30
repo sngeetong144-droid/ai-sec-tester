@@ -124,6 +124,13 @@ export function secureLiveEnabled(): boolean {
  * key / non-OK response / timeout — always returns a safe, non-empty string.
  */
 export async function secureLiveBot(message: string): Promise<string> {
+  // NVIDIA NIM first (owned quota), then paid providers once it is exhausted —
+  // each caller returns null on failure, so this IS the failover chain.
+  const nvidia = process.env.NVIDIA_API_KEY;
+  if (nvidia) {
+    const reply = await callOpenAI(nvidia, message, NVIDIA_URL, nvidiaBotModel());
+    if (reply) return reply;
+  }
   const openai = process.env.OPENAI_API_KEY;
   if (openai) {
     const reply = await callOpenAI(openai, message);
@@ -132,12 +139,6 @@ export async function secureLiveBot(message: string): Promise<string> {
   const anthropic = process.env.ANTHROPIC_API_KEY;
   if (anthropic) {
     const reply = await callAnthropic(anthropic, message);
-    if (reply) return reply;
-  }
-  // NVIDIA NIM — OpenAI-compatible, so the same caller with a different base URL.
-  const nvidia = process.env.NVIDIA_API_KEY;
-  if (nvidia) {
-    const reply = await callOpenAI(nvidia, message, NVIDIA_URL, nvidiaBotModel());
     if (reply) return reply;
   }
   // No key, or every provider failed → deterministic hardened fallback.
