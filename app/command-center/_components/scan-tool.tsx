@@ -137,7 +137,8 @@ export function ScanTool() {
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingLeft: 26 }}>
             <div>
               <label htmlFor="bodyTemplate" style={labelStyle}>
-                Request body template <span style={{ color: COLORS.faint, fontWeight: 500 }}>(optional)</span>
+                Request body template{" "}
+                <span style={{ color: COLORS.faint, fontWeight: 500 }}>(leave blank — auto-detected)</span>
               </label>
               <input
                 id="bodyTemplate"
@@ -145,9 +146,17 @@ export function ScanTool() {
                 disabled={running}
                 value={bodyTemplate}
                 onChange={(e) => setBodyTemplate(e.target.value)}
-                placeholder={`{"message":"{{prompt}}"}`}
+                placeholder="auto-detect"
                 style={{ ...inputStyle, fontFamily: "ui-monospace, monospace" }}
               />
+              <p style={{ margin: "6px 0 0", fontSize: 11.5, color: COLORS.ink3, lineHeight: 1.5 }}>
+                The scanner sends a harmless &ldquo;Hello&rdquo; first and keeps whichever shape the bot
+                answers: <code>{`{"message":…}`}</code>, <code>{`{"messages":[{"role","content"}]}`}</code>,{" "}
+                <code>{`{"text":…}`}</code>, <code>{`{"query":…}`}</code>, <code>{`{"prompt":…}`}</code>,{" "}
+                <code>{`{"input":…}`}</code>, or n8n&rsquo;s <code>{`{"chatInput":…}`}</code>. Only fill this in
+                if your bot uses a shape that is not on that list — <code>{`{{prompt}}`}</code> marks where the
+                probe text goes.
+              </p>
             </div>
             <div>
               <label htmlFor="authToken" style={labelStyle}>
