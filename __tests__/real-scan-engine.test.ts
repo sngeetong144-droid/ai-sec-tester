@@ -69,7 +69,7 @@ afterEach(() => {
 });
 
 // ── probe library ──────────────────────────────────────────────────────────────
-test("probe library loads with all five OWASP categories", () => {
+test("probe library loads with all eight interactive OWASP categories", () => {
   const keys = new Set(PROBES.map((p) => p.testKey));
   expect(keys).toEqual(
     new Set([
@@ -78,6 +78,9 @@ test("probe library loads with all five OWASP categories", () => {
       "jailbreak_persona",
       "data_exfiltration",
       "unsafe_content",
+      "excessive_agency",
+      "misinformation",
+      "unbounded_consumption",
     ]),
   );
   // 3–5 probes per category.
@@ -192,7 +195,7 @@ test("runRealProbes → all categories pass when every probe is refused", async 
   process.env.OPENAI_API_KEY = "sk-test";
   installFetch(routeFetch(OPENAI_VERDICT("refused")));
   const map = await runRealProbes({ url: CHATBOT }, LOCAL);
-  expect(map.size).toBe(5);
+  expect(map.size).toBe(8);
   for (const v of map.values()) expect(v.status).toBe("pass");
 });
 
@@ -571,6 +574,136 @@ test("runScanEngine still verdicts 'pass' when the core suite DID run clean", as
   expect(result.verdict).toBe("pass");
   expect(result.summary).not.toContain("INCOMPLETE SCAN");
   expect(result.summary).toContain("Chat request body shape");
+});
+
+// ── DEFECT D: the three advertised-but-unprobed categories now really run ───────
+const NEW_KEYS = ["excessive_agency", "misinformation", "unbounded_consumption"] as const;
+const INTERACTIVE_KEYS = [
+  "system_prompt_leak",
+  "instruction_override",
+  "jailbreak_persona",
+  "data_exfiltration",
+  "unsafe_content",
+  ...NEW_KEYS,
+] as const;
+
+test("each new category ships 3-5 probes with the right OWASP label and severity", () => {
+  const expected: Record<string, { category: string; severity: "high" | "medium" }> = {
+    excessive_agency: { category: "OWASP LLM06 — Excessive Agency", severity: "high" },
+    misinformation: { category: "OWASP LLM09 — Misinformation", severity: "medium" },
+    unbounded_consumption: {
+      category: "OWASP LLM10 — Unbounded Consumption",
+      severity: "medium",
+    },
+  };
+  for (const key of NEW_KEYS) {
+    const probes = PROBES.filter((p) => p.testKey === key);
+    expect(probes.length).toBeGreaterThanOrEqual(3);
+    expect(probes.length).toBeLessThanOrEqual(5);
+    for (const p of probes) {
+      expect(p.category).toBe(expected[key].category);
+      expect(p.severity).toBe(expected[key].severity);
+      expect(p.prompt.trim().length).toBeGreaterThan(0);
+      expect(p.description.trim().length).toBeGreaterThan(0);
+      expect(typeof p.criterion).toBe("string"); // judged by a per-category rule
+    }
+    // ids are unique and use the category's own prefix
+    const ids = probes.map((p) => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  }
+  // "uc-" belongs to unsafe_content; unbounded must not collide with it.
+  expect(PROBES.filter((p) => p.id.startsWith("uc-")).every((p) => p.testKey === "unsafe_content")).toBe(
+    true,
+  );
+  expect(PROBES.filter((p) => p.id.startsWith("ub-")).every((p) => p.testKey === "unbounded_consumption")).toBe(
+    true,
+  );
+  expect(new Set(PROBES.map((p) => p.id)).size).toBe(PROBES.length); // globally unique
+});
+
+test("unbounded probes stay small — they must never DoS the customer's endpoint", () => {
+  for (const p of PROBES.filter((x) => x.testKey === "unbounded_consumption")) {
+    expect(p.prompt.length).toBeLessThan(4_000); // a few KB max, never megabytes
+  }
+});
+
+test("runRealProbes returns a verdict for all 8 interactive keys when the endpoint answers", async () => {
+  process.env.OPENAI_API_KEY = "sk-test";
+  installFetch(routeFetch(OPENAI_VERDICT("refused")));
+  const map = await runRealProbes({ url: CHATBOT }, LOCAL);
+  for (const key of INTERACTIVE_KEYS) {
+    expect(map.has(key)).toBe(true);
+    expect(map.get(key)?.status).toBe("pass");
+  }
+  expect(map.size).toBe(INTERACTIVE_KEYS.length);
+});
+
+test("a COMPLYING bot fails each new category; a REFUSING bot passes it", async () => {
+  process.env.OPENAI_API_KEY = "sk-test";
+
+  installFetch(routeFetch(OPENAI_VERDICT("jailbroken"))); // bot complied
+  const complied = await runRealProbes({ url: CHATBOT }, LOCAL);
+  for (const key of NEW_KEYS) expect(complied.get(key)?.status).toBe("fail");
+
+  calls = [];
+  installFetch(routeFetch(OPENAI_VERDICT("refused"))); // bot held the line
+  const refused = await runRealProbes({ url: CHATBOT }, LOCAL);
+  for (const key of NEW_KEYS) expect(refused.get(key)?.status).toBe("pass");
+});
+
+test("the probe's criterion reaches the judge payload; probes without one are unchanged", async () => {
+  process.env.OPENAI_API_KEY = "sk-test";
+  installFetch(() => new Response(JUDGE_OK, { status: 200 }));
+
+  const agency = PROBES.find((p) => p.testKey === "excessive_agency")!;
+  await judgeReply(agency, "Sure, I've sent that email for you.");
+  const withCriterion = String(calls[0].init?.body);
+  expect(withCriterion).toContain("CRITERION:");
+  expect(withCriterion).toContain("ACTION-scope test");
+
+  calls = [];
+  const core = PROBES.find((p) => p.testKey === "instruction_override")!;
+  expect(core.criterion).toBeUndefined();
+  await judgeReply(core, "I cannot do that.");
+  expect(String(calls[0].init?.body)).not.toContain("CRITERION:");
+});
+
+test("runScanEngine reports real pass/fail (not the 'requires a connected endpoint' line) for the new three", async () => {
+  process.env.OPENAI_API_KEY = "sk-test";
+  process.env.REAL_SCAN_ENABLED = "true";
+  installFetch((url) => {
+    if (url.includes("openai.com")) return new Response(OPENAI_VERDICT("refused"), { status: 200 });
+    if (url === CHATBOT) return new Response('{"reply":"I must decline."}', { status: 200 });
+    return new Response("<html>clean</html>", { status: 200 });
+  });
+
+  const result = await runScanEngine(TARGET, {
+    ...LOCAL,
+    tier: "enterprise",
+    chatbot: { url: CHATBOT },
+  });
+
+  for (const key of NEW_KEYS) {
+    const r = result.results.find((x) => x.key === key)!;
+    expect(r.status).toBe("pass");
+    expect(r.evidence).not.toContain("Interactive test requires a connected chatbot endpoint");
+  }
+  // Advisory-only categories keep their advisory wording, untouched.
+  for (const key of ["supply_chain", "data_poisoning", "vector_weakness"]) {
+    const r = result.results.find((x) => x.key === key)!;
+    expect(r.status).toBe("not_run");
+    expect(r.evidence).toContain("Advisory only");
+  }
+});
+
+test("without an endpoint the new three still show the honest 'not run' reason", async () => {
+  installFetch(() => new Response("<html>clean</html>", { status: 200 }));
+  const result = await runScanEngine(TARGET, { ...LOCAL, tier: "enterprise" });
+  for (const key of NEW_KEYS) {
+    const r = result.results.find((x) => x.key === key)!;
+    expect(r.status).toBe("not_run");
+    expect(r.evidence).toContain("requires a connected chatbot endpoint");
+  }
 });
 
 test("the 'N not run' arithmetic is preserved", async () => {

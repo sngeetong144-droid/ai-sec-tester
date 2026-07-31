@@ -128,8 +128,8 @@ export function ScanTool() {
             style={inputStyle}
           >
             <option value="basic">Normal — 5 core checks</option>
-            <option value="advanced">Advanced — full OWASP Top-10 (15)</option>
-            <option value="enterprise">Enterprise — full OWASP Top-10 (15)</option>
+            <option value="advanced">Advanced — OWASP Top-10 (12 testable + 3 advisory)</option>
+            <option value="enterprise">Enterprise — OWASP Top-10 (12 testable + 3 advisory)</option>
           </select>
         </div>
 

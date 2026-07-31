@@ -141,10 +141,15 @@ const CORE_INTERACTIVE_NAMES = TEST_DEFINITIONS.map((d) => d.name).join(", ");
  * for full OWASP LLM Top-10 coverage + real web-hardening checks. Split by how
  * they evaluate (see evaluateStaticTest):
  *  - transport_* : REAL pass/fail from probed response headers (no simulation).
- *  - excessive_agency/misinformation/unbounded_consumption : interactive, stay
- *    not_run unless a real probe supplies a result (like the core interactive tests).
+ *  - excessive_agency/misinformation/unbounded_consumption : interactive and
+ *    REALLY probed — real-scan-engine ships a probe set for each, so with a
+ *    connected endpoint + real-scan enabled they return a genuine pass/fail.
+ *    Without an endpoint they stay not_run, like the core interactive tests.
  *  - supply_chain/data_poisoning/vector_weakness : ADVISORY — categories a
  *    black-box external scan cannot verify; always not_run, never scored.
+ *
+ * Testable vs advisory on advanced/enterprise: 12 testable (5 core interactive +
+ * 4 transport + 3 extended interactive) + 3 advisory-only.
  */
 export const EXTENDED_TEST_DEFINITIONS: TestDefinition[] = [
   {
