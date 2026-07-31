@@ -77,11 +77,51 @@ export function ScanTool() {
           />
           <p style={{ margin: "6px 0 0", fontSize: 11.5, color: COLORS.ink3, lineHeight: 1.5 }}>
             {mode === "endpoint"
-              ? "Direct chatbot message endpoint (webhook / API that takes a message and returns a reply)."
+              ? "You already know the exact link the chat sends messages to — paste it here and we message it directly."
               : mode === "website"
-                ? "A page that hosts a chatbot — the endpoint is auto-discovered from the page; if none is found the scan fails loudly."
-                : "Any public page — transport headers and exposed-secret checks only, no chatbot probing."}
+                ? "We try to find the chat widget on that page automatically (we also read the page's own code files). If we cannot find it, the scan fails loudly rather than reporting a bot it never tested."
+                : "We only look at the website's security headers. We never message the bot."}
           </p>
+          {/* Same plain-language recipe as the public form, worded for the operator. */}
+          <details style={{ marginTop: 8 }}>
+            <summary
+              style={{
+                cursor: "pointer",
+                fontSize: 11.5,
+                fontWeight: 700,
+                color: COLORS.accent,
+              }}
+            >
+              How do I find this?
+            </summary>
+            <ol
+              style={{
+                margin: "8px 0 0",
+                padding: "10px 12px 10px 26px",
+                borderRadius: 10,
+                background: COLORS.inset,
+                border: `1px solid ${COLORS.cardBorder}`,
+                fontSize: 11.5,
+                lineHeight: 1.6,
+                color: COLORS.ink3,
+              }}
+            >
+              <li>
+                Try <strong>Website</strong> mode first with the page address — the widget is
+                usually found automatically.
+              </li>
+              <li style={{ marginTop: 6 }}>
+                If it is not found, get the link by hand: open the site in Chrome, press F12
+                (or right-click &rarr; Inspect), click the <strong>Network</strong> tab, and
+                send the chatbot a test message. Click the new row and copy the{" "}
+                <strong>Request URL</strong> at the top.
+              </li>
+              <li style={{ marginTop: 6 }}>
+                Paste that link here and switch to <strong>Chatbot endpoint</strong> mode. No
+                install, no passwords, no API keys needed.
+              </li>
+            </ol>
+          </details>
         </div>
 
         <div>
@@ -110,9 +150,15 @@ export function ScanTool() {
             onChange={(e) => setMode(e.target.value as AdminScanMode)}
             style={inputStyle}
           >
-            <option value="passive">Passive — transport &amp; secret checks only</option>
-            <option value="endpoint">Chatbot endpoint — probe this URL directly</option>
-            <option value="website">Website — discover the chatbot on this page</option>
+            <option value="passive">
+              Passive — we only look at the website&rsquo;s security headers, never message the bot
+            </option>
+            <option value="endpoint">
+              Chatbot endpoint — I know the exact chat link; message it directly
+            </option>
+            <option value="website">
+              Website — find the chat widget on that page automatically
+            </option>
           </select>
         </div>
 

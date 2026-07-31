@@ -581,6 +581,28 @@ export function RequestForm() {
           automatically. If you already know your bot&rsquo;s message endpoint (the URL it
           posts to), you can paste that instead.
         </p>
+        {/* Non-technical visitors do not know what an "endpoint" is. Native
+            <details> = keyboard accessible and zero JS, zero dependencies. */}
+        <details className="how-find">
+          <summary>How do I find this?</summary>
+          <ol>
+            <li>
+              <strong>Easiest:</strong> paste your website address — we look for the chat
+              widget automatically.
+            </li>
+            <li>
+              <strong>If we cannot find it,</strong> you can give us the exact link your
+              chat uses. To get it: open your website in Chrome, press <kbd>F12</kbd> (or
+              right-click &rarr; Inspect) and click the <strong>Network</strong> tab, then
+              send your chatbot a test message. A new row appears — click it and copy the{" "}
+              <strong>Request URL</strong> at the top. That is the link.
+            </li>
+            <li>
+              <strong>Nothing to install</strong>, and we never need your passwords or API
+              keys.
+            </li>
+          </ol>
+        </details>
       </div>
 
       {/* Location check — client-side geo preview (UX only; server is authoritative). */}

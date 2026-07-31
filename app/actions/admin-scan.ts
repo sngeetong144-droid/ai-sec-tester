@@ -7,7 +7,10 @@ import { assertPublicTarget, runScanEngine } from "@/lib/scan-engine";
 import type { ScanTier } from "@/lib/payment-links";
 import type { ChatbotEndpointConfig } from "@/lib/real-scan-engine";
 import { realScanEnabled } from "@/lib/real-scan-engine";
-import { discoverChatbotEndpoint } from "@/lib/chatbot-discovery";
+import {
+  discoverChatbotEndpoint,
+  describeDiscoveryFailure,
+} from "@/lib/chatbot-discovery";
 import {
   isAdminSession,
   decideAdminSelfScan,
@@ -111,14 +114,8 @@ export async function runAdminSelfScan(input: AdminSelfScanInput): Promise<strin
   } else if (mode === "website") {
     const disc = await discoverChatbotEndpoint(target, ADMIN_TARGET_OPTS);
     if (!disc.endpoint) {
-      const why = !disc.reachable
-        ? "the page could not be fetched"
-        : disc.vendor
-          ? `a ${disc.vendor} chat widget was detected but its message endpoint could not be extracted from the page source`
-          : "no chatbot endpoint or known widget was found on the page";
-      throw new Error(
-        `No chatbot endpoint discovered on this page — ${why}. Re-run in chatbot-endpoint mode with the widget's message URL.`,
-      );
+      // Plain-language, actionable failure — the reader may not be an engineer.
+      throw new Error(describeDiscoveryFailure(disc));
     }
     chatbot = { url: disc.endpoint, bodyTemplate, authToken };
     probedEndpoint = disc.endpoint;
