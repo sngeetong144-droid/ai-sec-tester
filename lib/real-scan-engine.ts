@@ -42,6 +42,21 @@ const PROBE_TIMEOUT_MS = 15_000;
 const JUDGE_TIMEOUT_MS = 20_000;
 const MAX_REPLY_CHARS = 6_000;
 /**
+ * 429 backoff. Deliberately small: a scan is sequential and already slow, and a
+ * customer endpoint with a 5-minute window cannot be waited out inside one run.
+ * The point is to survive a short burst limit, not to defeat throttling — when
+ * probes are still lost the report says so rather than scoring the survivors.
+ */
+const RATE_LIMIT_RETRIES = 1;
+const RATE_LIMIT_MAX_BACKOFF_MS = 10_000;
+/** Overridable so tests (and a rushed operator) do not sit through real waits. */
+function rateLimitBackoffMs(): number {
+  const raw = Number(process.env.PROBE_RATE_LIMIT_BACKOFF_MS);
+  return Number.isFinite(raw) && raw >= 0 ? raw : 2_000;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/**
  * Hard cap on how much of the bot's reply reaches the JUDGE. MAX_REPLY_CHARS stays
  * large for stored evidence, but feeding the judge a 6 000-char blob (a whole web
  * page, say) drowns the instruction and it answers in prose instead of JSON — which
@@ -475,8 +490,10 @@ export function realScanEnabled(): boolean {
 
 type SendResult =
   | { ok: true; reply: string }
-  /** notChatApi: endpoint served a web page — a DISTINCT failure from a judge error. */
-  | { ok: false; error: string; notChatApi?: boolean };
+  /** notChatApi: endpoint served a web page — a DISTINCT failure from a judge error.
+   *  rateLimited: endpoint returned 429 — the probe never landed, so the category
+   *  is under-covered rather than secure. */
+  | { ok: false; error: string; notChatApi?: boolean; rateLimited?: boolean };
 
 // Field names chatbots commonly return the assistant text under. Order = priority.
 const REPLY_KEYS = [
@@ -580,7 +597,10 @@ export function extractReplyStrict(raw: string): string | null {
 
 type RawSendResult =
   | { ok: true; raw: string; contentType: string }
-  | { ok: false; error: string };
+  /** rateLimited: the endpoint returned 429. A DISTINCT failure from a dead
+   *  endpoint — the target is healthy and is throttling us, which is a
+   *  coverage problem to report, not a security finding. */
+  | { ok: false; error: string; rateLimited?: boolean; retryAfterMs?: number };
 
 /**
  * POST one prompt and return the RAW body + content-type, with no reply
@@ -631,6 +651,22 @@ async function sendProbeRaw(
     );
     const text = (await res.text()).slice(0, MAX_REPLY_CHARS);
     if (!res.ok) {
+      if (res.status === 429) {
+        // Honour Retry-After when the target states one, but never let a hostile
+        // or broken header stall the whole scan — cap it.
+        const header = res.headers.get("retry-after") ?? "";
+        const seconds = Number(header.trim());
+        const retryAfterMs =
+          Number.isFinite(seconds) && seconds > 0
+            ? Math.min(seconds * 1000, RATE_LIMIT_MAX_BACKOFF_MS)
+            : rateLimitBackoffMs();
+        return {
+          ok: false,
+          error: `Endpoint returned HTTP 429 (rate limited).`,
+          rateLimited: true,
+          retryAfterMs,
+        };
+      }
       return { ok: false, error: `Endpoint returned HTTP ${res.status}.` };
     }
     return { ok: true, raw: text, contentType: res.headers.get("content-type") ?? "" };
@@ -654,8 +690,21 @@ export async function sendProbe(
   options: ScanEngineOptions = {},
   templateOverride?: string,
 ): Promise<SendResult> {
-  const res = await sendProbeRaw(config, prompt, options, templateOverride);
-  if (!res.ok) return res;
+  let res = await sendProbeRaw(config, prompt, options, templateOverride);
+
+  // One bounded retry on 429. Customer chatbots commonly throttle; without this
+  // a healthy-but-rate-limited target silently loses probes, and a category
+  // graded on the survivors reads as "secure" when it was merely under-tested.
+  for (let attempt = 0; !res.ok && res.rateLimited && attempt < RATE_LIMIT_RETRIES; attempt += 1) {
+    await sleep(res.retryAfterMs ?? rateLimitBackoffMs());
+    res = await sendProbeRaw(config, prompt, options, templateOverride);
+  }
+
+  if (!res.ok) {
+    return res.rateLimited
+      ? { ok: false, error: res.error, rateLimited: true }
+      : res;
+  }
   if (looksLikeHtmlResponse(res.raw, res.contentType)) {
     return { ok: false, error: NOT_CHAT_API_ERROR, notChatApi: true };
   }
@@ -964,6 +1013,10 @@ export interface RealProbeRun {
   templateSource: BodyTemplateDetection["source"];
   /** The endpoint served HTML — it is a web page, not a chat API. Loud, distinct reason. */
   notChatApi: boolean;
+  /** At least one probe was rejected with HTTP 429 even after the bounded retry. */
+  rateLimited: boolean;
+  /** Test keys that passed on only SOME of their probes — coverage is incomplete. */
+  partiallyCovered: ReadonlySet<string>;
   /** Every judge provider failed on every attempt — nothing could be scored. */
   judgeUnavailable: boolean;
   note: string;
@@ -987,8 +1040,11 @@ export async function runRealProbeSuite(
   const detection = await detectBodyTemplate(config, options);
   const effective: ChatbotEndpointConfig = { ...config, bodyTemplate: detection.template };
   let notChatApi = detection.notChatApi;
+  let rateLimited = false;
   let judgeAttempts = 0;
   let judgeFailures = 0;
+  /** Categories that passed on a SUBSET of their probes — see the aggregation below. */
+  const partiallyCovered = new Set<string>();
 
   const byKey = new Map<RealTestKey, Probe[]>();
   for (const p of PROBES) {
@@ -1008,7 +1064,16 @@ export async function runRealProbeSuite(
       const sent = await sendProbe(effective, probe.prompt, options);
       if (!sent.ok) {
         if (sent.notChatApi) notChatApi = true;
-        notes.push(`${probe.id}: ${sent.notChatApi ? "endpoint not a chat API" : "error"} (${sent.error})`);
+        if (sent.rateLimited) rateLimited = true;
+        notes.push(
+          `${probe.id}: ${
+            sent.notChatApi
+              ? "endpoint not a chat API"
+              : sent.rateLimited
+                ? "rate limited"
+                : "error"
+          } (${sent.error})`,
+        );
         continue;
       }
       judgeAttempts += 1;
@@ -1041,9 +1106,21 @@ export async function runRealProbeSuite(
         evidence: `Guardrail bypassed on ${failed}/${ran} live probe(s). ${notes.join(" ")}${shape}`.trim(),
       });
     } else {
+      // A category graded on only SOME of its probes is not a clean pass. It is
+      // recorded as a pass (the probes that landed WERE refused) but flagged as
+      // under-covered, and the engine refuses an overall "pass" verdict while
+      // any such category exists — otherwise losing probes makes a bot look
+      // MORE secure, which is the exact inversion a security report must not do.
+      const lost = probes.length - ran;
+      if (lost > 0) partiallyCovered.add(testKey);
       out.set(testKey, {
         status: "pass",
-        evidence: `All ${ran} live probe(s) were refused by the chatbot. Guardrails held.${shape}`,
+        evidence:
+          lost > 0
+            ? `PARTIAL COVERAGE — only ${ran} of ${probes.length} probe(s) in this category were delivered; ` +
+              `those ${ran} were refused, but the remaining ${lost} never reached the chatbot, so this category ` +
+              `is NOT fully verified. ${notes.join(" ")}${shape}`.trim()
+            : `All ${ran} live probe(s) were refused by the chatbot. Guardrails held.${shape}`,
       });
     }
   }
@@ -1053,6 +1130,8 @@ export async function runRealProbeSuite(
     bodyTemplate: detection.template,
     templateSource: detection.source,
     notChatApi,
+    rateLimited,
+    partiallyCovered,
     judgeUnavailable: judgeAttempts > 0 && judgeFailures === judgeAttempts,
     note: detection.note,
   };

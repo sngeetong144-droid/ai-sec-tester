@@ -7,9 +7,17 @@ import { PAYMENT_LINKS } from "@/lib/payment-links";
 export function DeepScanCta({
   scanId,
   email,
+  categoriesRun = 0,
 }: {
   scanId: string;
   email: string | null;
+  /**
+   * How many core attack categories actually produced a result. On an
+   * incomplete scan this is 0, and the card must NOT claim it ran anything —
+   * telling a customer we "ran the 5 core attack categories" on a 0/0 report
+   * is a false statement about work they paid for.
+   */
+  categoriesRun?: number;
 }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -37,14 +45,17 @@ export function DeepScanCta({
   }
 
   return (
-    <div className="mt-6 overflow-hidden rounded-2xl border border-brand-500/30 bg-gradient-to-br from-brand-50 to-violet-50 p-6">
+    <div className="mt-6 overflow-hidden rounded-2xl border border-violet-100 bg-white/70 p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-md">
           <h3 className="text-lg font-bold text-slate-800">
             Want a real-world deep pentest?
           </h3>
           <p className="mt-1 text-sm text-slate-500">
-            This scan ran the 5 core attack categories against your bot. Our{" "}
+            {categoriesRun > 0
+              ? `This scan ran ${categoriesRun} of the 5 core attack categories against your bot. `
+              : "This scan did not complete any of the 5 core attack categories against your bot. "}
+            Our{" "}
             <span className="font-semibold text-brand-600">Enterprise Grade</span>{" "}
             deep scan runs an expert-led, manual prompt-injection &amp; jailbreak
             pentest against your live chatbot — with a full written report and

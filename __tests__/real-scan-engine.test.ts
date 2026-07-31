@@ -55,6 +55,7 @@ function clearKeys(): void {
   delete process.env.NVIDIA_MODEL;
   delete process.env.NVIDIA_JUDGE_MODEL;
   delete process.env.JUDGE_PROVIDER;
+  delete process.env.PROBE_RATE_LIMIT_BACKOFF_MS;
 }
 
 beforeEach(() => {
@@ -712,4 +713,95 @@ test("the 'N not run' arithmetic is preserved", async () => {
   const notRun = result.results.filter((r) => r.status === "not_run").length;
   expect(notRun).toBeGreaterThan(0);
   expect(result.summary).toContain(`${notRun} not run`);
+});
+
+// ── 429 rate limiting + partial-coverage honesty ────────────────────────────
+// Regression guard for the defect found on 2026-07-31: a chatbot that throttles
+// the scanner lost probes, and the surviving probes were scored as a clean
+// pass — so a bot that dropped probes looked MORE secure than one that answered.
+
+test("sendProbe retries once on 429 and succeeds when the target recovers", async () => {
+  process.env.PROBE_RATE_LIMIT_BACKOFF_MS = "0";
+  let hits = 0;
+  installFetch(() => {
+    hits += 1;
+    return hits === 1
+      ? new Response("", { status: 429 })
+      : new Response('{"reply":"I must decline."}', { status: 200 });
+  });
+  const res = await sendProbe({ url: CHATBOT }, "probe", LOCAL);
+  expect(res.ok).toBe(true);
+  expect(hits).toBe(2); // proves the retry actually happened
+});
+
+test("sendProbe reports rateLimited when 429 persists through the retry", async () => {
+  process.env.PROBE_RATE_LIMIT_BACKOFF_MS = "0";
+  installFetch(() => new Response("", { status: 429 }));
+  const res = await sendProbe({ url: CHATBOT }, "probe", LOCAL);
+  expect(res.ok).toBe(false);
+  if (!res.ok) {
+    expect(res.rateLimited).toBe(true);
+    expect(res.error).toContain("429");
+    // A throttled endpoint must NEVER be misreported as "not a chat API".
+    expect(res.notChatApi).toBeUndefined();
+  }
+});
+
+test("a 429'd category is flagged partially covered, not silently passed", async () => {
+  process.env.PROBE_RATE_LIMIT_BACKOFF_MS = "0";
+  process.env.OPENAI_API_KEY = "sk-test";
+  // Every chatbot call after the first few is throttled, so some probes in a
+  // category land and the rest do not — the exact shape of the live defect.
+  let chatCalls = 0;
+  installFetch((url) => {
+    if (url.includes("openai.com")) return new Response(OPENAI_VERDICT("refused"), { status: 200 });
+    chatCalls += 1;
+    return chatCalls <= 3
+      ? new Response('{"reply":"I must decline."}', { status: 200 })
+      : new Response("", { status: 429 });
+  });
+  const run = await runRealProbeSuite({ url: CHATBOT }, LOCAL);
+  expect(run.rateLimited).toBe(true);
+  expect(run.partiallyCovered.size).toBeGreaterThan(0);
+  const partialKey = [...run.partiallyCovered][0];
+  expect(run.verdicts.get(partialKey)?.evidence).toContain("PARTIAL COVERAGE");
+});
+
+test("runScanEngine refuses a pass verdict when core coverage is incomplete", async () => {
+  process.env.PROBE_RATE_LIMIT_BACKOFF_MS = "0";
+  process.env.OPENAI_API_KEY = "sk-test";
+  process.env.REAL_SCAN_ENABLED = "true";
+  let chatCalls = 0;
+  installFetch((url) => {
+    if (url.includes("openai.com")) return new Response(OPENAI_VERDICT("refused"), { status: 200 });
+    if (url === CHATBOT) {
+      chatCalls += 1;
+      return chatCalls <= 3
+        ? new Response('{"reply":"I must decline."}', { status: 200 })
+        : new Response("", { status: 429 });
+    }
+    return new Response("<html>clean</html>", { status: 200 });
+  });
+  const result = await runScanEngine(TARGET, { ...LOCAL, chatbot: { url: CHATBOT } });
+
+  // Nothing FAILED — every probe that landed was refused. The old code called
+  // that a pass at score 100. It must not.
+  expect(result.verdict).not.toBe("pass");
+  expect(result.summary).toContain("PARTIAL SCAN");
+  expect(result.summary).toContain("rate-limited");
+  expect(result.summary).toContain("OVERSTATES coverage");
+});
+
+test("full core coverage still earns a clean pass (guard against over-correction)", async () => {
+  process.env.OPENAI_API_KEY = "sk-test";
+  process.env.REAL_SCAN_ENABLED = "true";
+  installFetch((url) => {
+    if (url.includes("openai.com")) return new Response(OPENAI_VERDICT("refused"), { status: 200 });
+    if (url === CHATBOT) return new Response('{"reply":"I must decline."}', { status: 200 });
+    return new Response("<html>clean</html>", { status: 200 });
+  });
+  const result = await runScanEngine(TARGET, { ...LOCAL, chatbot: { url: CHATBOT } });
+  expect(result.verdict).toBe("pass");
+  expect(result.summary).not.toContain("PARTIAL SCAN");
+  expect(result.summary).not.toContain("INCOMPLETE SCAN");
 });

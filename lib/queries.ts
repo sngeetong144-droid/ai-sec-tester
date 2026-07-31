@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { readSessionId } from "@/lib/session";
 import { verifyReportToken } from "@/lib/hmac";
+import { isAdminSession } from "@/lib/command-center/admin";
 import type { Scan, ScanResultRow, ScanWithResults } from "@/lib/types";
 
 /**
@@ -107,6 +108,13 @@ export async function getScan(id: string): Promise<ScanWithResults | null> {
  * is the separate lockdown flagged in the deliverable — this closes the app routes.
  */
 export async function scanOwnedByCaller(id: string): Promise<boolean> {
+  // Admin bypass. Operator scans (console self-scans, and matrix/API runs that
+  // have no signed-in user at all) belong to no visitor, so an ownership-only
+  // gate made them permanently unopenable — including from the console's own
+  // "Operator scans" list, which links straight at /scans/<id>. Admins are the
+  // ADMIN_EMAILS allowlist, which is deny-by-default when unset.
+  if (await isAdminSession()) return true;
+
   const identity = await getRequestIdentity();
   if (!identity.userId && !identity.sessionId) return false;
 

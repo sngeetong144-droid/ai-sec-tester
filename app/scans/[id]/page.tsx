@@ -9,6 +9,7 @@ import {
   ScoreRing,
 } from "@/app/_components/badges";
 import { DeepScanCta } from "@/app/_components/deep-scan-cta";
+import { CORE_INTERACTIVE_KEYS } from "@/lib/scan-engine";
 import {
   groupRecommendations,
   ADVISORY_NOTE,
@@ -269,7 +270,15 @@ export default async function ScanDetail({
             the deep scan — showing them a $497 upgrade card is insulting and
             makes the report look like a sales page. */}
         {!scan.results.some((r) => r.test_key === "transport_https") && (
-          <DeepScanCta scanId={scan.id} email={scan.email} />
+          <DeepScanCta
+            scanId={scan.id}
+            email={scan.email}
+            categoriesRun={
+              scan.results.filter(
+                (r) => CORE_INTERACTIVE_KEYS.has(r.test_key) && (r.status === "pass" || r.status === "fail"),
+              ).length
+            }
+          />
         )}
 
         <p className="mt-8 text-center text-xs text-slate-400">
