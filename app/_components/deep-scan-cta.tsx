@@ -44,7 +44,7 @@ export function DeepScanCta({
             Want a real-world deep pentest?
           </h3>
           <p className="mt-1 text-sm text-slate-500">
-            This scan simulates the 5 standard attacks. Our{" "}
+            This scan ran the 5 core attack categories against your bot. Our{" "}
             <span className="font-semibold text-brand-600">Enterprise Grade</span>{" "}
             deep scan runs an expert-led, manual prompt-injection &amp; jailbreak
             pentest against your live chatbot — with a full written report and

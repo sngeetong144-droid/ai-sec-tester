@@ -565,15 +565,22 @@ export function RequestForm() {
         </div>
       </div>
       <div className="field">
-        <label htmlFor="rf-target">Target to scan (chatbot URL or endpoint)</label>
+        <label htmlFor="rf-target">Where is your chatbot?</label>
         <input
           id="rf-target"
           type="url"
           name="target"
           required
-          placeholder="https://yoursite.com/chat"
+          placeholder="https://yourcompany.com"
           onBlur={handleTargetBlur}
         />
+        {/* A visitor knows their website address; almost none know their widget's
+            message endpoint. Ask for the page and let the scanner find the widget. */}
+        <p className="hint">
+          Paste the address of the page your chat widget appears on — we find the widget
+          automatically. If you already know your bot&rsquo;s message endpoint (the URL it
+          posts to), you can paste that instead.
+        </p>
       </div>
 
       {/* Location check — client-side geo preview (UX only; server is authoritative). */}

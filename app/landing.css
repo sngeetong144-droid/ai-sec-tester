@@ -355,3 +355,12 @@
 .aist-landing .liability-note a { color: var(--accent); font-weight: 600; }
 .aist-landing .disc-wrap { display: none; margin-top: 10px; padding: 12px 13px; background: var(--canvas); border: 1px solid var(--line); border-radius: 10px; }
 .aist-landing .disc-wrap.show { display: block; }
+
+/* Field-level guidance under an input (request form). Muted, not competing with
+   the label, and readable on the light canvas. */
+.aist-landing .field .hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}

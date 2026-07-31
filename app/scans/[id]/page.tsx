@@ -154,7 +154,14 @@ export default async function ScanDetail({
           ))}
         </section>
 
-        <DeepScanCta scanId={scan.id} email={scan.email} />
+        {/* Upsell only makes sense BELOW the top tier. The extended checks
+            (transport/HSTS/CSP/clickjacking + the advisory set) exist only on
+            advanced/enterprise, so their presence means this buyer already has
+            the deep scan — showing them a $497 upgrade card is insulting and
+            makes the report look like a sales page. */}
+        {!scan.results.some((r) => r.test_key === "transport_https") && (
+          <DeepScanCta scanId={scan.id} email={scan.email} />
+        )}
 
         <p className="mt-8 text-center text-xs text-slate-400">
           Transport &amp; secret-exposure checks are performed live against the target.
