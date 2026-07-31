@@ -24,6 +24,8 @@ import {
   approveScanRequestPayment,
   markRequestPaid,
 } from "@/app/actions/scan-request-lifecycle";
+import { resolvePaymentLink } from "@/lib/payment-links";
+import { discoverChatbotEndpoint } from "@/lib/chatbot-discovery";
 
 /**
  * Command-center mutations (server actions). EVERY action calls requireAdmin()
@@ -163,12 +165,28 @@ export async function runScanAction(formData: FormData): Promise<void> {
   }
 
   try {
+    // Tier and chatbot MUST be passed. executeScan defaults to tier "basic" with
+    // no chatbot, so omitting them silently downgraded every Advanced ($197) and
+    // Enterprise ($497) case to a 5-check transport-only scan with the interactive
+    // OWASP probes recorded as not-run — the customer paid for 15 and got 5, with
+    // nothing in the UI showing the downgrade. The cron path already does this
+    // correctly; this mirrors lib/command-center/run-scan.ts.
+    let chatbot: { url: string } | null = null;
+    try {
+      const found = await discoverChatbotEndpoint(target);
+      if (found.endpoint) chatbot = { url: found.endpoint };
+    } catch {
+      chatbot = null; // discovery failure never blocks the transport checks
+    }
+
     await executeScan({
       caseId: id,
       target,
       label: view.req?.company ?? null,
       email: view.req?.email ?? null,
       sessionId: null,
+      chatbot,
+      tier: resolvePaymentLink(view.req?.plan)?.tier ?? "basic",
     });
   } catch (err) {
     // Gate denials (ScanAuthorizationError) and engine errors surface in the

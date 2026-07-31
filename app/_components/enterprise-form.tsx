@@ -38,6 +38,7 @@ const initial: EnterpriseFormState = {};
 
 export function EnterpriseForm() {
   const [step, setStep] = useState(1);
+  const [stepErr, setStepErr] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [ownershipMethod, setOwnershipMethod] = useState<string>("");
   const [state, action, isPending] = useActionState(
@@ -85,27 +86,23 @@ export function EnterpriseForm() {
         <input type="hidden" name="agreed_to_tos" value={agreed ? "true" : "false"} />
         <input type="hidden" name="ownership_method" value={ownershipMethod} />
 
-        {step === 1 && (
-          <div className="space-y-4">
+        <div className="space-y-4" hidden={step !== 1}>
             <h2 className="text-lg font-semibold text-slate-800">About You</h2>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Full name *" name="full_name" required />
-              <Field label="Work email *" name="email" type="email" required />
+              <Field label="Full name *" name="full_name" />
+              <Field label="Work email *" name="email" type="email" />
               <Field label="Company / Organisation" name="company" />
               <Field label="Your role / title" name="role_title" />
             </div>
             <Field label="Phone (optional)" name="phone" type="tel" />
           </div>
-        )}
 
-        {step === 2 && (
-          <div className="space-y-4">
+        <div className="space-y-4" hidden={step !== 2}>
             <h2 className="text-lg font-semibold text-slate-800">Target Chatbot</h2>
             <Field
               label="Chatbot URL *"
               name="chatbot_url"
               placeholder="https://yoursite.com"
-              required
             />
             <div>
               <label className="mb-1.5 block text-sm text-slate-600">
@@ -119,10 +116,8 @@ export function EnterpriseForm() {
               />
             </div>
           </div>
-        )}
 
-        {step === 3 && (
-          <div className="space-y-4">
+        <div className="space-y-4" hidden={step !== 3}>
             <h2 className="text-lg font-semibold text-slate-800">Prove Ownership</h2>
             <p className="text-sm text-slate-500">
               Choose any one method to verify you control the target domain.
@@ -168,10 +163,8 @@ export function EnterpriseForm() {
               </div>
             )}
           </div>
-        )}
 
-        {step === 4 && (
-          <div className="space-y-4">
+        <div className="space-y-4" hidden={step !== 4}>
             <h2 className="text-lg font-semibold text-slate-800">Authorization Agreement</h2>
             <pre className="max-h-44 overflow-y-auto whitespace-pre-wrap rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-xs leading-relaxed text-slate-600">
               {AGREEMENT}
@@ -195,6 +188,11 @@ export function EnterpriseForm() {
               </p>
             )}
           </div>
+
+        {stepErr && (
+          <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">
+            {stepErr}
+          </p>
         )}
 
         <div className="mt-8 flex items-center justify-between">
@@ -214,7 +212,25 @@ export function EnterpriseForm() {
             <button
               type="button"
               onClick={() => {
-                if (step === 3 && !ownershipMethod) return;
+                // Steps stay mounted so FormData keeps their values, which means
+                // the browser's `required` cannot be used (a hidden required input
+                // blocks submit and cannot be focused). Gate progression here instead.
+                const form = document.querySelector("form");
+                const val = (n: string) =>
+                  (form?.elements.namedItem(n) as HTMLInputElement | null)?.value.trim() ?? "";
+                if (step === 1 && (!val("full_name") || !val("email"))) {
+                  setStepErr("Please enter your full name and work email.");
+                  return;
+                }
+                if (step === 2 && !val("chatbot_url")) {
+                  setStepErr("Please enter the chatbot URL.");
+                  return;
+                }
+                if (step === 3 && !ownershipMethod) {
+                  setStepErr("Please choose an ownership verification method.");
+                  return;
+                }
+                setStepErr("");
                 setStep((s) => s + 1);
               }}
               className="rounded-lg bg-brand-500 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-40"
