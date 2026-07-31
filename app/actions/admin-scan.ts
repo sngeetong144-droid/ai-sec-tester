@@ -65,6 +65,25 @@ export interface AdminSelfScanInput {
 // Admin scans are exempt from the country/jurisdiction gate; SSRF stays on.
 const ADMIN_TARGET_OPTS = { allowRestrictedJurisdiction: true } as const;
 
+
+/**
+ * Append-only audit write. Deliberately swallows its own error: an audit failure
+ * must never destroy a completed scan result the operator is waiting for — but it
+ * IS logged server-side so a silently broken audit trail is discoverable.
+ */
+async function appendScanAudit(
+  db: ReturnType<typeof createServiceClient>,
+  row: { event_type: string; ref: string; detail: string },
+): Promise<void> {
+  const { error } = await db.from("cc_audit_log").insert({
+    case_id: null,
+    event_type: row.event_type,
+    ref: row.ref,
+    detail: row.detail,
+  });
+  if (error) console.error("[admin-scan] audit write failed:", error.message);
+}
+
 export async function runAdminSelfScan(input: AdminSelfScanInput): Promise<string> {
   const target = String(input?.target ?? "").trim();
   const label = input?.label ? String(input.label).trim().slice(0, 200) : null;
@@ -175,11 +194,29 @@ export async function runAdminSelfScan(input: AdminSelfScanInput): Promise<strin
       })
       .eq("id", scanId);
     if (updErr) throw new Error(updErr.message);
+
+    // A security product that scans third-party endpoints without recording WHO
+    // scanned WHAT and WHEN has no defensible answer to "were you authorized?".
+    // Admin self-scans previously wrote nothing here, so the audit log stopped
+    // dead while scans kept running. Append-only; never blocks the scan result.
+    await appendScanAudit(db, {
+      event_type: "ADMIN_SCAN_COMPLETED",
+      ref: scanId,
+      detail:
+        `mode=${mode} tier=${tier ?? "basic"} target=${target} ` +
+        `verdict=${engine.verdict} score=${engine.score} ` +
+        `ran=${engine.tests_passed}/${engine.tests_total}`,
+    });
   } catch (err) {
     await db
       .from("scans")
       .update({ status: "failed", summary: `${modeNote} ${String(err)}`.trim() })
       .eq("id", scanId);
+    await appendScanAudit(db, {
+      event_type: "ADMIN_SCAN_FAILED",
+      ref: scanId,
+      detail: `mode=${mode} target=${target} error=${String(err).slice(0, 300)}`,
+    });
     throw err;
   }
 
