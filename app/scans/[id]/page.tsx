@@ -9,6 +9,10 @@ import {
   ScoreRing,
 } from "@/app/_components/badges";
 import { DeepScanCta } from "@/app/_components/deep-scan-cta";
+import {
+  groupRecommendations,
+  ADVISORY_NOTE,
+} from "@/lib/report-recommendations";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +34,10 @@ export default async function ScanDetail({
   if (!scan) notFound();
 
   const failed = scan.results.filter((r) => r.status === "fail");
+  // Consolidated advice layer, rendered under the per-check cards. Grouping and
+  // severity order live in lib/report-recommendations so this page and the
+  // enterprise report cannot drift apart.
+  const recs = groupRecommendations(scan.results);
 
   return (
     <main className="grid-bg min-h-screen">
@@ -153,6 +161,107 @@ export default async function ScanDetail({
             </article>
           ))}
         </section>
+
+        {!recs.empty && (
+          <section className="mt-8 rounded-2xl border border-violet-100 bg-white/70 p-6">
+            <h2 className="text-lg font-bold text-slate-800">Recommendations</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Consolidated guidance from this scan — what to fix, what to harden,
+              and what only you can verify from the inside.
+            </p>
+
+            {recs.fixNow.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-rose-700">
+                  Fix now
+                </h3>
+                <ol className="mt-3 space-y-3">
+                  {recs.fixNow.map((r) => (
+                    <li
+                      key={r.id}
+                      className="rounded-xl border border-rose-200 bg-rose-50 p-4"
+                    >
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-slate-800">
+                          {r.testName}
+                        </h4>
+                        <SeverityTag severity={r.severity} />
+                      </div>
+                      <p className="mt-2 text-sm text-slate-600">
+                        {r.remediation}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {recs.hardening.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-emerald-700">
+                  Hardening
+                </h3>
+                <p className="mt-1 text-xs text-slate-400">
+                  These checks passed. The guidance below keeps them passing.
+                </p>
+                <ol className="mt-3 space-y-3">
+                  {recs.hardening.map((r) => (
+                    <li
+                      key={r.id}
+                      className="rounded-xl border border-violet-100 bg-white/50 p-4"
+                    >
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-slate-800">
+                          {r.testName}
+                        </h4>
+                        <SeverityTag severity={r.severity} />
+                      </div>
+                      <p className="mt-2 text-sm text-slate-600">
+                        {r.remediation}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {recs.advisory.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-amber-700">
+                  Advisory — cannot be tested from outside
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">{ADVISORY_NOTE}</p>
+                <ol className="mt-3 space-y-3">
+                  {recs.advisory.map((r) => (
+                    <li
+                      key={r.id}
+                      className="rounded-xl border border-amber-200 bg-amber-50 p-4"
+                    >
+                      <h4 className="font-semibold text-slate-800">
+                        {r.testName}
+                      </h4>
+                      {r.category && (
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          {r.category}
+                        </p>
+                      )}
+                      {r.remediation ? (
+                        <p className="mt-2 text-sm text-slate-600">
+                          {r.remediation}
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-sm text-slate-500">
+                          No stored guidance for this check on this scan — re-run
+                          the scan to capture it.
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Upsell only makes sense BELOW the top tier. The extended checks
             (transport/HSTS/CSP/clickjacking + the advisory set) exist only on

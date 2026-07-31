@@ -179,6 +179,38 @@ export async function loadEmailLog(limit = 200): Promise<EmailRow[]> {
   return (data as EmailRow[]) ?? [];
 }
 
+/**
+ * Operator-run scans straight off the `scans` engine table — the admin self-scan
+ * path (app/actions/admin-scan.ts) writes here and NEVER creates a cc_case, so
+ * these rows are invisible to loadCases() and to every case-driven screen. The
+ * report-history page reads them separately so an operator can find a scan they
+ * ran; they are NOT delivered customer reports.
+ */
+export type OperatorScanRow = Pick<
+  Scan,
+  | "id"
+  | "created_at"
+  | "target_url"
+  | "target_label"
+  | "status"
+  | "verdict"
+  | "score"
+  | "tests_passed"
+  | "tests_total"
+>;
+
+export async function loadRecentScans(limit = 50): Promise<OperatorScanRow[]> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("scans")
+    .select(
+      "id, created_at, target_url, target_label, status, verdict, score, tests_passed, tests_total",
+    )
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data as OperatorScanRow[]) ?? [];
+}
+
 /** scan_requests with no cc_case yet — the raw intake feed the console ingests. */
 export async function loadUningestedRequests(): Promise<ScanRequestRow[]> {
   const supabase = createServiceClient();

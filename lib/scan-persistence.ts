@@ -40,7 +40,10 @@ export async function runEngineAndPersist(
       status: r.status === "not_run" ? "pending" : r.status,
       detail: r.detail,
       evidence: r.evidence,
-      remediation: r.status === "fail" ? r.remediation : null,
+      // Remediation is persisted for EVERY result, not just failures: a passing
+      // check still carries hardening guidance, and advisory checks carry the
+      // only guidance they will ever have. The report groups it (lib/report-recommendations).
+      remediation: r.remediation ?? null,
       sort_order: r.sort_order,
     }));
     const { error: resErr } = await supabase.from("scan_results").insert(rows);
