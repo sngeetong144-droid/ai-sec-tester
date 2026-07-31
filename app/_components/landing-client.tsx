@@ -471,11 +471,18 @@ export function RequestForm() {
       countryDeclaredName: selected?.name ?? "",
       browserTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
       browserLocale: typeof navigator !== "undefined" ? navigator.language : "",
+      // BOTH consent flags must be sent. The server re-checks them independently
+      // (it never trusts the client render), and omitting `authorized` made every
+      // single submission fail its server-side consent check with a 400 while the
+      // box was visibly ticked — the request form was 100% blocked.
+      authorized: true,
       dueDiligenceConsent: true,
       // client geo signals — server re-resolves both, never trusts these alone.
       requestorGeo,
       targetGeo,
-      subscribedPlatform: subscribed,
+      // Server compares with === true, so the "yes"/"no" STRING always read as
+      // false and the third-party platform disclosure silently never applied.
+      subscribedPlatform: subscribed === "yes",
       providerName: String(fd.get("providerName") || "").trim(),
       providerNotifyRef: String(fd.get("providerNotifyRef") || "").trim(),
       providerNotified,
