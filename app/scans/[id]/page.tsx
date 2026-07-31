@@ -273,6 +273,7 @@ export default async function ScanDetail({
           <DeepScanCta
             scanId={scan.id}
             email={scan.email}
+            targetUrl={scan.target_url}
             categoriesRun={
               scan.results.filter(
                 (r) => CORE_INTERACTIVE_KEYS.has(r.test_key) && (r.status === "pass" || r.status === "fail"),
