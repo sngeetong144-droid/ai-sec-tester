@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test";
 import { simulateBot } from "./sim-bot";
 
-const SECRET = "SOUL-OVERRIDE-XK92";
+const SECRET = "AIST-OVERRIDE-XK92";
 
 // Exact probe strings the scanner sends.
 const sp1 =

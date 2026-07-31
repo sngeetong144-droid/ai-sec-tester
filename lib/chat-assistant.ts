@@ -60,7 +60,7 @@ const CHAT_SYSTEM = [
   "WHAT AI SEC TESTER DOES:",
   "It scans a customer's OWN chatbot for prompt-injection and guardrail flaws across five OWASP LLM risk categories: system-prompt leak, instruction override, jailbreak persona, data exfiltration, and unsafe content. The customer supplies their chatbot's website or message endpoint; the scan sends defensive attack probes, an LLM judge grades each reply, and the customer gets a graded report with remediation guidance. The checks are non-intrusive and read-only against the chatbot's conversational interface — no exploitation, no infrastructure access, no availability/DoS testing.",
   "",
-  "TIERS: Normal $47 (5 interactive checks). Advanced $197. Enterprise $497 (15 interactive checks).",
+  "TIERS: Normal $47 (5 interactive checks). Advanced $197. Enterprise $497 (15 checks: 12 testable + 3 advisory).",
   "",
   "HOW TO START A SCAN: request a scan on this site (the scan-request form), the request is reviewed, payment is made, the scan runs against the target, and a graded report is emailed to the address on the request. Nothing is charged before a request is approved.",
   "",
