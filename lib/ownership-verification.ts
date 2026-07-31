@@ -9,10 +9,32 @@
 
 import { promises as dns } from "dns";
 import { request as httpsRequest } from "node:https";
+import type { LookupFunction } from "node:net";
 import { createHash, randomBytes } from "crypto";
 import { assertPublicTarget } from "@/lib/probe";
 
 export const WELL_KNOWN_PATH = "/.well-known/ai-sec-tester.txt";
+
+/**
+ * Build the DNS `lookup` override that pins a socket to an already-validated IP.
+ *
+ * Node >= 18.13 enables autoSelectFamily, so `net` invokes lookup with
+ * `{ all: true }` and expects an ARRAY of `{ address, family }`. The original
+ * code answered with the older `cb(null, address, family)` 3-argument form, so
+ * the socket died with "Invalid IP address: undefined" — and the caller's catch
+ * swallowed it, meaning the .well-known ownership option silently verified
+ * NOBODY on modern Node (Vercel runs 24.x). Both shapes are handled here.
+ * Exported solely so that behaviour is directly testable.
+ */
+export function pinnedLookup(pinnedIp: string, family: number): LookupFunction {
+  return (_hostname, options, cb) => {
+    if (options && typeof options === "object" && options.all) {
+      cb(null, [{ address: pinnedIp, family }]);
+      return;
+    }
+    cb(null, pinnedIp, family);
+  };
+}
 
 export interface Challenge {
   token: string;
@@ -106,7 +128,7 @@ function pinnedWellKnownGet(
         method: "GET",
         timeout: 5000,
         headers: { "user-agent": "ai-sec-tester/1.0 (+ownership-verify)" },
-        lookup: (_hostname, _options, cb) => cb(null, pinnedIp, family || 4),
+        lookup: pinnedLookup(pinnedIp, family || 4),
       },
       (res) => {
         const status = res.statusCode ?? 0;

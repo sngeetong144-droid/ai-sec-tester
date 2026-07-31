@@ -71,6 +71,29 @@ test("ownership verify stamps verified_at/proof_hash via service-role only, neve
         return null;
       }
     },
+    // Same process-global reason as extractDomain above: ownership-pinned-lookup
+    // .test.ts imports pinnedLookup from this module, and dropping it here made
+    // THAT file fail with "Export named 'pinnedLookup' not found" depending
+    // purely on which file bun loaded first.
+    pinnedLookup:
+      (pinnedIp: string, family: number) =>
+      (
+        _hostname: string,
+        options: { all?: boolean },
+        cb: (...args: unknown[]) => void,
+      ): void => {
+        if (options && typeof options === "object" && options.all) {
+          cb(null, [{ address: pinnedIp, family }]);
+          return;
+        }
+        cb(null, pinnedIp, family);
+      },
+    WELL_KNOWN_PATH: "/.well-known/ai-sec-tester.txt",
+    generateChallenge: (domain: string) => ({
+      token: "aist-verify=test",
+      dns_txt_record: domain,
+      well_known_path: "/.well-known/ai-sec-tester.txt",
+    }),
   }));
 
   const { POST } = await import("../app/api/ownership/verify/route");

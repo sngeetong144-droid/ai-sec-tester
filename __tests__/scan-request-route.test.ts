@@ -63,7 +63,18 @@ mock.module("@/lib/supabase/service", () => ({
 
 mock.module("@/lib/audit-log", () => ({ recordScanAudit: async () => {} }));
 
+// mock.module replaces the module GLOBALLY for the whole bun run, so a partial
+// factory deletes exports other test files' route graphs still import. Omitting
+// sendRequesterAck here made this file fail with "Export named
+// 'sendRequesterAck' not found" purely depending on file ORDER — it passed only
+// while another file happened to load first. Every export the route imports is
+// stubbed, so ordering cannot decide the result.
 mock.module("@/lib/email", () => ({
+  esc: (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"),
+  sendEmail: async () => ({ ok: true }),
+  resolveOperatorEmail: () => "operator@example.com",
+  sendRequesterAck: async () => ({ ok: true }),
   sendNewRequestAlert: async (params: Record<string, unknown>) => {
     alertCalls.push(params);
     if (alertShouldThrow) throw new Error("resend down");

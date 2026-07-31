@@ -41,6 +41,12 @@ mock.module("@/lib/email", () => ({
     sends.push(payload);
     return { ok: true };
   },
+  // Stubbed for the same reason as scan-request-route.test.ts: this factory
+  // replaces @/lib/email for the entire run, so any export it omits vanishes
+  // from every other route graph loaded afterwards.
+  resolveOperatorEmail: () => "operator@example.com",
+  sendRequesterAck: async () => ({ ok: true }),
+  sendNewRequestAlert: async () => ({ ok: true }),
 }));
 
 const { POST: starterMap, OPTIONS: starterMapOptions } = await import("../app/api/starter-map/route");
