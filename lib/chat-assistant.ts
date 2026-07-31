@@ -106,6 +106,22 @@ export function normalizeHistory(history: ChatMessage[]): ChatMessage[] {
 // ── Providers ─────────────────────────────────────────────────────────────────
 
 /** OpenAI-compatible caller — also serves NVIDIA NIM (same wire format). */
+/**
+ * A reply can arrive HTTP-200 and still be junk: NIM's llama returned
+ * "We need to follow<unk><unk><unk>…" to an adversarial turn on the live site.
+ * Degenerate output is a PROVIDER failure, not an answer — returning it would show
+ * a customer garbage on the page of a security product. Fail over instead.
+ */
+function isDegenerate(reply: string): boolean {
+  const t = reply.trim();
+  if (t.length < 2) return true;
+  if (/<unk>/i.test(t)) return true;
+  // Unicode replacement chars, or one token repeated into a wall.
+  if ((t.match(/�/g) || []).length > 2) return true;
+  if (/(.{1,12}?){6,}/.test(t)) return true;
+  return false;
+}
+
 async function callOpenAICompatible(
   key: string,
   messages: ChatMessage[],
@@ -129,7 +145,8 @@ async function callOpenAICompatible(
     if (!res.ok) return null; // quota / rate limit / down → fail over
     const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const reply = data.choices?.[0]?.message?.content;
-    return typeof reply === "string" && reply.trim() ? reply : null;
+    if (typeof reply !== "string" || !reply.trim()) return null;
+    return isDegenerate(reply) ? null : reply;
   } catch {
     return null;
   } finally {
@@ -160,7 +177,8 @@ async function callAnthropic(key: string, messages: ChatMessage[]): Promise<stri
     if (!res.ok) return null;
     const data = (await res.json()) as { content?: Array<{ text?: string }> };
     const reply = data.content?.[0]?.text;
-    return typeof reply === "string" && reply.trim() ? reply : null;
+    if (typeof reply !== "string" || !reply.trim()) return null;
+    return isDegenerate(reply) ? null : reply;
   } catch {
     return null;
   } finally {
