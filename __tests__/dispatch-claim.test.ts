@@ -47,3 +47,86 @@ test("an expired claim is stealable, so a killed run cannot strand the row", asy
   const row = { ...fresh(), claimed_at: stale, claimed_by: "dead" };
   expect(await claimScanRequest(client(row), "r1", "B")).toBe(true);
 });
+
+// ── what actually makes the claim atomic ────────────────────────────────────
+// The handoff carried "claim atomicity is unproven at the Postgres level" as an
+// open item. Postgres-level serialisation is not ours to prove in a unit test and
+// faking a proof would be worse than the gap. What IS ours: the claim must remain
+// a SINGLE conditional UPDATE. That shape is precisely why Postgres atomicity
+// applies - concurrent UPDATEs on one row serialise, and under READ COMMITTED the
+// loser re-evaluates its WHERE against the committed row and stops matching.
+// Rewritten as read-then-write it would race, silently, and every existing test
+// here would still pass. These pin the shape.
+
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const CLAIM_SRC = readFileSync(
+  join(import.meta.dir, "..", "lib", "command-center", "claim.ts"),
+  "utf8",
+);
+
+test("the claim is one conditional UPDATE, never read-then-write", () => {
+  // Guards the guard: if the file moved or emptied, everything below is vacuous.
+  expect(CLAIM_SRC).toContain("claimScanRequest");
+
+  const claimFn = CLAIM_SRC.slice(
+    CLAIM_SRC.indexOf("export async function claimScanRequest"),
+    CLAIM_SRC.indexOf("export async function releaseScanRequestClaim"),
+  );
+  expect(claimFn.length).toBeGreaterThan(100);
+
+  // Exactly one write, and no prior read to decide on.
+  expect((claimFn.match(/\.update\(/g) ?? []).length).toBe(1);
+  expect(claimFn).not.toContain(".maybeSingle(");
+  expect(claimFn).not.toContain(".single(");
+});
+
+test("the claim predicate keeps both guards: status and availability", () => {
+  const claimFn = CLAIM_SRC.slice(CLAIM_SRC.indexOf("export async function claimScanRequest"));
+  // Dropping either turns a claim into an unconditional stomp.
+  expect(claimFn).toContain('.eq("status", "paid_scanning")');
+  expect(claimFn).toContain("availableClaimFilter");
+});
+
+test("a query error is distinguished from a lost race", () => {
+  // `data`-only destructuring would make a BROKEN claim path read exactly like a
+  // legitimately lost race, and every row would silently look claimed-by-someone.
+  expect(CLAIM_SRC).toContain("const { data, error }");
+  expect(CLAIM_SRC).toContain("if (error)");
+});
+
+test("concurrent claimants: exactly one wins", async () => {
+  // Models what Postgres does to two UPDATEs on one row: they serialise, and the
+  // second sees the first's committed claimed_at, so its filter no longer matches.
+  let claimedAt: number | null = null;
+  const supa = {
+    from() {
+      const state: { patch: Record<string, unknown> | null } = { patch: null };
+      const b: Record<string, unknown> = {};
+      const chain = () => b;
+      b.update = (patch: Record<string, unknown>) => {
+        state.patch = patch;
+        return b;
+      };
+      b.eq = chain;
+      b.or = chain;
+      b.select = () => {
+        const free = claimedAt === null;
+        if (free && state.patch) {
+          claimedAt = Date.now();
+          return Promise.resolve({ data: [{ id: "req-1" }], error: null });
+        }
+        return Promise.resolve({ data: [], error: null });
+      };
+      return b;
+    },
+  };
+
+  const results = await Promise.all([
+    claimScanRequest(supa as never, "req-1", "worker-a"),
+    claimScanRequest(supa as never, "req-1", "worker-b"),
+    claimScanRequest(supa as never, "req-1", "worker-c"),
+  ]);
+  expect(results.filter(Boolean).length).toBe(1);
+});
