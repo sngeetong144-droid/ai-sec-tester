@@ -315,7 +315,10 @@ export async function Drawer({ view }: { view: CaseView }) {
           {c.status === "scanning" && (
             <>
               {view.scan?.status !== "complete" && <RunScanForm caseId={c.id} />}
-              <DeliverForm caseId={c.id} />
+              <DeliverForm
+                caseId={c.id}
+                ready={view.scan?.status === "complete" && (view.checks?.length ?? 0) > 0}
+              />
             </>
           )}
           {c.status === "complete" && (

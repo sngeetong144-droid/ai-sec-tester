@@ -65,7 +65,21 @@ export function RunScanForm({ caseId }: { caseId: string }) {
   );
 }
 
-export function DeliverForm({ caseId }: { caseId: string }) {
+/**
+ * `ready` is false until the linked scan has finished AND persisted results.
+ * Delivering before then emailed the customer a "Verdict: PENDING (0 of 5
+ * checks passed)" report and closed the case. The server action refuses too —
+ * this only makes the refusal visible instead of a click that silently does
+ * nothing.
+ */
+export function DeliverForm({ caseId, ready = true }: { caseId: string; ready?: boolean }) {
+  if (!ready) {
+    return (
+      <span style={{ fontSize: 12.5, color: "#9b8fae" }}>
+        Report unavailable — the scan has not finished. Wait for it to complete, or re-run it.
+      </span>
+    );
+  }
   return (
     <form action={deliverCaseAction} style={{ display: "inline" }}>
       <input type="hidden" name="caseId" value={caseId} />

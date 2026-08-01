@@ -73,10 +73,15 @@ export default async function ScanCasesPage({
 
                 {c.case.status === "scanning" && (
                   <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
-                    <DeliverForm caseId={c.case.id} />
-                    <span style={{ fontSize: 11.5, color: COLORS.ink3 }}>
-                      Finalizes the case and queues the report email.
-                    </span>
+                    <DeliverForm
+                      caseId={c.case.id}
+                      ready={c.scan?.status === "complete" && (c.checks?.length ?? 0) > 0}
+                    />
+                    {c.scan?.status === "complete" && (c.checks?.length ?? 0) > 0 && (
+                      <span style={{ fontSize: 11.5, color: COLORS.ink3 }}>
+                        Finalizes the case and queues the report email.
+                      </span>
+                    )}
                   </div>
                 )}
               </Card>

@@ -283,6 +283,33 @@ export async function manualActivateScanAction(formData: FormData): Promise<void
 export async function deliverCaseAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("caseId") ?? "");
+
+  // REFUSE to finalize a case whose scan has not finished. Without this the
+  // action completed the case and emailed the customer a report reading
+  // "Verdict: PENDING (0 of 5 checks passed)" while the scan was still running
+  // and had persisted ZERO results — which is exactly what a paying customer
+  // received on 2026-08-01. Delivering an empty report is worse than delivering
+  // nothing: it closes the case, consumes the customer's purchase, and reports
+  // a security posture that was never measured.
+  const pre = await loadCase(id);
+  if (!pre) {
+    revalidateConsole();
+    return;
+  }
+  const scanDone = pre.scan?.status === "complete";
+  const hasResults = (pre.checks?.length ?? 0) > 0;
+  if (!scanDone || !hasResults) {
+    await recordCaseAudit({
+      caseId: id,
+      eventType: "REPORT_BLOCKED_SCAN_INCOMPLETE",
+      detail:
+        `refused to deliver: scan status=${pre.scan?.status ?? "none"}, ` +
+        `${pre.checks?.length ?? 0} result row(s). Re-run the scan, then deliver.`,
+    });
+    revalidateConsole();
+    return;
+  }
+
   const updated = await completeCase(id);
   if (!updated) return;
   const view = await loadCase(id);
