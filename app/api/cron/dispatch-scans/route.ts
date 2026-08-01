@@ -26,9 +26,22 @@ import { buildPaymentUrl, paymentCountdown } from "@/app/actions/scan-request-li
  */
 
 export const dynamic = "force-dynamic";
-// Scans run synchronously inside this request; give headroom. ponytail: bounded per
-// run (BATCH), and the 5-min cron drains any backlog — no queue/worker infra.
-export const maxDuration = 60;
+/**
+ * Scans run SYNCHRONOUSLY inside this request, so this budget is the hard limit
+ * on a paid scan.
+ *
+ * It was 60s, and no paid scan could ever finish. Measured real runs of the same
+ * engine against the same targets took 68s, 118s, 127s and 175s (scan-matrix,
+ * 2026-07-31), so every customer scan was killed mid-probe: the scans row stayed
+ * "running" forever, zero results were persisted, and the case looked merely slow
+ * rather than dead. Confirmed live on 2026-08-01 — the first real paid scan was
+ * activated at 02:06:51 and never completed.
+ *
+ * 300 matches /api/dev/scan-matrix, which demonstrably completes these same scans
+ * on this account, so the plan supports it. A batch of 5 can still exceed it; the
+ * stale-run recovery in run-scan.ts re-dispatches whatever gets cut off.
+ */
+export const maxDuration = 300;
 
 const DISPATCH_BATCH = 5;
 
@@ -72,9 +85,29 @@ export async function GET(request: Request): Promise<Response> {
     .eq("status", "paid_scanning")
     .limit(DISPATCH_BATCH);
 
+  // Time budget. The platform kills this request at maxDuration, so the loop
+  // must (a) never START a scan it cannot finish, and (b) hand each scan a
+  // deadline it stops itself at. Without both, a scan is killed mid-probe, no
+  // results are persisted, and the row is stranded at "running".
+  const startedAt = Date.now();
+  const HARD_MS = 300_000; // must match maxDuration above
+  const PER_SCAN_MS = 200_000; // measured real scans: 68s-175s
+  const SAFETY_MS = 15_000; // leave room to finalise, email, and respond
+
   for (const req of (paid as Row[]) ?? []) {
+    const elapsed = Date.now() - startedAt;
+    const remaining = HARD_MS - elapsed - SAFETY_MS;
+    if (remaining < 30_000) {
+      // Not enough left to do anything useful — leave it paid_scanning for the
+      // next tick rather than starting a run that will be cut off.
+      result.skipped.push({ id: req.id, reason: "deferred — dispatch time budget" });
+      continue;
+    }
     try {
-      const outcome = await runScanForRequest(supabase, req, { cronSecret: secret });
+      const outcome = await runScanForRequest(supabase, req, {
+        cronSecret: secret,
+        deadlineAtMs: Date.now() + Math.min(PER_SCAN_MS, remaining),
+      });
       if (outcome.status === "dispatched") result.dispatched.push(req.id);
       else if (outcome.status === "reconciled") result.reconciled.push(req.id);
       else if (outcome.status === "in_flight") result.inFlight.push(req.id);

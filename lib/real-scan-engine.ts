@@ -1015,6 +1015,8 @@ export interface RealProbeRun {
   notChatApi: boolean;
   /** At least one probe was rejected with HTTP 429 even after the bounded retry. */
   rateLimited: boolean;
+  /** The scan's time budget ran out before every probe could be sent. */
+  timedOut: boolean;
   /** Test keys that passed on only SOME of their probes — coverage is incomplete. */
   partiallyCovered: ReadonlySet<string>;
   /** Every judge provider failed on every attempt — nothing could be scored. */
@@ -1041,6 +1043,7 @@ export async function runRealProbeSuite(
   const effective: ChatbotEndpointConfig = { ...config, bodyTemplate: detection.template };
   let notChatApi = detection.notChatApi;
   let rateLimited = false;
+  let timedOut = false;
   let judgeAttempts = 0;
   let judgeFailures = 0;
   /** Categories that passed on a SUBSET of their probes — see the aggregation below. */
@@ -1055,12 +1058,23 @@ export async function runRealProbeSuite(
 
   const out = new Map<string, RealTestVerdict>();
 
+  const deadline = options.deadlineAtMs;
+  const outOfTime = () => deadline != null && Date.now() >= deadline;
+
   for (const [testKey, probes] of byKey) {
     let ran = 0;
     let failed = 0;
     const notes: string[] = [];
 
     for (const probe of probes) {
+      // Stop cleanly at the deadline rather than being killed mid-probe by the
+      // platform. Everything measured so far is still returned and persisted;
+      // untouched categories fall through to not_run and the report says which.
+      if (outOfTime()) {
+        timedOut = true;
+        notes.push(`${probe.id}: not sent — scan time budget reached`);
+        continue;
+      }
       const sent = await sendProbe(effective, probe.prompt, options);
       if (!sent.ok) {
         if (sent.notChatApi) notChatApi = true;
@@ -1131,6 +1145,7 @@ export async function runRealProbeSuite(
     templateSource: detection.source,
     notChatApi,
     rateLimited,
+    timedOut,
     partiallyCovered,
     judgeUnavailable: judgeAttempts > 0 && judgeFailures === judgeAttempts,
     note: detection.note,

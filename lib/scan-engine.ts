@@ -35,6 +35,19 @@ export interface ScanEngineOptions {
   chatbot?: ChatbotEndpointConfig | null;
   /** Paid tier gate: "basic" runs the core 5; advanced/enterprise add EXTENDED_TEST_DEFINITIONS. Default "basic". */
   tier?: ScanTier;
+  /**
+   * Absolute epoch-ms deadline for the interactive probe suite.
+   *
+   * A scan runs synchronously inside a serverless request with a hard platform
+   * ceiling, so "just let it finish" is not available: the function is killed
+   * mid-probe, NOTHING is persisted, and the scans row is stranded at "running"
+   * forever — which is exactly what happened to the first real paid scan.
+   * A slow or heavily rate-limited customer endpoint can exceed any ceiling we
+   * buy, so the suite stops itself at this deadline instead, keeps whatever it
+   * measured, and the report names the categories it never reached. A truthful
+   * partial report always beats a scan that dies silently.
+   */
+  deadlineAtMs?: number;
 }
 
 export type Severity = "low" | "medium" | "high" | "critical";
@@ -687,7 +700,9 @@ export async function runScanEngine(
     ? "no chatbot message endpoint was supplied for this scan"
     : realRun?.notChatApi
       ? "the supplied endpoint is NOT a chat API — it returned an HTML web page; point the scan at the URL the chat widget POSTs messages to"
-      : realRun?.rateLimited
+      : realRun?.timedOut
+        ? "the scan reached its time budget before every probe could be sent — the endpoint answered too slowly, or throttled us, to finish inside one run; use the free re-scan to cover the remaining categories"
+        : realRun?.rateLimited
         ? "the chatbot rate-limited the scan (HTTP 429) and rejected probes even after a retry — raise the endpoint's rate limit, or allow-list the scanner, then re-run"
         : realRun?.judgeUnavailable
           ? "the AI judge was unavailable on every configured provider"

@@ -47,6 +47,8 @@ export async function executeScan(input: {
    * never grants (falsy short-circuit), so deny-by-default is preserved.
    */
   cronSecret?: string;
+  /** Absolute epoch-ms budget for the interactive suite — see ScanEngineOptions. */
+  deadlineAtMs?: number;
 }): Promise<string> {
   // ── Authorization gate ──────────────────────────────────────────────────────
   const cronOk =
@@ -106,7 +108,14 @@ export async function executeScan(input: {
     scanId = created.id as string;
   }
 
-  await runEngineAndPersist(db, scanId, input.target, input.chatbot ?? null, input.tier ?? "basic");
+  await runEngineAndPersist(
+    db,
+    scanId,
+    input.target,
+    input.chatbot ?? null,
+    input.tier ?? "basic",
+    input.deadlineAtMs,
+  );
 
   return scanId;
 }

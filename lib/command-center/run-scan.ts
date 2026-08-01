@@ -91,10 +91,16 @@ export interface DispatchOutcome {
   reason?: string;
 }
 
+/**
+ * A run older than this is dead, not in flight. Comfortably above the dispatch
+ * route's maxDuration (300s) so a genuinely running scan is never stolen.
+ */
+const STALE_RUN_MS = 6 * 60 * 1000;
+
 export async function runScanForRequest(
   supabase: Supa,
   req: RunScanRow,
-  opts: { cronSecret?: string },
+  opts: { cronSecret?: string; deadlineAtMs?: number },
 ): Promise<DispatchOutcome> {
   // Bridge to the cc_case that carries the guarded engine gate.
   const { data: cc } = await supabase
@@ -113,17 +119,30 @@ export async function runScanForRequest(
 
   // Inspect the linked scan to avoid double-running one already in progress/done.
   let scanStatus: string | null = null;
+  let scanStartedAt = 0;
   if (ccCase.scan_id) {
     const { data: sc } = await supabase
       .from("scans")
-      .select("status")
+      .select("status, created_at")
       .eq("id", ccCase.scan_id)
       .maybeSingle();
-    scanStatus = (sc as { status: string } | null)?.status ?? null;
+    const row = sc as { status: string; created_at: string } | null;
+    scanStatus = row?.status ?? null;
+    scanStartedAt = Date.parse(String(row?.created_at ?? "")) || 0;
   }
-  // ponytail: no distributed lock — relies on 5-min cron spacing + this status check.
-  // Upgrade path: a SELECT ... FOR UPDATE claim if scans ever run concurrently.
-  if (scanStatus === "running") return { status: "in_flight" };
+  // A run killed by the platform can never write "failed", so without a staleness
+  // rule the row sits at "running" and this guard blocks every future dispatch —
+  // the request is stuck forever. Anything older than the dispatch budget is dead,
+  // not in flight, so it falls through to the retry path below.
+  if (scanStatus === "running") {
+    const staleFor = Date.now() - scanStartedAt;
+    if (scanStartedAt > 0 && staleFor > STALE_RUN_MS) {
+      await supabase.from("scans").update({ status: "failed" }).eq("id", ccCase.scan_id as string);
+      scanStatus = "failed";
+    } else {
+      return { status: "in_flight" };
+    }
+  }
 
   // How many times this request's scan has already been attempted (bounds retry).
   const { data: reqRow } = await supabase
@@ -198,6 +217,10 @@ export async function runScanForRequest(
     chatbot = null; // discovery failure is never fatal to the transport checks
   }
 
+  // Hard budget for the interactive suite. The dispatch route's maxDuration is
+  // the platform's kill switch; this stops the suite BEFORE it, so results are
+  // persisted and the report is honest about what was covered instead of the
+  // function dying mid-probe and stranding the scan at "running" with no rows.
   await executeScan({
     caseId: ccCase.id,
     target: req.target_url,
@@ -207,6 +230,7 @@ export async function runScanForRequest(
     chatbot,
     tier: resolvePaymentLink(req.plan)?.tier ?? "basic",
     cronSecret: opts.cronSecret,
+    deadlineAtMs: opts.deadlineAtMs,
   });
 
   // Finalize: cc_case scanning → complete, queue+deliver report email, close request.

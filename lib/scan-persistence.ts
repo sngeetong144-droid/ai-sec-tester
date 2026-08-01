@@ -24,9 +24,11 @@ export async function runEngineAndPersist(
   target: string,
   chatbot: ChatbotEndpointConfig | null,
   tier: ScanTier,
+  /** Absolute epoch-ms budget for the interactive suite — see ScanEngineOptions. */
+  deadlineAtMs?: number,
 ): Promise<void> {
   try {
-    const engine = await runScanEngine(target, { chatbot, tier });
+    const engine = await runScanEngine(target, { chatbot, tier, deadlineAtMs });
 
     const rows = engine.results.map((r) => ({
       scan_id: scanId,
