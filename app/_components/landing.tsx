@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { PAYMENT_LINKS } from "@/lib/payment-links";
+import { TIER_FEATURES } from "@/lib/tier-features";
 import { RevealScripts, ChatBubble, RequestForm } from "@/app/_components/landing-client";
 
 // Faithful port of the static design (Raw/package/ai-security-scanner). Markup
@@ -77,18 +78,7 @@ const TIERS = [
     tier: "basic",
     cta: "Request Normal scan",
     btnClass: "btn btn-ghost",
-    features: [
-      "5 OWASP LLM checks",
-      "Pass/Fail scorecard",
-      // Was "Priority scan processing". Nothing prioritised anything — the
-      // dispatcher had no ORDER BY at all, so the queue was not even FIFO (fixed
-      // in the same change). Replaced with a claim the code backs: settlement
-      // triggers dispatch with no human step. Measured on request 7fdd21ea,
-      // 2026-08-01 — paid to delivered PDF in under four minutes.
-      "Scan starts automatically after payment",
-      "Branded PDF audit report",
-      "Evidence per finding + remediation",
-    ],
+    features: TIER_FEATURES.basic,
   },
   {
     name: "Advanced",
@@ -99,12 +89,7 @@ const TIERS = [
     tier: "advanced",
     cta: "Request Advanced scan",
     btnClass: "btn btn-accent",
-    features: [
-      "Everything in Normal",
-      "Full OWASP LLM Top-10 coverage",
-      "Deeper probes per category",
-      "PDF reports emailed automatically",
-    ],
+    features: TIER_FEATURES.advanced,
   },
   {
     name: "Enterprise",
@@ -115,14 +100,7 @@ const TIERS = [
     tier: "enterprise",
     cta: "Request Enterprise scan",
     btnClass: "btn btn-ghost",
-    features: [
-      "Everything in Advanced",
-      "Authorization + identity verification",
-      "Automated risk triage (score + flags)",
-      "Human review before scan runs",
-      "Full report + 1 free re-scan after fixes",
-      "Secure token-gated report page",
-    ],
+    features: TIER_FEATURES.enterprise,
   },
 ];
 

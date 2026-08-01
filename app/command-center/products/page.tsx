@@ -1,48 +1,31 @@
 import { Shell } from "@/app/command-center/_components/shell";
 import { PAYMENT_LINKS, type ScanTier } from "@/lib/payment-links";
+import { TIER_FEATURES } from "@/lib/tier-features";
 import { Card, CardTitle, COLORS, Badge, Mono } from "@/app/command-center/_ui";
 
 export const dynamic = "force-dynamic";
 
-const META: Record<ScanTier, { name: string; unit: string; mode: string; productLink: string; features: string[] }> = {
+const META: Record<ScanTier, { name: string; unit: string; mode: string; productLink: string; features: readonly string[] }> = {
   basic: {
     name: "Normal",
     unit: "one-time · per scan",
     mode: "Reviewed → pay",
     productLink: "scan.thesoulsofai.com/#pricing",
-    features: [
-      "5 OWASP LLM checks",
-      "Pass/Fail scorecard",
-      "Scan starts automatically after payment",
-      "Branded PDF audit report",
-      "Evidence per finding + remediation",
-    ],
+    features: TIER_FEATURES.basic,
   },
   advanced: {
     name: "Advanced",
     unit: "one-time · per scan",
     mode: "Reviewed → pay",
     productLink: "scan.thesoulsofai.com/#pricing",
-    features: [
-      "Everything in Normal",
-      "Full OWASP LLM Top-10 coverage",
-      "Deeper probes per category",
-      "PDF reports emailed automatically",
-    ],
+    features: TIER_FEATURES.advanced,
   },
   enterprise: {
     name: "Enterprise",
     unit: "one-time · per chatbot",
     mode: "Reviewed + identity verify",
     productLink: "scan.thesoulsofai.com/enterprise",
-    features: [
-      "Everything in Advanced",
-      "Authorization + identity verification",
-      "Automated risk triage (score + flags)",
-      "Human review before scan runs",
-      "Full report + 1 free re-scan after fixes",
-      "Secure token-gated report page",
-    ],
+    features: TIER_FEATURES.enterprise,
   },
 };
 
