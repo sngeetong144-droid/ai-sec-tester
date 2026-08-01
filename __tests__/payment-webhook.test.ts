@@ -148,6 +148,23 @@ function discountedEvent(amountTotalCents: number, discountCents: number) {
   });
 }
 
+// Stripe reports a FULLY DISCOUNTED checkout as "no_payment_required" — there was
+// no charge to make. Requiring "paid" made a 100%-off redemption a silent no-op.
+function freeSettledEvent(discountCents: number) {
+  return JSON.stringify({
+    type: "checkout.session.completed",
+    data: {
+      object: {
+        client_reference_id: "ref-123",
+        payment_status: "no_payment_required",
+        amount_total: 0,
+        total_details: { amount_discount: discountCents },
+        metadata: {},
+      },
+    },
+  });
+}
+
 function req(body: string, signature: string | null): Request {
   const headers: Record<string, string> = {};
   if (signature !== null) headers["stripe-signature"] = signature;
@@ -222,6 +239,22 @@ test("discount does NOT defeat the cross-tier underpayment guard", async () => {
   row.plan = "enterprise"; // quoted $497 = 49700c
   // Basic-price checkout plus a small coupon still falls far short of the quote.
   const res = await POST(req(discountedEvent(4700, 500), "good"));
+  expect(res.status).toBe(200);
+  expect(row.status).toBe("approved_awaiting_payment");
+});
+
+
+test("100%-off checkout reported as no_payment_required → still activates", async () => {
+  row.plan = "Normal — $47";
+  const res = await POST(req(freeSettledEvent(4700), "good"));
+  expect(res.status).toBe(200);
+  expect(row.status).toBe("paid_scanning");
+});
+
+test("no_payment_required without a covering discount → does NOT activate", async () => {
+  row.plan = "Normal — $47";
+  // A zero-value session with no discount recorded is not a settled $47 sale.
+  const res = await POST(req(freeSettledEvent(0), "good"));
   expect(res.status).toBe(200);
   expect(row.status).toBe("approved_awaiting_payment");
 });

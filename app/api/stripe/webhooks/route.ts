@@ -72,6 +72,17 @@ export async function POST(request: Request) {
       // ── New subscription or one-time purchase ─────────────────────────────
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+        // Stripe reports a FULLY DISCOUNTED checkout as "no_payment_required",
+        // not "paid" — there was no charge to make. Requiring "paid" alone meant
+        // a 100%-off promotion code completed successfully in Stripe and was then
+        // ignored here: the request stayed approved_awaiting_payment and no scan
+        // ever ran. Nothing is weakened by accepting it, because markRequestPaid
+        // still requires the GROSS value (charge + discount) to cover the quoted
+        // tier price, so a $0 session only settles when the merchant's own coupon
+        // absorbed the full amount.
+        const settled =
+          session.payment_status === "paid" ||
+          session.payment_status === "no_payment_required";
 
         // ── PRIMARY paid → paid_scanning path (scan_requests lifecycle) ────────
         // The approval flow appends ?client_reference_id=<scan_request id> to the
@@ -85,7 +96,7 @@ export async function POST(request: Request) {
         // activation remains the manual fallback. See deliverable notes.
         const clientRef =
           session.client_reference_id ?? session.metadata?.client_reference_id;
-        if (clientRef && session.payment_status === "paid") {
+        if (clientRef && settled) {
           // Pass amount_total so markRequestPaid rejects underpayment (a basic-tier
           // checkout carrying an enterprise request's client_reference_id), and the
           // discount so a merchant-issued promotion code still counts toward the
@@ -105,7 +116,7 @@ export async function POST(request: Request) {
         //    static links — flagged non-functional in recon). ───────────────────
         const caseId = session.metadata?.case_id;
         const scanId = session.metadata?.scan_id;
-        if (caseId && scanId && session.payment_status === "paid") {
+        if (caseId && scanId && settled) {
           await activateCase(caseId, scanId);
         }
 
