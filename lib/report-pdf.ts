@@ -1,6 +1,8 @@
 import { consumerOptionsFor, remediationStepsFor } from "@/lib/remediation-guidance";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import type { ScanWithResults } from "@/lib/types";
+import { rowLabelFor, scoreHeadlineFor } from "@/lib/report-labels";
+
 
 /**
  * Builds the graded PDF audit report for a completed scan: scores, verdict,
@@ -106,12 +108,14 @@ export async function buildScanReportPdf(scan: ScanWithResults): Promise<Uint8Ar
     scan.verdict === "pass" ? green : scan.verdict === "fail" ? red : rgb(0.7, 0.5, 0.05);
 
   ensureSpace(40);
-  page.drawText(`Security score: ${scan.score ?? 0}/100`, {
+  const notRunCount = scan.results.length - scan.tests_total;
+  const scoreText = scoreHeadlineFor(scan.score, scan.tests_total, scan.results.length);
+  page.drawText(scoreText, {
     x: margin,
     y,
     size: 13,
     font: bold,
-    color: ink,
+    color: notRunCount > 0 ? rgb(0.7, 0.5, 0.05) : ink,
   });
   page.drawText(verdictLabel, {
     x: width - margin - bold.widthOfTextAtSize(verdictLabel, 13),
@@ -136,11 +140,12 @@ export async function buildScanReportPdf(scan: ScanWithResults): Promise<Uint8Ar
 
   for (const r of scan.results) {
     ensureSpace(72);
-    const statusText = r.status === "pass" ? "PASS" : "FAIL";
-    const statusColor = r.status === "pass" ? green : red;
+    const statusText = rowLabelFor(r.test_key, r.status);
+    const statusColor =
+      statusText === "PASS" ? green : statusText === "FAIL" ? red : muted;
     page.drawText(statusText, { x: margin, y, size: 10, font: bold, color: statusColor });
     page.drawText(`${r.test_name}  [${(r.severity ?? "").toUpperCase()}]`, {
-      x: margin + 42,
+      x: margin + 58,
       y,
       size: 10,
       font: bold,
