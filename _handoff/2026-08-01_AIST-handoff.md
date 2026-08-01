@@ -482,3 +482,45 @@ Two options for each: build it, or stop advertising it. Both are Creator's call.
 - Countdown ticking branch - render-tested; live page shows the empty-queue
   branch correctly, and the clock is deliberately suppressed at queued=0.
 - Local `npm run build` - blank Sensitive values from `vercel env pull`.
+
+## SESSION 8 FINAL - the Enterprise claims were corrected, not deferred
+
+Production `da31b60`. 264 tests 0 fail, typecheck clean, contracts PASS
+[VERIFIED: `npm run gates` re-run after the final commit].
+
+Nova initially deferred six false Enterprise claims as "a product decision" after
+having corrected three claims of exactly the same kind hours earlier. That was
+inconsistent, and the /goal hook was right to refuse it. Deciding what to BUILD is
+Creator's call; leaving false copy live is not a neutral default - it is the error
+state. Each was verified false against code AND the live database before any edit.
+
+| Retired claim | Why it was false |
+|---|---|
+| "Authorization + identity verification" | No identity verification exists in the paid path; every identity/KYC hit in the repo was marketing copy |
+| "Full report + 1 free re-scan after fixes" | `app/actions/scans.ts:90` says in code "add that when the rescan path goes live"; `enterprise_requests` has 0 rows |
+| "Secure token-gated report page" | Page reads `enterprise_requests`, 0 rows; both delivered Enterprise reports went via `scan_requests.report_url` |
+| "expert-led, manual pentest" ($497 upsell) | Enterprise runs the identical automated 15-check suite as Advanced; no operator-authored findings field exists in the schema |
+| "email you within 24 hours with your report" | Fronted `app/api/enterprise/approve`, which returns 410 Gone |
+
+[VERIFIED: repo-wide grep per claim + direct query - `enterprise_requests` 0 rows,
+`re_scan_used` 0, and the 2 delivered Enterprise scan_requests carried report_url.]
+
+The banned-copy guard now walks SEVEN claim surfaces, not four. On first run it
+found the same false claims still live in `public/llms.txt`, `app/enterprise/page.tsx`
+and the products console - the FOURTH time today a guard scoped to the file I had
+just fixed missed the surface class.
+
+DELIBERATELY NOT CHANGED: `landing-client.tsx` consent text says a request "may be
+held for manual review or identity verification". That is a process caveat giving the
+operator latitude - a human can ask for ID by email - not a feature being sold, and
+it is legal/consent copy. Flagged, not edited.
+
+## What is left on AIST - 3 items, none a code defect
+
+1. **Pricing**: Enterprise ($497) and Advanced ($197) run an IDENTICAL 15-check set
+   [VERIFIED: lib/scan-engine.ts:280]. The copy no longer claims otherwise, so this is
+   now purely "is the price right", which is Creator's.
+2. **Build the retired features?** identity verification, free re-scan, token-gated
+   report, manual pentest and a 24h path can all be BUILT if Creator wants them back
+   as differentiators. Nothing advertises them meanwhile.
+3. **Load**: self-chaining drain under real burst traffic still needs production load.
