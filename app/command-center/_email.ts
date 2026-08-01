@@ -128,7 +128,15 @@ export function composeEmail(
     const scan = view.scan;
     const verdict = (scan?.verdict ?? "pending").toUpperCase();
     const passed = scan?.tests_passed ?? 0;
-    const total = scan?.tests_total ?? 5;
+    // tests_total counts only checks that RAN. Using it as the headline
+    // denominator produced "4 of 4 checks passed" on an Enterprise scan where
+    // 11 of its 15 checks never executed — indistinguishable from a perfect
+    // result. Prefer the full recorded set; fall back only if absent.
+    const ran = scan?.tests_total ?? 0;
+    // The persisted result rows ARE the full set — 15 for Enterprise, 5 for
+    // Normal — so no schema change is needed to tell the truth here.
+    const total = view.checks?.length || ran || 5;
+    const notRun = Math.max(0, total - ran);
     const rescanToken = `RESCAN-${r}`;
     const scanRef = scan?.id ? `SCN-${scan.id.slice(0, 8)}` : "(no scan record)";
     return {
@@ -139,7 +147,7 @@ export function composeEmail(
         `Hi ${name},\n\n` +
         `Your AI security test for ${url} is complete.\n\n` +
         `Scan: ${scanRef}\n` +
-        `Verdict: ${verdict} (${passed} of ${total} checks passed)\n` +
+        `Verdict: ${verdict} (${passed} of ${total} checks passed${notRun > 0 ? `, ${notRun} NOT RUN` : ""})\n` +
         // "4 of 4 checks passed" reads as a clean bill of health, but `total`
         // counts only the checks that RAN. When coverage was incomplete the
         // engine says so in the summary — and that caveat has to travel with the

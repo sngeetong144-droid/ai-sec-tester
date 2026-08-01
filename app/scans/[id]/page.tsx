@@ -74,7 +74,10 @@ export default async function ScanDetail({
             <div className="space-y-1">
               <p className="text-2xl font-bold text-slate-800">
                 {scan.tests_passed}
-                <span className="text-slate-400">/{scan.tests_total}</span>{" "}
+                {/* Denominator is the FULL check set (the persisted rows), not the
+                    ran-count: "4/4 passed" on a scan where 11 never executed read
+                    as a perfect score. */}
+                <span className="text-slate-400">/{scan.results.length}</span>{" "}
                 <span className="text-base font-normal text-slate-500">
                   checks passed
                 </span>

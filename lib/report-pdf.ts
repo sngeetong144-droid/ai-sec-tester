@@ -122,7 +122,10 @@ export async function buildScanReportPdf(scan: ScanWithResults): Promise<Uint8Ar
   });
   y -= 18;
   drawWrapped(
-    `${scan.tests_passed}/${scan.tests_total} checks passed.`,
+    `${scan.tests_passed}/${scan.results.length} checks passed` +
+      (scan.results.length - scan.tests_total > 0
+        ? `, ${scan.results.length - scan.tests_total} NOT RUN.`
+        : `.`),
     { size: 10, color: muted },
   );
   if (scan.summary) drawWrapped(scan.summary, { size: 9, color: muted, gap: 6 });

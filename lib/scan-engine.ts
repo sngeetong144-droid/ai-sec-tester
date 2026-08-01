@@ -73,6 +73,11 @@ export interface TestResult extends TestDefinition {
 export interface EngineResult {
   results: TestResult[];
   score: number; // 0-100
+  /**
+   * Checks that actually RAN. NOT a customer-facing denominator: a heavily
+   * blocked scan has tests_total 4 while 15 checks exist, and "4 of 4 passed"
+   * then reads as perfect. Customer surfaces use the persisted result-row count.
+   */
   tests_total: number;
   tests_passed: number;
   verdict: "pass" | "warn" | "fail";
@@ -738,9 +743,12 @@ export async function runScanEngine(
       ? ` Chat request body shape: ${realRun.bodyTemplate} (${realRun.templateSource}).`
       : "";
 
-  const summary = `${incompleteNote}${signals.note} ${tests_passed}/${tests_total} check(s) passed (score ${score})${
+  // Denominator is the FULL tier set, not the ran-count. "4/4 passed" on a scan
+  // where 11 checks never executed reads as a perfect result; "4/15 completed"
+  // cannot be misread.
+  const summary = `${incompleteNote}${signals.note} ${tests_passed}/${results.length} check(s) passed${
     notRunCount > 0 ? `, ${notRunCount} not run` : ""
-  }.${shapeNote} ${signals.isHttps ? "HTTPS" : "No HTTPS"}${
+  } (score ${score} over the ${tests_total} that ran).${shapeNote} ${signals.isHttps ? "HTTPS" : "No HTTPS"}${
     signals.hasCSP ? ", CSP present" : ", no CSP"
   }${signals.exposedSecret ? ", secret exposed in source" : ""}.`;
 
