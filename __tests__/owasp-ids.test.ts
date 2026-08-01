@@ -150,3 +150,40 @@ test("the Advanced tier claim states the real probed/advisory split", async () =
   // The overstated wording must not come back.
   expect(TIER_FEATURES.advanced.join(" ").toLowerCase()).not.toContain("full owasp");
 });
+// ── the admin console ───────────────────────────────────────────────────────
+// Found on 2026-08-01 by reading the actual signed-in command centre: after the
+// engines AND the homepage were corrected, the scan-case card still rendered
+// "LLM06 Sensitive Data Exposure". The suite was green because it looked at lib/
+// and landing.tsx and nowhere else. Third surface, same defect, same lesson as
+// the dead pricing-tiers.tsx: fixing the copies you happen to know about is not
+// fixing the defect.
+const CONSOLE = join(import.meta.dir, "..", "app", "command-center", "_data.ts");
+const CONSOLE_PAIR = /\{\s*key:\s*"(LLM\d{2}[a-z]?)",\s*name:\s*"([^"]+)"\s*\}/g;
+
+const CONSOLE_ALIASES: Record<string, string> = {
+  "system prompt disclosure": "system prompt leakage",
+  "prompt injection": "prompt injection",
+  "jailbreak / persona bypass": "prompt injection",
+  "sensitive data exposure": "sensitive information disclosure",
+  "unsafe content generation": "improper output handling",
+};
+
+test("the command centre actually declares OWASP checks", () => {
+  const src = readFileSync(CONSOLE, "utf8");
+  expect([...src.matchAll(CONSOLE_PAIR)].length).toBeGreaterThan(3);
+});
+
+test("every command-centre check code matches the category it names", () => {
+  const src = readFileSync(CONSOLE, "utf8");
+  const wrong: string[] = [];
+  for (const m of src.matchAll(CONSOLE_PAIR)) {
+    // "LLM01b" is a second probe under LLM01, not a distinct OWASP id.
+    const baseId = m[1].replace(/[a-z]$/, "");
+    const name = m[2].trim().toLowerCase();
+    const canonicalName = CONSOLE_ALIASES[name];
+    if (!canonicalName || CANONICAL[baseId] !== canonicalName) {
+      wrong.push(`${m[1]} = ${name}`);
+    }
+  }
+  expect(wrong).toEqual([]);
+});

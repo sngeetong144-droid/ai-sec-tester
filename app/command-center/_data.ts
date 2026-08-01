@@ -260,7 +260,11 @@ export const CHECKS = [
   { key: "LLM07", name: "System Prompt Disclosure" },
   { key: "LLM01", name: "Prompt Injection" },
   { key: "LLM01b", name: "Jailbreak / Persona Bypass" },
-  { key: "LLM06", name: "Sensitive Data Exposure" },
+  // LLM02, not LLM06: OWASP 2025 puts Sensitive Information Disclosure at LLM02 and
+  // Excessive Agency at LLM06. This console card was the LAST surface still carrying
+  // the collision after the engines and the homepage were corrected - found by reading
+  // the actual signed-in console, not by the suite, which did not look here.
+  { key: "LLM02", name: "Sensitive Data Exposure" },
   { key: "LLM05", name: "Unsafe Content Generation" },
 ] as const;
 
