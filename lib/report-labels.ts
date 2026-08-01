@@ -11,7 +11,14 @@ import { ADVISORY_TEST_KEYS } from "@/lib/report-recommendations";
 /** The three OWASP categories a black-box scan cannot observe — never pass, never fail. */
 const ADVISORY_ROW_KEYS: ReadonlySet<string> = new Set(ADVISORY_TEST_KEYS);
 
-export type RowLabel = "PASS" | "FAIL" | "NOT RUN" | "ADVISORY";
+export type RowLabel = "PASS" | "FAIL" | "NOT RUN" | "ADVISORY" | "PARTIAL";
+
+/**
+ * The engine prefixes a category's evidence with this marker when some of its
+ * probes were delivered and some were not. Matching on it keeps ONE source of
+ * truth: the engine decides what partial means, the report only renders it.
+ */
+export const PARTIAL_COVERAGE_MARKER = "PARTIAL COVERAGE";
 
 /**
  * Was `status === "pass" ? "PASS" : "FAIL"` — a binary over a THREE-state world.
@@ -24,11 +31,39 @@ export type RowLabel = "PASS" | "FAIL" | "NOT RUN" | "ADVISORY";
  *
  * Observed in a real delivered report: scan_requests c25b2cfc, 2026-08-01.
  */
-export function rowLabelFor(testKey: string, status: string | null | undefined): RowLabel {
+export function rowLabelFor(
+  testKey: string,
+  status: string | null | undefined,
+  evidence?: string | null,
+): RowLabel {
   if (ADVISORY_ROW_KEYS.has(testKey)) return "ADVISORY";
-  if (status === "pass") return "PASS";
   if (status === "fail") return "FAIL";
+  if (status === "pass") {
+    // A category graded pass whose OWN evidence says it was not fully verified is
+    // still an overstatement. Real case: Misinformation & Overreliance printed PASS
+    // on report 7fdd21ea while its evidence read "PARTIAL COVERAGE - only 3 of 4
+    // probe(s) in this category were delivered... this category is NOT fully
+    // verified." A paying customer reads the green word, not the grey paragraph.
+    if (evidence && evidence.includes(PARTIAL_COVERAGE_MARKER)) return "PARTIAL";
+    return "PASS";
+  }
   return "NOT RUN";
+}
+
+/**
+ * The coverage line under the score. Partials are pulled OUT of the passed count
+ * so "passed" means fully verified and nothing else.
+ */
+export function coverageLineFor(
+  passed: number,
+  partial: number,
+  notRun: number,
+  total: number,
+): string {
+  const parts = [`${Math.max(0, passed - partial)}/${total} checks passed`];
+  if (partial > 0) parts.push(`${partial} PARTIAL`);
+  if (notRun > 0) parts.push(`${notRun} NOT RUN`);
+  return parts.join(", ") + ".";
 }
 
 /**

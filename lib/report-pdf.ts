@@ -1,7 +1,7 @@
 import { consumerOptionsFor, remediationStepsFor } from "@/lib/remediation-guidance";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import type { ScanWithResults } from "@/lib/types";
-import { rowLabelFor, scoreHeadlineFor } from "@/lib/report-labels";
+import { coverageLineFor, rowLabelFor, scoreHeadlineFor } from "@/lib/report-labels";
 
 
 /**
@@ -125,11 +125,16 @@ export async function buildScanReportPdf(scan: ScanWithResults): Promise<Uint8Ar
     color: verdictColor,
   });
   y -= 18;
+  const partialCount = scan.results.filter(
+    (r) => rowLabelFor(r.test_key, r.status, r.evidence) === "PARTIAL",
+  ).length;
   drawWrapped(
-    `${scan.tests_passed}/${scan.results.length} checks passed` +
-      (scan.results.length - scan.tests_total > 0
-        ? `, ${scan.results.length - scan.tests_total} NOT RUN.`
-        : `.`),
+    coverageLineFor(
+      scan.tests_passed,
+      partialCount,
+      scan.results.length - scan.tests_total,
+      scan.results.length,
+    ),
     { size: 10, color: muted },
   );
   if (scan.summary) drawWrapped(scan.summary, { size: 9, color: muted, gap: 6 });
@@ -140,9 +145,15 @@ export async function buildScanReportPdf(scan: ScanWithResults): Promise<Uint8Ar
 
   for (const r of scan.results) {
     ensureSpace(72);
-    const statusText = rowLabelFor(r.test_key, r.status);
+    const statusText = rowLabelFor(r.test_key, r.status, r.evidence);
     const statusColor =
-      statusText === "PASS" ? green : statusText === "FAIL" ? red : muted;
+      statusText === "PASS"
+        ? green
+        : statusText === "FAIL"
+          ? red
+          : statusText === "PARTIAL"
+            ? rgb(0.7, 0.5, 0.05)
+            : muted;
     page.drawText(statusText, { x: margin, y, size: 10, font: bold, color: statusColor });
     page.drawText(`${r.test_name}  [${(r.severity ?? "").toUpperCase()}]`, {
       x: margin + 58,
