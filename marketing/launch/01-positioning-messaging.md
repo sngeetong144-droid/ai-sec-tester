@@ -97,7 +97,7 @@ Downstream copy (landing, emails, ads, social, SEO) inherits this spine. Level 1
 > *(The free 30-day re-scan is an Enterprise-tier entitlement. Do not carry it into Level 3 — it is not part of the base deliverable.)*
 
 **Level 4 — The coverage (name the checks):**
-> LLM01 prompt injection · LLM06 sensitive-info disclosure · LLM07 system-prompt leakage · LLM08 excessive agency · insecure output handling · common jailbreak / guardrail-bypass patterns.
+> LLM01 prompt injection · LLM02 sensitive-info disclosure · LLM07 system-prompt leakage · LLM06 excessive agency · insecure output handling · common jailbreak / guardrail-bypass patterns.
 
 **Level 5 — The mechanics:**
 > Request a scan (no checkout, no login). We check ownership/authorization + geo, sanctions, and licensing. Approved requests get an emailed payment link. Pay → scan runs → report emailed. From $47 / $197 / $497.
@@ -134,7 +134,7 @@ You can — and you'll get an anecdote, not evidence. Ad-hoc prompts are unstruc
 Because scanning a system you can't prove you're authorized to test is illegal, and a self-serve "point it anywhere" scanner is a liability engine for everyone. The review (authorization + geo/sanctions/licensing, target: within one business day — `[NEEDS: confirm one-business-day review SLA is real, not aspirational]`) protects you from that liability and third parties from unauthorized testing. It's not friction we tolerate — it's why the result is something you can stand behind. No charge until it's approved.
 
 ### 7.3 "It's just a support bot / we already have a pentest firm."
-Ask whether that firm's last report named prompt injection, system-prompt leakage, or jailbreak resistance — most generic AppSec vendors don't test LLM-specific failure modes at all. And support bots are the *highest-value* target precisely because they're customer-facing, unmonitored, and usually wired to a knowledge base or backend tools — exactly where secrets (LLM06) and excessive tool access (LLM08) leak. This is a narrow, fast complement to your existing security, not a replacement.
+Ask whether that firm's last report named prompt injection, system-prompt leakage, or jailbreak resistance — most generic AppSec vendors don't test LLM-specific failure modes at all. And support bots are the *highest-value* target precisely because they're customer-facing, unmonitored, and usually wired to a knowledge base or backend tools — exactly where secrets (LLM02) and excessive tool access (LLM06) leak. This is a narrow, fast complement to your existing security, not a replacement.
 
 **Additional objections (secondary):**
 - **"How do I know it won't break production?"** — Probes are non-invasive by design, and nothing runs until authorization clears. `[NEEDS: confirm non-invasive probe methodology is documented for the report/FAQ]`

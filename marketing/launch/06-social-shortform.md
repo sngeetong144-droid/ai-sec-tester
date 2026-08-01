@@ -11,7 +11,7 @@
 **Safe to say (verified against live product / code):**
 - Live at **scan.thesoulsofai.com** — a request-first landing, **no self-serve checkout**. Every CTA routes to the request form.
 - Pricing: **$47 Normal / $197 Advanced (per scan) / $497 Enterprise (per chatbot)**, one-time.
-- Coverage aligned to **OWASP LLM Top-10**: LLM01 prompt injection, LLM02 insecure output handling, LLM06 sensitive info disclosure, LLM07 system-prompt leakage, LLM08 excessive agency, plus common jailbreak / guardrail-bypass patterns.
+- Coverage aligned to **OWASP LLM Top-10**: LLM01 prompt injection, LLM05 insecure output handling, LLM05 sensitive info disclosure, LLM07 system-prompt leakage, LLM06 excessive agency, plus common jailbreak / guardrail-bypass patterns.
 - **Real interactive probes graded by an LLM judge** — the scanner converses with the target bot and grades each response. Not a static payload list, not a simulation.
 - **Authorization-first is enforced in code**, not just copy: request → server re-checks both consent boxes → resolves requester + target country → auto-rejects OFAC / comprehensively sanctioned targets → **holds Singapore / Malaysia targets for manual licensing review**. No payment taken and no scan launched at request time.
 - Deliverable: **A–F / 0–100 score + Pass/Fail scorecard + branded PDF** with evidence per finding and plain-language remediation.
@@ -119,7 +119,7 @@ Each post has a LinkedIn (long) and an X (≤280 char) variant carrying the same
 > It's usually the highest-value target you have. Here's why:
 >
 > - It's **customer-facing** — anyone can talk to it, all day, unmonitored.
-> - It's usually **wired to a knowledge base or backend tools** — which is exactly where secrets leak (LLM06 — sensitive info disclosure) and where over-broad tool access bites (LLM08 — excessive agency).
+> - It's usually **wired to a knowledge base or backend tools** — which is exactly where secrets leak (LLM02 — sensitive info disclosure) and where over-broad tool access bites (LLM06 — excessive agency).
 > - It ships with **guardrails written in plain English**, which means they can often be argued away in plain English.
 >
 > Ask your last pentest report whether it named prompt injection, system-prompt leakage, or jailbreak resistance. Most generic AppSec reports don't test LLM-specific failure modes at all — not because the firm is bad, but because it's a different discipline.
@@ -129,7 +129,7 @@ Each post has a LinkedIn (long) and an X (≤280 char) variant carrying the same
 **X:**
 > "It's just a support bot, low risk."
 >
-> It's your highest-value target: customer-facing, unmonitored, and wired to a KB + backend tools — exactly where LLM06 (data leaks) and LLM08 (excessive agency) bite.
+> It's your highest-value target: customer-facing, unmonitored, and wired to a KB + backend tools — exactly where LLM02 (data leaks) and LLM06 (excessive agency) bite.
 >
 > scan.thesoulsofai.com
 
@@ -197,7 +197,7 @@ Each post has a LinkedIn (long) and an X (≤280 char) variant carrying the same
 **LinkedIn:**
 > The scariest chatbot bug usually isn't what it *says*. It's what it can *do*.
 >
-> **LLM08 — excessive agency.** When a chatbot is wired to tools (send an email, look up an order, hit an internal API) and its permission boundary lives only in the prompt, a well-phrased request can make it act outside what you intended.
+> **LLM06 — excessive agency.** When a chatbot is wired to tools (send an email, look up an order, hit an internal API) and its permission boundary lives only in the prompt, a well-phrased request can make it act outside what you intended.
 >
 > "Cancel that order" becomes "cancel *any* order." "Look up my ticket" becomes "look up *anyone's* ticket." The model isn't malicious — it's helpful, and helpful is the vulnerability.
 >
@@ -208,7 +208,7 @@ Each post has a LinkedIn (long) and an X (≤280 char) variant carrying the same
 **X:**
 > The scariest chatbot bug isn't what it says — it's what it can *do*.
 >
-> LLM08, excessive agency: a bot wired to tools, with its permission boundary living only in the prompt. "Cancel that order" → "cancel any order."
+> LLM06, excessive agency: a bot wired to tools, with its permission boundary living only in the prompt. "Cancel that order" → "cancel any order."
 >
 > scan.thesoulsofai.com
 
@@ -414,7 +414,7 @@ Cadence: 1 primary post/day, Mon–Fri, both weeks (10 posting days). Weekends l
 | **W1 Fri** | LinkedIn + X | **Post 4** ("Support bot is the target") | Objection handling | Kill "low-risk" before the weekend. |
 | W1 Sat/Sun | — | (optional) repost Video 1 to TikTok/Shorts | Reach | Reuse, no new copy. |
 | **W2 Mon** | LinkedIn + X | **Post 8** ("Launch announcement") + **Video 2** ("Who tests your chatbot?") | Offer intro | Second week opens the offer, warmed by W1 education. |
-| **W2 Tue** | LinkedIn + X | **Post 7** ("Excessive agency", LLM08) | Educational (deeper) | Keep teaching; don't go all-sell. |
+| **W2 Tue** | LinkedIn + X | **Post 7** ("Excessive agency", LLM06) | Educational (deeper) | Keep teaching; don't go all-sell. |
 | **W2 Wed** | LinkedIn + X | **Post 5** ("Anecdote ≠ evidence") + **Video 4** ("Inside one finding") | Objection / proof | DIY objection + technical proof for eng leads. |
 | **W2 Thu** | LinkedIn + X | **Post 9** ("Pick your depth") + **Video 5** ("Pick your depth") | Offer / tiers | Present pricing plainly. |
 | **W2 Fri** | LinkedIn + X | **Post 10** ("Re-scan closes the loop") | Offer / Enterprise value | Close on the highest-value differentiator. |

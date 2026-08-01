@@ -34,8 +34,8 @@ const CHECKS: Check[] = [
 // The five CORE interactive categories — exactly what a Normal scan runs, so the
 // hero scorecard shows what a $47 buyer actually receives. Codes match
 // TEST_DEFINITIONS in lib/scan-engine.ts, not an older OWASP numbering.
-// Previously listed "LLM02 Insecure output" (the engine grades that as LLM05 —
-// Improper Output Handling) and "LLM08 Excessive agency", which is an EXTENDED
+// Previously listed "LLM05 Insecure output" (the engine grades that as LLM05 —
+// Improper Output Handling) and "LLM06 Excessive agency", which is an EXTENDED
 // check the Normal tier does not run at all. A wrong OWASP code on the homepage
 // of a security product is the first thing an informed buyer will catch.
 const SCORECARD = [

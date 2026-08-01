@@ -48,7 +48,7 @@ AI Sec Tester pushes on them for you — the same way an attacker would — and 
 Checks aligned with the OWASP Top-10 for LLM Applications — the failure modes attackers actually use, not a generic checklist.
 
 - **LLM01 · Prompt injection** — Can a crafted message override your instructions or hijack the bot's behavior?
-- **LLM02 · Insecure output handling** — Does the bot return unsafe content that could break the page consuming it?
+- **LLM05 · Insecure output handling** — Does the bot return unsafe content that could break the page consuming it?
 - **LLM02 · Sensitive info disclosure** — Will it reveal secrets, keys, or other users' data when coaxed?
 - **LLM07 · System prompt leakage** — Can an attacker extract your hidden system prompt and business logic?
 - **LLM06 · Excessive agency** — Does the bot take actions or call tools it shouldn't be allowed to?
@@ -126,10 +126,10 @@ Most people picture "hacking a chatbot" as something exotic. It's usually just t
 Here are the failure modes attackers actually use — the ones AI Sec Tester probes for, aligned to the OWASP Top-10 for LLM Applications:
 
 - **Prompt injection (LLM01)** — a crafted message overrides your instructions and hijacks the bot.
-- **Insecure output handling (LLM02)** — the bot returns content that breaks the page rendering it.
-- **Sensitive info disclosure (LLM06)** — it reveals secrets, keys, or another user's data when coaxed.
+- **Insecure output handling (LLM05)** — the bot returns content that breaks the page rendering it.
+- **Sensitive info disclosure (LLM02)** — it reveals secrets, keys, or another user's data when coaxed.
 - **System prompt leakage (LLM07)** — an attacker extracts your hidden prompt and business logic.
-- **Excessive agency (LLM08)** — the bot calls tools or takes actions it should never be allowed to.
+- **Excessive agency (LLM06)** — the bot calls tools or takes actions it should never be allowed to.
 - **Guardrail bypass** — familiar jailbreak patterns that walk the model past its safety rules.
 
 You wrote guardrails for most of these. The only way to know they hold is to push on them.
@@ -356,7 +356,7 @@ We're The Souls of AI, and we kept running into the same gap: teams are shipping
 So we built **AI Sec Tester**.
 
 **What it does:**
-Point it at a chatbot you own or are authorized to test. It runs OWASP LLM Top-10 aligned checks — prompt injection (LLM01), insecure output (LLM02), sensitive info disclosure (LLM06), system prompt leakage (LLM07), excessive agency (LLM08), and common jailbreak/guardrail-bypass patterns. You get back a **Pass/Fail scorecard** with a grade, **evidence for every finding** (the actual prompt and response), and **plain-language remediation** you can hand straight to a developer. In seconds.
+Point it at a chatbot you own or are authorized to test. It runs OWASP LLM Top-10 aligned checks — prompt injection (LLM01), insecure output (LLM05), sensitive info disclosure (LLM02), system prompt leakage (LLM07), excessive agency (LLM06), and common jailbreak/guardrail-bypass patterns. You get back a **Pass/Fail scorecard** with a grade, **evidence for every finding** (the actual prompt and response), and **plain-language remediation** you can hand straight to a developer. In seconds.
 
 **Why the request-first flow:**
 Scanning a system you don't own is illegal, so every scan starts with a short authorization review — not a checkout page. Approved requests get a secure payment link and the scan runs; unapproved ones get a reason and no charge. It keeps the whole thing responsible by default.

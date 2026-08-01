@@ -97,7 +97,7 @@ Word counts are targets, not gospel — depth over padding.
 **Primary kw:** OWASP LLM Top 10 explained · **Cluster:** #6, #13 · **~2,200w**
 - Why the OWASP *web* Top 10 doesn't cover LLM apps (a DAST scanner has no concept of a system prompt).
 - Walk each relevant category with a chatbot-specific example and "how you'd know you have it":
-  - LLM01 Prompt Injection · LLM02 Insecure Output Handling · LLM06 Sensitive Information Disclosure · LLM07 System Prompt Leakage · LLM08 Excessive Agency (+ brief nods to the rest).
+  - LLM01 Prompt Injection · LLM05 Insecure Output Handling · LLM05 Sensitive Information Disclosure · LLM07 System Prompt Leakage · LLM06 Excessive Agency (+ brief nods to the rest).
 - For each: the failure mode, who it hurts, a one-line remediation direction.
 - "Which of these can you test today?" → maps directly to what AI Sec Tester probes.
 - CTA: request a scan / see the checklist.
@@ -163,7 +163,7 @@ Word counts are targets, not gospel — depth over padding.
 
 Add an FAQ section to the landing (or a `/faq`) with **FAQPage JSON-LD** — this is the single highest-leverage AEO move (drives "People Also Ask" + AI Overview citations). Pull 8 from the existing 12-Q set in `seo-geo-content.md`; lead with these buyer questions:
 
-1. What does AI Sec Tester check for? → OWASP LLM Top-10 failure modes: prompt injection (LLM01), insecure output handling (LLM02), sensitive info disclosure (LLM06), system-prompt leakage (LLM07), excessive agency (LLM08), plus jailbreak/guardrail-bypass patterns.
+1. What does AI Sec Tester check for? → OWASP LLM Top-10 failure modes: prompt injection (LLM01), insecure output handling (LLM05), sensitive info disclosure (LLM02), system-prompt leakage (LLM07), excessive agency (LLM06), plus jailbreak/guardrail-bypass patterns.
 2. Is this a real scan or a simulation? → Real interactive probes against your live chatbot, each response graded by an LLM judge. Not a static payload list.
 3. Can I test any chatbot? → No. Only bots you own or are explicitly authorized to test. We run an authorization + geo/sanctions/licensing check before any scan.
 4. How much does it cost? → One-time: $47 Normal, $197 Advanced (per scan), $497 Enterprise (per chatbot).

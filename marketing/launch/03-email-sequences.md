@@ -14,7 +14,7 @@ These three sequences must sound like the emails the product already sends (`app
 - Greeting: `Hi {first name},` — sign-off: `— AI Sec Tester`
 - Short declarative sentences. No exclamation marks. No emoji.
 - Findings framed as `PASS / FAIL`, a grade, and `X of Y checks passed`.
-- OWASP LLM checks named by code (LLM01 prompt injection, LLM06 sensitive info disclosure, LLM07 system-prompt leakage, LLM08 excessive agency) plus jailbreak / guardrail-bypass.
+- OWASP LLM checks named by code (LLM01 prompt injection, LLM02 sensitive info disclosure, LLM07 system-prompt leakage, LLM06 excessive agency) plus jailbreak / guardrail-bypass.
 - Reference codes shown plainly (CASE-xxxx, SCN-xxxx, RESCAN-xxxx).
 - Authorization framed as a feature the product is proud of, never as fine print.
 - Real transactional subject lines to echo (do not contradict them):
@@ -80,8 +80,8 @@ It runs the OWASP LLM Top-10 failure modes against a chatbot you own — as real
 
 - **LLM01 — prompt injection:** can a user override your instructions?
 - **LLM07 — system-prompt leakage:** will it reveal how it was told to behave?
-- **LLM06 — sensitive info disclosure:** does it leak data from its context or backend?
-- **LLM08 — excessive agency:** can it be talked into using tools it shouldn't?
+- **LLM02 — sensitive info disclosure:** does it leak data from its context or backend?
+- **LLM06 — excessive agency:** can it be talked into using tools it shouldn't?
 - Plus jailbreak and guardrail-bypass patterns.
 
 Each probe is graded by an LLM judge, with the probe and the bot's response captured as evidence. You get a Pass/Fail scorecard, an A–F / 0–100 grade, and a PDF report with plain-language remediation — a document you can hand to a developer, a customer, or an auditor.
@@ -151,7 +151,7 @@ Two things we hear, and the honest answer to both.
 You can — and you'll get an anecdote, not evidence. Ad-hoc prompts are unstructured and un-repeatable. You can't show them to a customer, an investor, or an auditor, and you can't prove what you did or didn't test. AI Sec Tester runs the same failure modes as a structured battery, graded, with the receipt captured per finding. The output is a document, not a hunch.
 
 **"It's just a support bot — this isn't high-risk."**
-Support bots are the highest-value target precisely because they're customer-facing, unmonitored, and usually wired to a knowledge base or backend tools. That's where sensitive data (LLM06) and excessive tool access (LLM08) actually leak. This is a narrow, fast first pass — the filter between "did nothing" and a five-figure red-team engagement. Not a replacement for either. A place to start.
+Support bots are the highest-value target precisely because they're customer-facing, unmonitored, and usually wired to a knowledge base or backend tools. That's where sensitive data (LLM02) and excessive tool access (LLM06) actually leak. This is a narrow, fast first pass — the filter between "did nothing" and a five-figure red-team engagement. Not a replacement for either. A place to start.
 
 If you're shipping a customer-facing chatbot or AI agent, this is worth an afternoon.
 

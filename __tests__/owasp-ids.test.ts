@@ -2,8 +2,8 @@
  * owasp-ids.test.ts - the OWASP LLM Top-10 (2025) id mapping is the product's
  * core credibility claim. Getting a code wrong is the first thing an informed
  * buyer catches, and it has now been wrong three separate times:
- *   - homepage said "LLM02 Insecure output" (engine grades it LLM05)
- *   - homepage said "LLM08 Excessive agency" for a check the Normal tier never runs
+ *   - homepage said "LLM05 Insecure output" (engine grades it LLM05)
+ *   - homepage said "LLM06 Excessive agency" for a check the Normal tier never runs
  *   - the engine labelled BOTH Sensitive Information Disclosure and Excessive
  *     Agency as LLM06, and shipped that into a paid $497 report (scan c498084a)
  *
@@ -46,7 +46,7 @@ function pairs(): { id: string; name: string; file: string }[] {
 
 // The homepage carries bare codes next to a category NAME, in a different shape
 // from the engines. The first version of this test read only lib/, so it passed
-// green while the hero scorecard still said "LLM06 Sensitive data exposure" -
+// green while the hero scorecard still said "LLM02 Sensitive data exposure" -
 // caught by reading the deployed page, not by the suite. Covered now.
 const LANDING = join(import.meta.dir, "..", "app", "_components", "landing.tsx");
 const LANDING_PAIR = /code:\s*"(LLM\d{2})",\s*(?:h|name):\s*"([^"]+)"/g;
@@ -153,7 +153,7 @@ test("the Advanced tier claim states the real probed/advisory split", async () =
 // ── the admin console ───────────────────────────────────────────────────────
 // Found on 2026-08-01 by reading the actual signed-in command centre: after the
 // engines AND the homepage were corrected, the scan-case card still rendered
-// "LLM06 Sensitive Data Exposure". The suite was green because it looked at lib/
+// "LLM02 Sensitive Data Exposure". The suite was green because it looked at lib/
 // and landing.tsx and nowhere else. Third surface, same defect, same lesson as
 // the dead pricing-tiers.tsx: fixing the copies you happen to know about is not
 // fixing the defect.

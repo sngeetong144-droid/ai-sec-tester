@@ -25,7 +25,7 @@ Every claim in published content must map to something the product actually does
 allowed claim set:
 
 - Runs automated, OWASP-LLM-Top-10-aligned probes: **LLM01** prompt injection, **LLM02**
-  insecure output handling, **LLM02** sensitive information disclosure, **LLM07** system
+  insecure output handling, **LLM05** sensitive information disclosure, **LLM07** system
   prompt leakage, **LLM06** excessive agency, plus common **jailbreak / guardrail-bypass**
   patterns.
 - Returns a **Pass/Fail scorecard**, a **branded PDF audit report**, **evidence per
@@ -298,7 +298,7 @@ cite the page.
     | Best for | Your website/API | Your chatbot's behavior |
   - H2: What DAST is genuinely great at (and you should still run it)
   - H2: The gap: your chatbot is a new attack surface DAST wasn't built for
-  - H2: Where the two overlap (LLM02 insecure output can bite both layers)
+  - H2: Where the two overlap (LLM05 insecure output can bite both layers)
   - H2: The honest recommendation — run both; use the right tool per layer
   - **CTA:** "Cover the layer your DAST can't — request an OWASP LLM scan from $47." → homepage.
 - **Tone guard:** never claim DAST is useless or that AI Sec Tester replaces it. That over-claim

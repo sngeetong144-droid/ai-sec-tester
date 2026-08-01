@@ -13,7 +13,7 @@ Aligned with the [OWASP Top-10 for LLM Applications](https://owasp.org/www-proje
    - **System Prompt Disclosure** (LLM07)
    - **Prompt Injection / Instruction Override** (LLM01)
    - **Jailbreak & Persona Bypass** (LLM01)
-   - **Sensitive Data Exposure** (LLM06)
+   - **Sensitive Data Exposure** (LLM02)
    - **Unsafe Content Generation** (LLM05)
 3. Get a Pass/Fail scorecard, severity, evidence, and remediation per check.
 4. Download a PDF audit report, or upgrade to an Enterprise deep scan.

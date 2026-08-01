@@ -35,10 +35,10 @@ The other option people reach for is asking an LLM to jailbreak their own bot. T
 The scan runs real interactive probes against the target chatbot — it converses with the bot, tries the failure modes that are specific to LLM applications, and an LLM judge grades each response. It's aligned to the OWASP LLM Top-10, and the checks named on the live product include:
 
 - **LLM01 — Prompt injection.** Can an instruction hidden in user input override the bot's own rules?
-- **LLM02 — Insecure output handling.** Does the bot emit unsafe content downstream systems will trust?
-- **LLM06 — Sensitive information disclosure.** Will it reveal data it shouldn't — keys, internal context, other users' information?
+- **LLM05 — Insecure output handling.** Does the bot emit unsafe content downstream systems will trust?
+- **LLM02 — Sensitive information disclosure.** Will it reveal data it shouldn't — keys, internal context, other users' information?
 - **LLM07 — System-prompt leakage.** Will it hand over its own instructions?
-- **LLM08 — Excessive agency.** If it's wired to tools or a backend, can it be talked into using them in ways you didn't intend?
+- **LLM06 — Excessive agency.** If it's wired to tools or a backend, can it be talked into using them in ways you didn't intend?
 - Plus common **jailbreak and guardrail-bypass** patterns.
 
 This is not a static payload list matched against a regex. The probes are interactive and the grading is done by a judge model reading the actual exchange.
@@ -103,7 +103,7 @@ Generic web scanners don't know what a system prompt is — they'll pass a bot t
 
 So AI Sec Tester does three things:
 
-1. **Real interactive probes, not a simulation.** It actually converses with your bot across the OWASP-LLM Top-10 failure modes — prompt injection, jailbreak bypass, system-prompt leakage (LLM07), sensitive-data exposure (LLM06), excessive agency (LLM08) — and an LLM judge grades each response.
+1. **Real interactive probes, not a simulation.** It actually converses with your bot across the OWASP-LLM Top-10 failure modes — prompt injection, jailbreak bypass, system-prompt leakage (LLM07), sensitive-data exposure (LLM02), excessive agency (LLM06) — and an LLM judge grades each response.
 2. **An authorization gate before any scan runs.** You request a scan; we check ownership/authorization plus jurisdiction and sanctions before anything fires. You can only scan bots you own or are authorized to test. This is enforced server-side, not a checkbox you tick and forget.
 3. **A hand-off-able result.** An A–F / 0–100 scorecard and a PDF with the evidence behind each finding and plain-language remediation.
 

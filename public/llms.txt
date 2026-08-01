@@ -14,10 +14,10 @@ per finding and plain-language remediation guidance — in seconds.
 ## Key capabilities
 
 - Prompt injection detection (OWASP LLM01) — crafted messages that override instructions
-- Insecure output handling (OWASP LLM02) — unsafe content returned to the consuming page
-- Sensitive information disclosure (OWASP LLM06) — secrets, keys, or other users' data
+- Insecure output handling (OWASP LLM05) — unsafe content returned to the consuming page
+- Sensitive information disclosure (OWASP LLM02) — secrets, keys, or other users' data
 - System prompt leakage (OWASP LLM07) — extraction of hidden system prompts and business logic
-- Excessive agency (OWASP LLM08) — tools/actions the bot shouldn't be allowed to take
+- Excessive agency (OWASP LLM06) — tools/actions the bot shouldn't be allowed to take
 - Common jailbreak / guardrail-bypass patterns
 - Pass/Fail scorecard, branded PDF audit report, and remediation guidance
 

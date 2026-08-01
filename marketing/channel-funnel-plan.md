@@ -13,8 +13,8 @@
 AI Sec Tester runs automated, OWASP-LLM-Top-10-aligned probes against a chatbot the
 customer **owns or is authorized to test**, and returns a Pass/Fail security scorecard
 (branded PDF) with per-finding evidence and plain-language remediation. Checks shipped
-today: prompt injection (LLM01), insecure output handling (LLM02), sensitive info
-disclosure (LLM06), system prompt leakage (LLM07), excessive agency (LLM08), and common
+today: prompt injection (LLM01), insecure output handling (LLM05), sensitive info
+disclosure (LLM02), system prompt leakage (LLM07), excessive agency (LLM06), and common
 jailbreak/guardrail-bypass patterns.
 
 **The funnel is request-first, not self-serve.** There is no checkout button on the

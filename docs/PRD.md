@@ -44,7 +44,7 @@ Source of truth: `app/_components/landing.tsx` (tier features) + `lib/payment-li
 > **An Advanced or Enterprise customer today receives the identical 5-check scan as a $47 Normal customer.** "Full OWASP LLM Top-10 coverage" is not delivered.
 > **Requirement: wire tier → engine before any Advanced/Enterprise sale, or withdraw those tiers.** This is a mis-selling and chargeback exposure on the money path.
 
-Checks surfaced on the landing (`CHECKS`): LLM01 prompt injection · LLM06 sensitive info disclosure · LLM07 system-prompt leakage · LLM08 excessive agency · JAILBREAK guardrail bypass · OUTPUT insecure output handling.
+Checks surfaced on the landing (`CHECKS`): LLM01 prompt injection · LLM02 sensitive info disclosure · LLM07 system-prompt leakage · LLM06 excessive agency · JAILBREAK guardrail bypass · OUTPUT insecure output handling.
 
 ## 5. Architecture
 
