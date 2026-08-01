@@ -383,3 +383,38 @@ Plus one environmental, not an AIST defect: local `npm run build` cannot run bec
 at clean HEAD fails identically].
 
 NO OPEN CODE DEFECTS.
+
+## SESSION 7 final - verified inside Creator's own signed-in console
+
+Production `1e88f36`, 261 tests 0 fail.
+
+**A FOURTH surface had the wrong OWASP code and Nova had already called the fix
+"closed end to end".** Creator sent a screenshot of `/command-center/cases` showing
+the scan-case card still rendering "LLM06 Sensitive Data Exposure", from its own
+CHECKS array in `app/command-center/_data.ts`. Fixed, and the test now parses the
+console's `{ key, name }` shape too. Control: reintroducing it fails 1 of 9.
+
+PATTERN, stated plainly because it repeated three times in one session: Nova fixed
+the copies it happened to know about, then declared the defect closed. Engines ->
+"fixed". Homepage scorecard -> "fixed end to end". Console card -> found by Creator,
+not by Nova and not by the suite. The enumeration must come BEFORE the first claim
+of completion, not after each surface is caught.
+
+**Verified inside Creator's authenticated Chrome session** [VERIFIED: claude-in-chrome
+against Browser 2, `/command-center/cases`]: codes now LLM07, LLM01, LLM01b, LLM02,
+LLM05. `LLM06 ... Sensitive` no longer matches anywhere on the page.
+
+### Countdown - PARTIALLY verified live, and the limit matters
+`/command-center/scan` rendered live as `0 paid scans queued - queue empty.` That is
+the CORRECT branch for an empty queue, and it confirms the component mounts and
+renders in production. It does NOT verify the ticking clock: with `queued === 0` the
+countdown is deliberately suppressed, so no clock could tick. Observing the ticking
+branch needs a queued paid row, i.e. a production write.
+STATUS: empty-queue branch VERIFIED live; ticking branch render-tested only.
+
+### Remaining - 2, both decisions or load, no code defects
+1. Self-chaining drain under real burst load - needs a genuine production load run.
+2. Advanced vs Enterprise price gap - identical 15-check set [VERIFIED:
+   lib/scan-engine.ts:280]; Enterprise bullets claim process extras, not more checks.
+   A pricing decision, and "approve all" did not say WHICH way to take it, so nothing
+   was changed.
