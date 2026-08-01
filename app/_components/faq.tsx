@@ -34,7 +34,7 @@ export function SeoJsonLd() {
     offers: [
       { "@type": "Offer", name: "Normal", price: String(NORMAL.priceUsd), priceCurrency: "USD", description: "One-time reviewed scan with 5 OWASP LLM checks and a branded PDF scorecard." },
       { "@type": "Offer", name: "Advanced", price: String(ADVANCED.priceUsd), priceCurrency: "USD", description: "One-time scan covering all 10 OWASP LLM categories: 7 probed live, 3 advisory." },
-      { "@type": "Offer", name: "Enterprise", price: String(ENTERPRISE.priceUsd), priceCurrency: "USD", description: "Authorization + identity verification, human review before scan, full report, and one free re-scan." },
+      { "@type": "Offer", name: "Enterprise", price: String(ENTERPRISE.priceUsd), priceCurrency: "USD", description: "Human-reviewed authorization before the scan runs, plus the full branded PDF report with evidence per finding." },
     ],
   };
 

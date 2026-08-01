@@ -19,7 +19,9 @@ export default function EnterprisePage() {
           </h1>
           <p className="mx-auto mt-3 max-w-lg text-slate-500">
             Our team reviews every request before the scan runs. Complete the
-            form below — we&apos;ll email you within 24 hours with your report.
+            form below and we&apos;ll email you the outcome of that review — a
+            payment link if it is approved, or the reason if it is not. The scan
+            starts automatically once payment settles.
           </p>
         </header>
 
@@ -27,7 +29,7 @@ export default function EnterprisePage() {
           {[
             ["Authorization verified", "We confirm ownership before any scan"],
             ["Automated triage", "Instant risk check on submission"],
-            ["Full report + re-scan", "PDF report + one free re-scan included"],
+            ["Full PDF report", "Branded report with evidence per finding"],
           ].map(([title, desc]) => (
             <div
               key={title}

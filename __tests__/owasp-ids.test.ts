@@ -199,6 +199,9 @@ const CLAIM_SURFACES = [
   ["public", "llms.txt"],
   ["lib", "tier-features.ts"],
   ["app", "_components", "landing.tsx"],
+  ["app", "_components", "deep-scan-cta.tsx"],
+  ["app", "enterprise", "page.tsx"],
+  ["app", "command-center", "products", "page.tsx"],
 ];
 
 test("no claim surface still sells retired or overstated copy", () => {
@@ -210,6 +213,20 @@ test("no claim surface still sells retired or overstated copy", () => {
     /full OWASP LLM Top-?10 coverage/i,
     // Confirmed false: probe depth is identical at every tier.
     /deeper probes per category/i,
+    // No identity verification exists anywhere in the paid path - the only hits
+    // for identity/KYC in the whole repo were marketing copy.
+    /identity verif/i,
+    // The re-scan path is not live; app/actions/scans.ts says so in the code, and
+    // enterprise_requests had 0 rows [VERIFIED: direct query 2026-08-02].
+    /free re-?scan/i,
+    // The page exists but reads enterprise_requests, which has 0 rows; both
+    // delivered Enterprise reports went via scan_requests.report_url.
+    /token-gated report/i,
+    // Enterprise runs the identical automated suite as Advanced. There is no
+    // operator-authored findings field anywhere in the schema.
+    /expert-led|manual pentest|manual prompt-injection/i,
+    // The 24h promise fronted app/api/enterprise/approve, which returns 410 Gone.
+    /within 24 hours with your report/i,
   ];
   const offenders: string[] = [];
   for (const parts of CLAIM_SURFACES) {

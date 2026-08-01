@@ -62,7 +62,7 @@ export const FAQS = [
   { q: "What is OWASP LLM Top-10?", a: "It's the industry-standard list of the most critical security risks for applications built on large language models — the same failure modes real attackers target." },
   { q: "Why do I have to request a scan first?", a: "Scanning a system you don't own is illegal. Every request is reviewed to confirm you own or are authorized to test the target before any payment link is issued or scan runs — it protects you and us." },
   { q: "What happens after I submit the request?", a: "You'll get an email confirming we received it. After review (usually within one business day) we email you either a secure payment link to proceed, or the reason it wasn't approved — no charge either way until approved." },
-  { q: "Can I scan any chatbot?", a: "Only chatbots you own or are explicitly authorized to test. The request form captures that authorization, and Enterprise adds identity verification before anything runs." },
+  { q: "Can I scan any chatbot?", a: "Only chatbots you own or are explicitly authorized to test. The request form captures that authorization, and every request is reviewed by a human before any scan runs." },
   { q: "What do I actually get?", a: "A branded PDF scorecard with a grade, each check's Pass/Fail status, evidence for every finding, and remediation guidance you can hand to a developer." },
 ];
 

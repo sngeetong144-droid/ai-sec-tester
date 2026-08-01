@@ -49,10 +49,18 @@ export const TIER_FEATURES: Record<ScanTier, readonly string[]> = {
   ],
   enterprise: [
     "Everything in Advanced",
-    "Authorization + identity verification",
+    // Was "Authorization + identity verification". NO identity verification exists
+    // anywhere in the paid path - the only hits for identity/KYC in the repo are
+    // marketing copy. What IS real is the human authorization review every request
+    // goes through before a link is issued.
+    "Authorization reviewed by a human before the scan runs",
     "Automated risk triage (score + flags)",
-    "Human review before scan runs",
-    "Full report + 1 free re-scan after fixes",
-    "Secure token-gated report page",
+    // Was "Full report + 1 free re-scan after fixes". The re-scan path is not live:
+    // app/actions/scans.ts:90 says so in the code ("add that when the rescan path
+    // goes live"), and enterprise_requests has 0 rows [VERIFIED: direct query].
+    "Full branded PDF report with evidence per finding",
+    // REMOVED "Secure token-gated report page". The page exists but reads
+    // enterprise_requests, which has 0 rows [VERIFIED: direct query]; both delivered
+    // Enterprise reports went out through scan_requests.report_url instead.
   ],
 } as const;

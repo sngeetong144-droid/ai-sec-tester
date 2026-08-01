@@ -162,9 +162,9 @@ export function DeepScanCta({
               : "This scan did not complete any of the 5 core attack categories against your bot. "}
             Our{" "}
             <span className="font-semibold text-brand-600">Enterprise Grade</span>{" "}
-            deep scan runs an expert-led, manual prompt-injection &amp; jailbreak
-            pentest against your live chatbot — with a full written report and
-            remediation plan.
+            deep scan runs the full 15-check suite against your live chatbot — all 10
+            OWASP LLM categories, 7 probed live and 3 advisory, with a branded PDF
+            report, evidence per finding and a remediation plan.
           </p>
         </div>
         <div className="text-right">

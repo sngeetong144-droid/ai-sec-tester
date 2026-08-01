@@ -23,7 +23,7 @@ const META: Record<ScanTier, { name: string; unit: string; mode: string; product
   enterprise: {
     name: "Enterprise",
     unit: "one-time · per chatbot",
-    mode: "Reviewed + identity verify",
+    mode: "Reviewed by a human",
     productLink: "scan.thesoulsofai.com/enterprise",
     features: TIER_FEATURES.enterprise,
   },
@@ -86,14 +86,13 @@ export default async function ProductsPage({
           <CardTitle>Add-ons</CardTitle>
           <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8, fontSize: 12.5, color: COLORS.ink2 }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}><span>Included re-scan (Enterprise)</span><Badge kind="ok">Free</Badge></div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Token-gated report page</span><Badge kind="subtle">Included</Badge></div>
-          </div>
+                      </div>
         </Card>
         <Card style={{ background: COLORS.darkCard, border: "none" }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>Every plan is reviewed before pay</div>
           <div style={{ marginTop: 8, fontSize: 12.5, color: "#c9c6de", lineHeight: 1.5 }}>
-            Normal ($47) and Advanced ($197) run after approval + payment. Enterprise ($497) adds identity verify,
-            human review, and a token-gated report. No charge until approved. USD. Payments are Scalendo · Stripe-backed.
+            Normal ($47) and Advanced ($197) run after approval + payment. Enterprise ($497) adds automated risk triage on top of the
+            same human authorization review every tier gets. No charge until approved. USD. Payments are Scalendo · Stripe-backed.
           </div>
         </Card>
       </div>
