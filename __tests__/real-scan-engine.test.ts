@@ -805,3 +805,61 @@ test("full core coverage still earns a clean pass (guard against over-correction
   expect(result.summary).not.toContain("PARTIAL SCAN");
   expect(result.summary).not.toContain("INCOMPLETE SCAN");
 });
+
+// ── transient transport failure ─────────────────────────────────────────────
+// Regression guard for the defect found on 2026-08-01 in a PAID Enterprise report
+// (scan c498084a): probe mi-1 died with "Endpoint request failed (offline, blocked,
+// or timed out)" and was never retried, so LLM09 shipped as 3-of-4 PARTIAL COVERAGE.
+// A probe lost to a timeout costs exactly what a probe lost to a 429 costs.
+
+test("sendProbe retries once on a thrown fetch and succeeds when the target recovers", async () => {
+  process.env.PROBE_TRANSPORT_BACKOFF_MS = "0";
+  let hits = 0;
+  installFetch(() => {
+    hits += 1;
+    if (hits === 1) throw new Error("socket hang up");
+    return new Response('{"reply":"I must decline."}', { status: 200 });
+  });
+  const res = await sendProbe({ url: CHATBOT }, "probe", LOCAL);
+  expect(res.ok).toBe(true);
+  expect(hits).toBe(2); // proves the retry actually happened
+});
+
+test("sendProbe gives up after ONE transport retry, not indefinitely", async () => {
+  process.env.PROBE_TRANSPORT_BACKOFF_MS = "0";
+  let hits = 0;
+  installFetch(() => {
+    hits += 1;
+    throw new Error("ETIMEDOUT");
+  });
+  const res = await sendProbe({ url: CHATBOT }, "probe", LOCAL);
+  expect(res.ok).toBe(false);
+  expect(hits).toBe(2); // original + exactly one retry, bounded
+  if (!res.ok) expect(res.error).toContain("offline, blocked, or timed out");
+});
+
+test("a deterministic HTTP failure is NOT retried", async () => {
+  process.env.PROBE_TRANSPORT_BACKOFF_MS = "0";
+  let hits = 0;
+  installFetch(() => {
+    hits += 1;
+    return new Response("nope", { status: 500 });
+  });
+  const res = await sendProbe({ url: CHATBOT }, "probe", LOCAL);
+  expect(res.ok).toBe(false);
+  // Retrying an HTTP status burns the target's rate-limit budget for an
+  // identical answer, and 500s are what a scanned bot returns under load.
+  expect(hits).toBe(1);
+});
+
+test("a blocked target is NOT retried", async () => {
+  process.env.PROBE_TRANSPORT_BACKOFF_MS = "0";
+  let hits = 0;
+  installFetch(() => {
+    hits += 1;
+    return new Response("{}", { status: 200 });
+  });
+  const res = await sendProbe({ url: CHATBOT }, "probe"); // no allowPrivateTarget
+  expect(res.ok).toBe(false);
+  expect(hits).toBe(0); // refused before any request left the process
+});

@@ -48,6 +48,20 @@ const MAX_REPLY_CHARS = 6_000;
  * probes are still lost the report says so rather than scoring the survivors.
  */
 const RATE_LIMIT_RETRIES = 1;
+// A probe lost to a timeout or a dropped connection costs the SAME coverage as one
+// lost to a 429, and for the same reason: the category gets graded on the survivors
+// and an under-tested bot reads as a secure one. Observed on a paid Enterprise report
+// (scan c498084a, probe mi-1) - a single transport blip permanently reduced LLM09 to
+// 3 of 4 probes. Bounded at 1 like the 429 path, so worst case is one extra request
+// per probe and the target's own rate limit is not the thing we blow through.
+const TRANSPORT_RETRIES = 1;
+const TRANSPORT_BACKOFF_DEFAULT_MS = 1_500;
+// Env-overridable for the same reason the 429 backoff is: a test must be able to
+// prove the retry happened without sleeping for real.
+function transportBackoffMs(): number {
+  const raw = Number(process.env.PROBE_TRANSPORT_BACKOFF_MS);
+  return Number.isFinite(raw) && raw >= 0 ? raw : TRANSPORT_BACKOFF_DEFAULT_MS;
+}
 const RATE_LIMIT_MAX_BACKOFF_MS = 10_000;
 /** Overridable so tests (and a rushed operator) do not sit through real waits. */
 function rateLimitBackoffMs(): number {
@@ -600,7 +614,10 @@ type RawSendResult =
   /** rateLimited: the endpoint returned 429. A DISTINCT failure from a dead
    *  endpoint — the target is healthy and is throttling us, which is a
    *  coverage problem to report, not a security finding. */
-  | { ok: false; error: string; rateLimited?: boolean; retryAfterMs?: number };
+  /** transient: the fetch THREW - timeout, DNS, reset connection. Distinct from a
+   *  deterministic refusal (blocked target, bad template, an HTTP status), which
+   *  would fail identically on a retry and must NOT be retried. */
+  | { ok: false; error: string; rateLimited?: boolean; retryAfterMs?: number; transient?: boolean };
 
 /**
  * POST one prompt and return the RAW body + content-type, with no reply
@@ -671,7 +688,11 @@ async function sendProbeRaw(
     }
     return { ok: true, raw: text, contentType: res.headers.get("content-type") ?? "" };
   } catch {
-    return { ok: false, error: "Endpoint request failed (offline, blocked, or timed out)." };
+    return {
+      ok: false,
+      error: "Endpoint request failed (offline, blocked, or timed out).",
+      transient: true,
+    };
   } finally {
     clearTimeout(timeout);
   }
@@ -697,6 +718,15 @@ export async function sendProbe(
   // graded on the survivors reads as "secure" when it was merely under-tested.
   for (let attempt = 0; !res.ok && res.rateLimited && attempt < RATE_LIMIT_RETRIES; attempt += 1) {
     await sleep(res.retryAfterMs ?? rateLimitBackoffMs());
+    res = await sendProbeRaw(config, prompt, options, templateOverride);
+  }
+
+  // Same bounded-retry argument as the 429 path above, for the other way a probe
+  // silently vanishes. Deliberately NOT applied to an HTTP status (4xx/5xx) or a
+  // blocked target: those are deterministic and a retry only burns the target's
+  // rate-limit budget for an identical answer.
+  for (let attempt = 0; !res.ok && res.transient && attempt < TRANSPORT_RETRIES; attempt += 1) {
+    await sleep(transportBackoffMs());
     res = await sendProbeRaw(config, prompt, options, templateOverride);
   }
 
