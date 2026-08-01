@@ -87,8 +87,14 @@ export async function POST(request: Request) {
           session.client_reference_id ?? session.metadata?.client_reference_id;
         if (clientRef && session.payment_status === "paid") {
           // Pass amount_total so markRequestPaid rejects underpayment (a basic-tier
-          // checkout carrying an enterprise request's client_reference_id).
-          const paid = await markRequestPaid(clientRef, session.amount_total);
+          // checkout carrying an enterprise request's client_reference_id), and the
+          // discount so a merchant-issued promotion code still counts toward the
+          // quoted price rather than reading as an underpayment.
+          const paid = await markRequestPaid(
+            clientRef,
+            session.amount_total,
+            session.total_details?.amount_discount ?? 0,
+          );
           // Only kick when THIS delivery performed the transition (markRequestPaid
           // returns false for a duplicate/underpaid delivery), so a replayed webhook
           // cannot start a second dispatch run.

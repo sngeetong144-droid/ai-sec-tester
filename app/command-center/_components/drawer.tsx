@@ -235,10 +235,17 @@ export async function Drawer({ view }: { view: CaseView }) {
         </Section>
 
         <Section title="Ownership verification">
-          {/* ponytail: ownership_tokens aren't linked to a case yet — honest "not linked". */}
+          {/* ownership_tokens aren't linked to a case yet, so this is never populated.
+              The previous copy said proof was required "before activation", which is
+              false — decideScanAuthorization gates on admin + scanning + paid only.
+              It read as a hard blocker on every case and made paid activation look
+              pointless. State what is actually true instead. */}
           <div style={{ fontSize: 12.5, color: COLORS.ink3 }}>
-            No verified ownership proof is linked to this case. Ownership must be proven via DNS TXT,
-            a /.well-known file, or an HTML meta tag before activation.
+            Ownership proof is not collected on the request form, so no proof is linked to this
+            case. It does <strong>not</strong> block activation — a paid case activates and scans
+            normally. The requester&rsquo;s signed authorization statement below is the
+            authorization of record. Self-serve verification (DNS TXT or a /.well-known file)
+            exists for the Enterprise deep-scan upgrade, which does require it.
           </div>
         </Section>
 

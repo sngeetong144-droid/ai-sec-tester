@@ -130,6 +130,24 @@ function underpaidEvent(amountTotalCents: number) {
   });
 }
 
+// A settled checkout where a merchant-issued promotion code covered part or all
+// of the price: amount_total is the NET charge, total_details.amount_discount is
+// what the coupon absorbed.
+function discountedEvent(amountTotalCents: number, discountCents: number) {
+  return JSON.stringify({
+    type: "checkout.session.completed",
+    data: {
+      object: {
+        client_reference_id: "ref-123",
+        payment_status: "paid",
+        amount_total: amountTotalCents,
+        total_details: { amount_discount: discountCents },
+        metadata: {},
+      },
+    },
+  });
+}
+
 function req(body: string, signature: string | null): Request {
   const headers: Record<string, string> = {};
   if (signature !== null) headers["stripe-signature"] = signature;
@@ -179,4 +197,31 @@ test("underpayment (basic price on an enterprise request) → no flip", async ()
   const res = await POST(req(underpaidEvent(4700), "good")); // paid basic $47
   expect(res.status).toBe(200);
   expect(row.status).toBe("approved_awaiting_payment"); // stayed unpaid — not unlocked
+});
+
+
+// Promotion codes. A 100%-off coupon is how the owner exercises the money path
+// without spending; before this, gross was never considered, so Stripe reported a
+// validly-paid checkout and markRequestPaid refused to activate it — the customer
+// pays (or redeems) and the scan silently never runs.
+test("100%-off promotion code → still activates (gross covers the quoted price)", async () => {
+  row.plan = "Normal — $47";
+  const res = await POST(req(discountedEvent(0, 4700), "good"));
+  expect(res.status).toBe(200);
+  expect(row.status).toBe("paid_scanning");
+});
+
+test("partial promotion code → activates when paid + discount meets the quote", async () => {
+  row.plan = "Normal — $47";
+  const res = await POST(req(discountedEvent(2700, 2000), "good"));
+  expect(res.status).toBe(200);
+  expect(row.status).toBe("paid_scanning");
+});
+
+test("discount does NOT defeat the cross-tier underpayment guard", async () => {
+  row.plan = "enterprise"; // quoted $497 = 49700c
+  // Basic-price checkout plus a small coupon still falls far short of the quote.
+  const res = await POST(req(discountedEvent(4700, 500), "good"));
+  expect(res.status).toBe(200);
+  expect(row.status).toBe("approved_awaiting_payment");
 });

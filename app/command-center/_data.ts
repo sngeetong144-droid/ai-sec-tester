@@ -348,9 +348,18 @@ export function gateRowsFor(view: CaseView): GateRow[] {
   const j = deriveJur(view.req);
   const rows: GateRow[] = [];
 
-  // Ownership: no verified proof is linked to a case in this data model yet.
-  // ponytail: honest "not proven" until ownership_tokens are wired to a case; no fake "verified".
-  rows.push({ label: "Ownership verified", value: "Not proven", kind: "bad" });
+  // Ownership: ownership_tokens are not linked to a case in this data model yet,
+  // so no case can ever show a proof. It stays honestly "Not collected" — but it
+  // is NOT scored "bad", because a bad row flips the summary to "Will not
+  // activate", which made EVERY case claim it would never run even when payment
+  // would in fact activate it. The real engine gate is decideScanAuthorization
+  // (admin + status scanning + paid); ownership is not part of it. Reporting a
+  // blocker that does not block is the same defect as hiding one that does.
+  rows.push({
+    label: "Ownership verified",
+    value: "Not collected (not required to activate)",
+    kind: "subtle",
+  });
 
   rows.push(
     j.jur === "mismatch"

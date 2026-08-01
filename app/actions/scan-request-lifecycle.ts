@@ -118,6 +118,8 @@ export async function approveScanRequestPayment(
 export async function markRequestPaid(
   clientReferenceId: string,
   amountTotalCents?: number | null,
+  /** Stripe `total_details.amount_discount` — promotion codes and coupons. */
+  discountCents?: number | null,
 ): Promise<boolean> {
   const supabase = createServiceClient();
 
@@ -143,9 +145,18 @@ export async function markRequestPaid(
   if (amountTotalCents != null) {
     const link = resolvePaymentLink((reqRow as { plan: string | null }).plan);
     const expectedCents = link ? link.priceUsd * 100 : 0;
-    if (expectedCents > 0 && amountTotalCents < expectedCents) {
+    // Compare the GROSS value of the checkout (paid + discounted), not the net
+    // charge. The guard exists to stop a cheap link being opened with an
+    // expensive tier's client_reference_id — a discount the merchant themselves
+    // issued is not that attack. Comparing net alone meant any Stripe promotion
+    // code, including the 100%-off coupon used to test the money path without
+    // spending, produced a validly-paid checkout that this function then refused
+    // to activate: Stripe says paid, the scan never runs, and the customer waits.
+    const grossCents = amountTotalCents + (discountCents ?? 0);
+    if (expectedCents > 0 && grossCents < expectedCents) {
       console.error(
-        `markRequestPaid: underpayment for ${(reqRow as { id: string }).id} — paid ${amountTotalCents}c < quoted ${expectedCents}c; not flipping to paid_scanning.`,
+        `markRequestPaid: underpayment for ${(reqRow as { id: string }).id} — gross ${grossCents}c ` +
+          `(paid ${amountTotalCents}c + discount ${discountCents ?? 0}c) < quoted ${expectedCents}c; not flipping to paid_scanning.`,
       );
       return false;
     }
