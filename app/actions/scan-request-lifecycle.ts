@@ -153,12 +153,41 @@ export async function markRequestPaid(
     // spending, produced a validly-paid checkout that this function then refused
     // to activate: Stripe says paid, the scan never runs, and the customer waits.
     const grossCents = amountTotalCents + (discountCents ?? 0);
+    // What the buyer was ACTUALLY charged, as opposed to the gross value above.
+    const netCents = amountTotalCents;
     if (expectedCents > 0 && grossCents < expectedCents) {
       console.error(
         `markRequestPaid: underpayment for ${(reqRow as { id: string }).id} — gross ${grossCents}c ` +
           `(paid ${amountTotalCents}c + discount ${discountCents ?? 0}c) < quoted ${expectedCents}c; not flipping to paid_scanning.`,
       );
       return false;
+    }
+
+    // ── Denial-of-wallet guard for fully-discounted checkouts ──────────────
+    // The gross check above deliberately treats a merchant coupon as payment, so
+    // a 100%-off code on the ENTERPRISE link yields gross $497 >= $497 and unlocks
+    // a free $497 scan. That is correct for a private test coupon and wrong for a
+    // lead-magnet code, which is public by design: one shared or leaked code then
+    // buys anyone unlimited enterprise scans, and every scan spends real LLM
+    // tokens. Stripe can cap redemptions and restrict a code to one price, but
+    // that is dashboard configuration a human can forget — this is the same rule
+    // enforced where the money actually settles.
+    //
+    // FREE_SCAN_MAX_TIER is the highest tier a ZERO-CHARGE checkout may unlock.
+    // Default "basic": free leads get the $47 scan, paid tiers need real money.
+    // Set it to "enterprise" to run a full-price test without spending.
+    if (netCents === 0 && link) {
+      const RANK: Record<string, number> = { basic: 0, advanced: 1, enterprise: 2 };
+      const ceilingName = (process.env.FREE_SCAN_MAX_TIER ?? "basic").trim().toLowerCase();
+      const ceiling = RANK[ceilingName] ?? RANK.basic;
+      if ((RANK[link.tier] ?? 99) > ceiling) {
+        console.error(
+          `markRequestPaid: refusing free ${link.tier} scan for ${(reqRow as { id: string }).id} — ` +
+            `a zero-charge checkout may unlock at most "${ceilingName}" (FREE_SCAN_MAX_TIER). ` +
+            `Discount ${discountCents ?? 0}c covered the whole ${expectedCents}c price.`,
+        );
+        return false;
+      }
     }
   }
 
