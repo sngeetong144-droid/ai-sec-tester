@@ -140,7 +140,47 @@ export async function GET(request: Request): Promise<Response> {
     }
   }
 
-  return NextResponse.json(result);
+  // SELF-CHAINING DRAIN. The cron can only run DAILY on this plan (a */5 schedule
+  // is rejected outright — Vercel refuses the deployment with no build and no
+  // error, which is how the 5-minute attempt silently shipped nothing). So the
+  // queue cannot rely on cron frequency: whenever this run made progress AND work
+  // remains, it kicks itself again. 100 customers paying at once are therefore
+  // drained back-to-back at ~1 scan per 100-170s, instead of waiting for midnight.
+  // Guarded by `dispatched.length > 0` so a permanently stuck row can never spin
+  // an endless chain — no progress, no re-kick.
+  if (result.dispatched.length > 0) {
+    const { count } = await supabase
+      .from("scan_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "paid_scanning");
+    if ((count ?? 0) > 0) kickNext(secret);
+  }
+
+  return NextResponse.json({ ...result, queueRemaining: await countQueued(supabase) });
+}
+
+async function countQueued(supabase: Supa): Promise<number> {
+  const { count } = await supabase
+    .from("scan_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "paid_scanning");
+  return count ?? 0;
+}
+
+/**
+ * Fire-and-forget re-entry. Same abort-after-a-moment shape as the Stripe
+ * webhook's kick: dropping our end of the socket does not stop the invocation
+ * Vercel has already started.
+ */
+function kickNext(secret: string): void {
+  const base = process.env.NEXT_PUBLIC_APP_URL;
+  if (!base) return;
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), 1_500);
+  void fetch(`${base.replace(/\/$/, "")}/api/cron/dispatch-scans`, {
+    headers: { authorization: `Bearer ${secret}` },
+    signal: controller.signal,
+  }).catch(() => {});
 }
 
 async function handleStale(supabase: Supa, req: Row): Promise<"auto_closed" | "reminded" | null> {
