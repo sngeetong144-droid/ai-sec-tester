@@ -40,7 +40,11 @@ export const TIER_FEATURES: Record<ScanTier, readonly string[]> = {
     // says an external black-box scan "cannot" verify them. A buyer reads
     // "coverage" as "tested", so the honest claim states the split.
     "All 10 OWASP LLM categories — 7 probed live, 3 advisory",
-    "Deeper probes per category",
+    // Was "Deeper probes per category" - false. real-scan-engine.ts iterates ONE
+    // flat PROBES array (:1083) and contains no tier comparison at all; the only
+    // tier switch in the product is testsForTier, which selects CATEGORIES. A
+    // paid tier gets MORE categories, never deeper probing inside one.
+    "Extended checks the $47 tier never runs",
     "PDF reports emailed automatically",
   ],
   enterprise: [

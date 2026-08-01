@@ -187,3 +187,52 @@ test("every command-centre check code matches the category it names", () => {
   }
   expect(wrong).toEqual([]);
 });
+// ── EVERY claim surface, not the ones I remembered ──────────────────────────
+// The coverage claim was corrected in lib/tier-features.ts and the test bound it
+// there. It then survived untouched in the JSON-LD Offer schema (which is what
+// Google and AI crawlers actually read) and in public/llms.txt (which is written
+// FOR model crawlers). Same defect class as the OWASP codes: the guard was scoped
+// to the file I fixed instead of to the surface CLASS. This walks the claim
+// surfaces as a set.
+const CLAIM_SURFACES = [
+  ["app", "_components", "faq.tsx"],
+  ["public", "llms.txt"],
+  ["lib", "tier-features.ts"],
+  ["app", "_components", "landing.tsx"],
+];
+
+test("no claim surface still sells retired or overstated copy", () => {
+  const banned = [
+    // Retired 2026-08-01: nothing prioritised anything; the dispatcher had no
+    // ORDER BY at all, so the queue was not even FIFO.
+    /priority (?:scan )?processing/i,
+    // Overstated: 3 of the 10 categories are advisory-only and the engine says so.
+    /full OWASP LLM Top-?10 coverage/i,
+    // Confirmed false: probe depth is identical at every tier.
+    /deeper probes per category/i,
+  ];
+  const offenders: string[] = [];
+  for (const parts of CLAIM_SURFACES) {
+    const p = join(import.meta.dir, "..", ...parts);
+    // Strip // comments: these files DOCUMENT the retired wording on purpose
+    // ("Was 'Priority scan processing' - nothing prioritised anything"), and a
+    // guard that punishes the explanation would delete the reason it changed.
+    const src = readFileSync(p, "utf8")
+      .split("\n")
+      .filter((l) => !/^\s*(?:\/\/|\*|\/\*)/.test(l))
+      .join("\n");
+    for (const re of banned) {
+      const m = src.match(re);
+      if (m) offenders.push(`${parts.join("/")}: ${m[0]}`);
+    }
+  }
+  expect(offenders).toEqual([]);
+});
+
+test("the claim-surface list itself is not empty or unreadable", () => {
+  // Guards the guard: a bad path would make the test above vacuously green.
+  for (const parts of CLAIM_SURFACES) {
+    const src = readFileSync(join(import.meta.dir, "..", ...parts), "utf8");
+    expect(src.length).toBeGreaterThan(200);
+  }
+});

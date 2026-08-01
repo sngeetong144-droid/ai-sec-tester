@@ -23,8 +23,8 @@ per finding and plain-language remediation guidance — in seconds.
 
 ## Pricing at a glance
 
-- Normal — $47 per scan: 5 OWASP LLM checks, Pass/Fail scorecard, branded PDF, evidence + remediation per finding, priority processing
-- Advanced — $197 per scan: full OWASP LLM Top-10 coverage with deeper probes per category (most popular)
+- Normal — $47 per scan: 5 OWASP LLM checks, Pass/Fail scorecard, branded PDF, evidence + remediation per finding, scan starts automatically after payment
+- Advanced — $197 per scan: all 10 OWASP LLM categories: 7 probed live, 3 advisory (most popular)
 - Enterprise — $497 per chatbot: identity verification, automated risk triage, human review before the scan, full report + 1 free re-scan after fixes
 
 ## Compliance

@@ -33,7 +33,7 @@ export function SeoJsonLd() {
     publisher: { "@type": "Organization", name: "The Souls of AI", url: "https://thesoulsofai.com" },
     offers: [
       { "@type": "Offer", name: "Normal", price: String(NORMAL.priceUsd), priceCurrency: "USD", description: "One-time reviewed scan with 5 OWASP LLM checks and a branded PDF scorecard." },
-      { "@type": "Offer", name: "Advanced", price: String(ADVANCED.priceUsd), priceCurrency: "USD", description: "One-time scan with full OWASP LLM Top-10 coverage and deeper probes per category." },
+      { "@type": "Offer", name: "Advanced", price: String(ADVANCED.priceUsd), priceCurrency: "USD", description: "One-time scan covering all 10 OWASP LLM categories: 7 probed live, 3 advisory." },
       { "@type": "Offer", name: "Enterprise", price: String(ENTERPRISE.priceUsd), priceCurrency: "USD", description: "Authorization + identity verification, human review before scan, full report, and one free re-scan." },
     ],
   };
