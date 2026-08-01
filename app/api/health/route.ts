@@ -31,6 +31,18 @@ export function GET() {
       failoverChain: providerChain(),
       pinned: String(process.env.JUDGE_PROVIDER ?? "").trim().toLowerCase() || null,
     },
+    /**
+     * Can a settled checkout actually be VERIFIED and acted on? Without
+     * STRIPE_WEBHOOK_SECRET every delivery fails signature verification, returns
+     * 400, and the paid scan never starts — Stripe does not retry a 400, so the
+     * sale is silently lost. This is the single point of failure for the entire
+     * paid path and it was the one thing this instrument did not report. A green
+     * scanner and a green delivery block above prove nothing if this is false.
+     */
+    payment: {
+      webhookSecretPresent: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
+      stripeKeyPresent: Boolean(process.env.STRIPE_SECRET_KEY),
+    },
     // Does the finished report actually reach the customer, unattended?
     delivery: {
       emailSendEnabled: emailSendEnabled(),

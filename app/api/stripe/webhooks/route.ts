@@ -91,9 +91,14 @@ export async function POST(request: Request) {
         // markRequestPaid only transitions a row still in approved_awaiting_payment, so
         // a duplicate delivery is a no-op (no second scan — the scan is triggered by the
         // separate dispatch job, keyed on paid_scanning — and this handler queues no email).
-        // FLAG: it is UNCONFIRMED that FastPayDirect/Scalendo forwards client_reference_id
-        // and fires a Stripe `checkout.session.completed` event. If it does not, console
-        // activation remains the manual fallback. See deliverable notes.
+        // RESOLVED 2026-07-13: the old FastPayDirect/Scalendo links were GoHighLevel-
+        // hosted and settled via PaymentIntents, so they NEVER emitted
+        // `checkout.session.completed` and this branch was structurally unreachable.
+        // The tiers now use NATIVE Stripe payment links (lib/payment-links.ts), which
+        // do emit that event and do forward ?client_reference_id.
+        // STILL UNPROVEN: no real purchase has ever been made, so this branch has not
+        // executed in production even once. `/api/health` → payment.webhookSecretPresent
+        // proves the signature check CAN pass; only a live checkout proves it does.
         const clientRef =
           session.client_reference_id ?? session.metadata?.client_reference_id;
         if (clientRef && settled) {
