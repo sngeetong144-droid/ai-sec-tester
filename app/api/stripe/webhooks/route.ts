@@ -110,6 +110,9 @@ export async function POST(request: Request) {
             clientRef,
             session.amount_total,
             session.total_details?.amount_discount ?? 0,
+            // Recorded as settlement evidence (scan_requests.stripe_session_id, 0020):
+            // the audit link from a claimed sale back to a real Stripe dashboard object.
+            session.id,
           );
           // Only kick when THIS delivery performed the transition (markRequestPaid
           // returns false for a duplicate/underpaid delivery), so a replayed webhook

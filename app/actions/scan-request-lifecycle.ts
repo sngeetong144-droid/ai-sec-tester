@@ -120,6 +120,8 @@ export async function markRequestPaid(
   amountTotalCents?: number | null,
   /** Stripe `total_details.amount_discount` — promotion codes and coupons. */
   discountCents?: number | null,
+  /** Stripe Checkout Session id - the audit link back to the dashboard. */
+  stripeSessionId?: string | null,
 ): Promise<boolean> {
   const supabase = createServiceClient();
 
@@ -142,6 +144,11 @@ export async function markRequestPaid(
   }
   if (!reqRow) return false; // no awaiting row → idempotent no-op
 
+  // Gross value of the checkout (charge + merchant discount). Hoisted out of the
+  // guard block because it is also what gets PERSISTED as the settled amount.
+  const grossCents =
+    amountTotalCents != null ? amountTotalCents + (discountCents ?? 0) : null;
+
   if (amountTotalCents != null) {
     const link = resolvePaymentLink((reqRow as { plan: string | null }).plan);
     const expectedCents = link ? link.priceUsd * 100 : 0;
@@ -152,10 +159,9 @@ export async function markRequestPaid(
     // code, including the 100%-off coupon used to test the money path without
     // spending, produced a validly-paid checkout that this function then refused
     // to activate: Stripe says paid, the scan never runs, and the customer waits.
-    const grossCents = amountTotalCents + (discountCents ?? 0);
     // What the buyer was ACTUALLY charged, as opposed to the gross value above.
     const netCents = amountTotalCents;
-    if (expectedCents > 0 && grossCents < expectedCents) {
+    if (expectedCents > 0 && (grossCents ?? 0) < expectedCents) {
       console.error(
         `markRequestPaid: underpayment for ${(reqRow as { id: string }).id} — gross ${grossCents}c ` +
           `(paid ${amountTotalCents}c + discount ${discountCents ?? 0}c) < quoted ${expectedCents}c; not flipping to paid_scanning.`,
@@ -198,9 +204,29 @@ export async function markRequestPaid(
     }
   }
 
+  // Settlement EVIDENCE, not merely a status flip. "status" is writable by hand from
+  // the console, so a row reading paid_scanning proves nothing on its own - that is
+  // the exact ambiguity migration 0020 was added to close. These three columns are
+  // written ONLY here, and only from a signature-verified Stripe webhook.
+  // paid_amount_cents is the GROSS value (charge + merchant discount) per 0020, so a
+  // fully-discounted checkout stays auditable instead of reading as a zero payment.
+  // GATED ON THE STRIPE SESSION ID, deliberately. This function has a SECOND caller:
+  // manualActivateScanAction (app/actions/command-center.ts) advances a row by hand from
+  // the console and passes no session and no amount. Stamping settlement there would
+  // brand a hand-advanced row as Stripe-evidenced and rebuild the very ambiguity 0020
+  // was written to end - a paid-looking row nobody ever paid for (R-14). Only a
+  // signature-verified checkout carries a session id, so that is the evidence gate.
+  const settlement: Record<string, unknown> = { status: "paid_scanning" };
+  if (stripeSessionId) {
+    settlement.paid_at = new Date().toISOString();
+    settlement.stripe_session_id = stripeSessionId;
+    // Null only when Stripe sent no amount_total at all; the sale is still evidenced.
+    if (grossCents != null) settlement.paid_amount_cents = grossCents;
+  }
+
   const { data, error } = await supabase
     .from("scan_requests")
-    .update({ status: "paid_scanning" })
+    .update(settlement)
     .eq("stripe_client_reference_id", clientReferenceId)
     .eq("status", "approved_awaiting_payment")
     .select("id");

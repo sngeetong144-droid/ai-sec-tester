@@ -18,7 +18,16 @@ import { test, expect, mock, beforeEach } from "bun:test";
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
 
 // ── one mutable fake row + spies ───────────────────────────────────────────────
-let row: { id: string; stripe_client_reference_id: string; status: string; plan: string | null };
+let row: {
+  id: string;
+  stripe_client_reference_id: string;
+  status: string;
+  plan: string | null;
+  // Settlement evidence (migration 0020). Undefined until the webhook writes them.
+  paid_at?: string;
+  paid_amount_cents?: number;
+  stripe_session_id?: string;
+};
 let activateCalls = 0;
 
 function resetRow() {
@@ -28,6 +37,9 @@ function resetRow() {
     status: "approved_awaiting_payment",
     plan: null,
   };
+  delete row.paid_at;
+  delete row.paid_amount_cents;
+  delete row.stripe_session_id;
   activateCalls = 0;
 }
 resetRow();
@@ -110,7 +122,12 @@ function paidEvent() {
   return JSON.stringify({
     type: "checkout.session.completed",
     data: {
-      object: { client_reference_id: "ref-123", payment_status: "paid", metadata: {} },
+      object: {
+        id: "cs_test_paid",
+        client_reference_id: "ref-123",
+        payment_status: "paid",
+        metadata: {},
+      },
     },
   });
 }
@@ -121,6 +138,7 @@ function underpaidEvent(amountTotalCents: number) {
     type: "checkout.session.completed",
     data: {
       object: {
+        id: "cs_test_amt",
         client_reference_id: "ref-123",
         payment_status: "paid",
         amount_total: amountTotalCents,
@@ -138,6 +156,7 @@ function discountedEvent(amountTotalCents: number, discountCents: number) {
     type: "checkout.session.completed",
     data: {
       object: {
+        id: "cs_test_amt",
         client_reference_id: "ref-123",
         payment_status: "paid",
         amount_total: amountTotalCents,
@@ -155,6 +174,7 @@ function freeSettledEvent(discountCents: number) {
     type: "checkout.session.completed",
     data: {
       object: {
+        id: "cs_test_free",
         client_reference_id: "ref-123",
         payment_status: "no_payment_required",
         amount_total: 0,
@@ -257,4 +277,79 @@ test("no_payment_required without a covering discount → does NOT activate", as
   const res = await POST(req(freeSettledEvent(0), "good"));
   expect(res.status).toBe(200);
   expect(row.status).toBe("approved_awaiting_payment");
+});
+
+// ── Settlement evidence (migration 0020) ──────────────────────────────────────
+// Before this, settlement existed ONLY as a status transition, and status is
+// writable by hand from the Supabase console. A row reading paid_scanning was
+// therefore indistinguishable from one advanced manually — the exact ambiguity
+// that let five `complete` rows read as delivered sales when none was a purchase
+// (Creator ruling R-14). These assertions are the difference between a claimed
+// sale and an evidenced one.
+
+test("settled checkout writes paid_at, gross amount and the Stripe session id", async () => {
+  row.plan = "Normal — $47";
+  const res = await POST(req(discountedEvent(4700, 0), "good"));
+  expect(res.status).toBe(200);
+  expect(row.status).toBe("paid_scanning");
+  expect(row.stripe_session_id).toBe("cs_test_amt");
+  expect(row.paid_amount_cents).toBe(4700);
+  expect(typeof row.paid_at).toBe("string");
+  expect(Number.isNaN(Date.parse(row.paid_at as string))).toBe(false);
+});
+
+test("100%-off checkout records the GROSS value, not zero", async () => {
+  // The audit property: a fully-discounted $47 sale must not read as a $0 payment.
+  row.plan = "Normal — $47";
+  const res = await POST(req(freeSettledEvent(4700), "good"));
+  expect(res.status).toBe(200);
+  expect(row.paid_amount_cents).toBe(4700);
+  expect(row.stripe_session_id).toBe("cs_test_free");
+});
+
+test("refused underpayment writes NO settlement evidence", async () => {
+  row.plan = "enterprise";
+  const res = await POST(req(underpaidEvent(4700), "good"));
+  expect(res.status).toBe(200);
+  expect(row.status).toBe("approved_awaiting_payment");
+  expect(row.paid_at).toBeUndefined();
+  expect(row.paid_amount_cents).toBeUndefined();
+  expect(row.stripe_session_id).toBeUndefined();
+});
+
+test("duplicate delivery does not overwrite the original settlement record", async () => {
+  row.plan = "Normal — $47";
+  await POST(req(discountedEvent(4700, 0), "good"));
+  const firstPaidAt = row.paid_at;
+  expect(firstPaidAt).toBeDefined();
+
+  // A replayed webhook must not re-stamp paid_at — that would destroy the record
+  // of WHEN the money actually landed.
+  await POST(req(discountedEvent(9900, 0), "good"));
+  expect(row.paid_at).toBe(firstPaidAt as string);
+  expect(row.paid_amount_cents).toBe(4700);
+});
+
+test("settled checkout with no amount information still stamps paid_at", async () => {
+  // amount_total absent → nothing to record as an amount, but settlement DID occur.
+  const res = await POST(req(paidEvent(), "good"));
+  expect(res.status).toBe(200);
+  expect(row.status).toBe("paid_scanning");
+  expect(typeof row.paid_at).toBe("string");
+  expect(row.stripe_session_id).toBe("cs_test_paid");
+  expect(row.paid_amount_cents).toBeUndefined();
+});
+test("MANUAL console activation writes NO settlement evidence", async () => {
+  // The R-14 property. manualActivateScanAction (app/actions/command-center.ts)
+  // calls markRequestPaid(requestId) with no session and no amount. It must still
+  // advance the row, and must NOT leave anything that reads as proof of payment —
+  // otherwise a hand-advanced row becomes indistinguishable from a real sale, which
+  // is the ambiguity migration 0020 exists to end.
+  const { markRequestPaid } = await import("../app/actions/scan-request-lifecycle");
+  const moved = await markRequestPaid("ref-123");
+  expect(moved).toBe(true);
+  expect(row.status).toBe("paid_scanning");
+  expect(row.paid_at).toBeUndefined();
+  expect(row.stripe_session_id).toBeUndefined();
+  expect(row.paid_amount_cents).toBeUndefined();
 });

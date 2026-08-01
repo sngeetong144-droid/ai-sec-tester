@@ -8,8 +8,8 @@
 -- pending 0019, so 0020 is the first free number across all three consumers.
 -- Check the live registry, not this folder, before numbering the next one.
 --
--- NOT YET APPLIED. Applying this is a Creator-gated action (Live gate 4: DB
--- migrations require per-batch approval). Do not run it to "check if it works".
+-- APPLIED 2026-08-01 on Creator approval; registry version 20260801125919, verified
+-- by query rather than by the tool success flag. This header previously read NOT YET APPLIED and was stale.
 --
 -- WHY
 -- `scan_requests` records that a payment LINK was sent (payment_link_sent_at) and
