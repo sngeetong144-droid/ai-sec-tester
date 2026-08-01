@@ -61,6 +61,21 @@ function ref(view: CaseView): string {
 }
 
 /** Resolve the PRD merge tokens for a case into a finished subject + body. */
+/**
+ * Lift the engine's own incompleteness sentence into the customer email.
+ * runScanEngine prefixes a summary with "PARTIAL SCAN — ..." or "INCOMPLETE
+ * SCAN — ..." whenever the core OWASP coverage was not achieved. Returns "" for
+ * a genuinely complete scan so a clean report stays clean.
+ */
+export function coverageCaveat(summary: string | null | undefined): string {
+  const text = String(summary ?? "");
+  const marker = /(PARTIAL SCAN —[^]*?)(?:Reachable|$)/.exec(text) ?? /(INCOMPLETE SCAN —[^]*?)(?:Reachable|$)/.exec(text);
+  if (!marker) return "";
+  return `
+COVERAGE NOTICE: ${marker[1].trim()}
+`;
+}
+
 export function composeEmail(
   kind: EmailKind,
   view: CaseView,
@@ -124,8 +139,20 @@ export function composeEmail(
         `Hi ${name},\n\n` +
         `Your AI security test for ${url} is complete.\n\n` +
         `Scan: ${scanRef}\n` +
-        `Verdict: ${verdict} (${passed} of ${total} checks passed)\n\n` +
-        `One free re-scan is available for 30 days: ${rescanToken}\n\n` +
+        `Verdict: ${verdict} (${passed} of ${total} checks passed)\n` +
+        // "4 of 4 checks passed" reads as a clean bill of health, but `total`
+        // counts only the checks that RAN. When coverage was incomplete the
+        // engine says so in the summary — and that caveat has to travel with the
+        // headline, not sit in a record the customer never opens. Otherwise a
+        // scan that could not reach two OWASP categories is reported as perfect.
+        coverageCaveat(scan?.summary) +
+        `\n` +
+        // The token used to be redeemable at /enterprise/rescan, but that page was
+        // RETIRED when the scan engine was made admin-activated only — it now just
+        // tells visitors to contact support. Quoting a bare code with no way to
+        // redeem it reads as a broken promise, so the copy states the real path.
+        `One free re-scan is included for 30 days. Reply to this email quoting ` +
+        `${rescanToken} and we'll schedule it.\n\n` +
         `Reference: ${r}\n\n` +
         `— AI Sec Tester`,
     };

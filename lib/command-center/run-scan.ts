@@ -7,6 +7,8 @@ import { deliverComposedEmail } from "@/lib/email-templates";
 import { executeScan } from "@/app/actions/scans";
 import { discoverChatbotEndpoint } from "@/lib/chatbot-discovery";
 import { resolvePaymentLink } from "@/lib/payment-links";
+import { buildScanReportPdf } from "@/lib/report-pdf";
+import type { ScanWithResults } from "@/lib/types";
 
 /**
  * The SINGLE activate→run→finalize flow, shared by the two callers that need it:
@@ -40,22 +42,28 @@ const REPORT_BUCKET = process.env.SCAN_REPORT_BUCKET ?? "reports";
 const REPORT_URL_TTL_SECONDS = 60 * 60 * 24 * 30; // 30d — matches the free-rescan window.
 
 /**
- * Upload the report body to Supabase Storage and return a signed URL.
- * Additive + fail-soft: any error (bucket missing, storage disabled, absent
- * env) logs a warning and returns null so the finalize path is unchanged.
- * ponytail: the artifact IS the composed report email body (plain text).
- * Upgrade to a rendered PDF/HTML here once a report generator exists.
+ * Render the scan's graded PDF report, upload it to Supabase Storage and return
+ * a signed URL. The artifact IS the real multi-page PDF (same renderer as
+ * GET /api/scans/[id]/report) — it used to be a .txt of the five-line email
+ * body, which is not the "graded PDF report with evidence per finding" the
+ * product sells.
+ * Additive + fail-soft: any error (PDF build, bucket missing, storage disabled,
+ * absent env) logs a warning and returns null so the finalize path is unchanged
+ * — a failed artifact must never destroy a completed scan.
  */
 export async function storeReportArtifact(
   supabase: Supa,
   requestId: string,
-  body: string,
+  scan: ScanWithResults,
 ): Promise<string | null> {
   try {
-    const path = `${requestId}.txt`;
+    const pdf = await buildScanReportPdf(scan);
+    const path = `${requestId}.pdf`;
     const { error: upErr } = await supabase.storage
       .from(REPORT_BUCKET)
-      .upload(path, body, { contentType: "text/plain; charset=utf-8", upsert: true });
+      // Buffer copy: the Supabase JS client needs a concrete body, and Uint8Array
+      // from pdf-lib is fine — Buffer.from keeps it explicit about the byte range.
+      .upload(path, Buffer.from(pdf), { contentType: "application/pdf", upsert: true });
     if (upErr) {
       console.warn(`report artifact upload skipped: ${upErr.message}`);
       return null;
@@ -261,9 +269,14 @@ export async function deliverCaseReport(
 ): Promise<string | null> {
   const report = composeEmail("report", view);
   const requestId = view.req?.id ?? null;
-  const reportUrl = requestId
-    ? await storeReportArtifact(supabase, requestId, report.body)
+  // The email body stays plain text; the DOWNLOADABLE artifact is the real PDF.
+  // CaseView already carries the scan row and its checks, so the PDF is rendered
+  // from what is in hand — no second round-trip to getScan.
+  const scan: ScanWithResults | null = view.scan
+    ? { ...view.scan, results: view.checks }
     : null;
+  const reportUrl =
+    requestId && scan ? await storeReportArtifact(supabase, requestId, scan) : null;
   await queueEmail(view.case.id, report);
   await deliverComposedEmail(report, reportUrl ? { reportUrl } : undefined);
   return reportUrl;
