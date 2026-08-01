@@ -12,10 +12,22 @@
 
 const WINDOW_MS = 60_000;
 
-// The chat assistant spends LLM tokens per request, so it gets its own, tighter
-// window: 10 requests / 5 minutes per IP. Same in-process caveat as above.
+// The chat assistant spends LLM tokens per request, so it gets its own window:
+// 5 minutes per IP. Same in-process caveat as above.
+//
+// RAISED 10 -> 60 on 2026-08-01 (Creator-approved). At 10, a self-scan died a
+// third of the way through its FIRST check: a full tier run sends ~34 probes to
+// the chat endpoint, so every self-scan returned PARTIAL and no self-scan result
+// could be read as a verdict. 60 clears one full run with headroom and still
+// bounds an abuser to 12 req/min.
+//
+// TRADE-OFF, stated plainly: this is a 6x weaker brake on the public endpoint.
+// It is a deterrent, not a guarantee (per-instance, in-memory — see above), so
+// the real fix remains the documented upgrade path: Upstash Redis or Vercel WAF
+// rate rules, which can exempt our own scanner instead of loosening everyone.
+// Env-tunable so the ceiling can be corrected without a deploy.
 const CHAT_WINDOW_MS = 300_000;
-const CHAT_IP_MAX_PER_WINDOW = 10;
+const CHAT_IP_MAX_PER_WINDOW = Number(process.env.CHAT_RATE_MAX ?? 60);
 
 // Separate caps: an IP is the tightest identity; an email DOMAIN is broader
 // (a whole company shares one), so it gets a looser ceiling.

@@ -176,7 +176,7 @@ sequenceDiagram
     end
     S->>S: Daily cron (0 0 * * *) — up to 24h latency
     S->>S: executeScan → 5-check engine (tier IGNORED 🔴)
-    S->>S: storeReportArtifact (plain text, not PDF) → 30d signed URL
+    S->>S: storeReportArtifact (rendered PDF) → 30d signed URL
     S-->>C: Report email + signed URL / HMAC token page
     Note over C,O: ❌ Nothing after this. No re-scan invite. No ask.
 ```
@@ -193,7 +193,7 @@ sequenceDiagram
 | Pay link | Receives link | Composes URL (`buildPaymentUrl`) | **Sends it — GATED (T-07)** (~5 min) |
 | Payment | Pays at FastPayDirect | Webhook → `markRequestPaid` **❓unconfirmed** | **May have to flip status by hand** |
 | Dispatch | **Waits, blind, up to ~24h** | Daily cron → activate → `executeScan` (**5 checks, any tier**) | — |
-| Report | Receives email + 30d signed URL | Store artifact (**plain text**), queue + deliver email | — |
+| Report | Receives email + 30d signed URL | Store artifact (**rendered PDF**), queue + deliver email | — |
 | Chase | Reminder at 48h / closed at 14d | `handleStale` — **coded, GATED** | Chases by hand today |
 | Re-scan | Benefit lapses silently | **NOT BUILT** | — |
 | Advocate | Never asked | **NOT BUILT** | — |
@@ -211,7 +211,7 @@ sequenceDiagram
 | 5 | **Daily cron, not 5-min** — up to 24h latency while the site says "in seconds" | 🟠 HIGH | `vercel.json` `"0 0 * * *"` vs. the route's stale comment | Fix the comment; fix the copy; or raise the cron frequency. |
 | 6 | **The pipe has never run end-to-end in prod** | 🟠 HIGH | roadmap **G1** — highest-value single action in that file | Apply migrations, set `CRON_SECRET`, run ONE real scan on an owned bot. |
 | 7 | **RLS lockdown (0007) is authored but NOT applied** | 🟠 HIGH | `0007_scope_scans_rls.sql` header: *"⚠️ DO NOT APPLY YET"*; live DB still carries an out-of-band anon `using(true)` policy | Follow the migration's mandatory apply order. Deploy the service-role cutover, verify, **then** apply. |
-| 8 | **Stored artifact is plain text, "branded PDF" is promised** | 🟡 MEDIUM | `storeReportArtifact` uploads `report.body` | Swap upload source to the existing PDF render (~1–2h, A6). |
+| 8 | ~~Stored artifact is plain text, "branded PDF" is promised~~ | ✅ CLOSED 2026-08-01 | `storeReportArtifact` uploads `buildScanReportPdf` output as `application/pdf` | Done — A6 closed. |
 | 9 | Scans run synchronously, `maxDuration = 60` | 🟡 MEDIUM | cron route | Fine at zero volume. Revisit if a scan regularly exceeds ~50s. |
 | 10 | 3 failed attempts → manual review **with no alert** | 🟡 MEDIUM | `MAX_SCAN_ATTEMPTS` in `run-scan.ts` | Fold into the S4 digest. |
 | 11 | **Single-operator, no rota, no SLA** | 🟡 STRUCTURAL | — | Accepted for a solo business. The S4 digest is the mitigation. |

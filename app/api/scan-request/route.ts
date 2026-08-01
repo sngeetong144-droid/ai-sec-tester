@@ -40,7 +40,8 @@ import { sendNewRequestAlert, sendRequesterAck } from "@/lib/email";
  *     never auto-rejected on unverified law.
  *
  * Persistence: public.scan_requests (migrations 0004 + 0006). Those migrations
- * are LOCAL / not yet applied — applying them is a gated deploy step.
+ * are APPLIED in prod (20260706225506, 20260710180423)
+ * [VERIFIED: Supabase list_migrations, 2026-08-01].
  */
 
 interface ScanRequestBody {

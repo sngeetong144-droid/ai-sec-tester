@@ -97,9 +97,9 @@ Resend. Operator alert on intake (`sendNewRequestAlert`) is **BUILT** but best-e
 Three static FastPayDirect payment links ($47/$197/$497) in `lib/payment-links.ts` — the single source of pricing. `approveScanRequestPayment` stamps `approved_awaiting_payment` + `payment_link_sent_at` and returns a URL carrying `client_reference_id` = the scan-request id. `markRequestPaid` flips `→ paid_scanning`, **idempotently** (conditional WHERE) and with an **underpayment guard** (a $47 settlement carrying a $497 request's ref is rejected).
 **The webhook that calls it is UNCONFIRMED** — see §8 Risk 1.
 
-### 5.6 Report delivery — **PARTIAL**
+### 5.6 Report delivery — **BUILT**
 On completion: `storeReportArtifact` uploads to Supabase Storage bucket `reports` and returns a **30-day signed URL** (fail-soft → `null`), the report email is queued to `cc_email_log` and delivered, and the request is closed. Enterprise gets an **HMAC-token-gated** report page (`/enterprise/report/[token]`, `makeReportToken`) and a token-gated PDF (`/api/scans/[id]/report?token=`) — **no session needed; the token is the credential.**
-**PARTIAL:** the stored artifact is the **plain-text composed email body**, not the rendered PDF. A PDF renderer exists but is not what gets uploaded — while every tier advertises a "branded PDF audit report."
+**RESOLVED 2026-08-01:** the stored artifact IS the rendered PDF. `storeReportArtifact` calls `buildScanReportPdf` (the same renderer behind `GET /api/scans/[id]/report`) and uploads it as `application/pdf`, matching the "branded PDF audit report" every tier advertises. It used to upload the five-line composed email body as text. Delivery remains fail-soft: any failure (PDF build, missing bucket, storage disabled) logs and returns `null` so a completed scan is never destroyed by a failed artifact — the email still sends with the inline verdict summary.
 
 ## 6. Security posture
 
@@ -141,9 +141,10 @@ On completion: `storeReportArtifact` uploads to Supabase Storage bucket `reports
 | Approve & send pay link (one-tap) | **GATED (T-07)** — G2 |
 | 48h reminder + 14d auto-close | **BUILT but GATED (T-07)** — G3 |
 | Report email + 30-day signed URL + HMAC token page | **BUILT** |
-| Report artifact = rendered PDF | 🔴 **NOT BUILT** — plain text is uploaded; "branded PDF" is advertised |
-| RLS lockdown (0007) | 🔴 **NOT APPLIED** |
-| Migrations 0004/0006 applied in prod | `[NEEDS: verify — route comment says LOCAL / not yet applied]` |
+| Report artifact = rendered PDF | ✅ **BUILT (2026-08-01)** — `storeReportArtifact` uploads `buildScanReportPdf` output as `application/pdf` |
+| RLS lockdown (0007) | ✅ **APPLIED** — `20260712110620_0007_scope_scans_rls` [VERIFIED: Supabase `list_migrations`, 2026-08-01] |
+| Migrations 0004/0006 applied in prod | ✅ **APPLIED** — `20260706225506_0004_scan_requests`, `20260710180423_0006_scan_request_disclosure`. The "NOT YET APPLIED" headers in those .sql files were stale and have been corrected [VERIFIED: Supabase `list_migrations`, 2026-08-01] |
+| Local migration files vs applied registry | ⚠️ **DIVERGED (expected)** — prod also carries `0010_store_pricing` … `0017_guest_checkout` and the `merge_agenticrm_crm_schema_into_db1` set, which live in the **agenticrm-v2** repo: this Supabase project is shared. Local `supabase/migrations/` holding only 0001–0008 is therefore NOT a missing-migration bug. Next free number for THIS repo is **0009** |
 | **One real end-to-end intake→approve→pay→scan→report in prod** | 🔴 **NEVER HAPPENED** — roadmap **G1**, "the highest-value single action in the file" |
 | 30-day re-scan invite · testimonial ask · any nurture | **NOT BUILT** |
 | Customers, revenue, metrics, testimonials | **ZERO.** None exist. None may be invented. |

@@ -21,7 +21,11 @@ import { isAdminSession, decideAdminSelfScan, ScanAuthorizationError } from "@/l
  * lib/admin-scan-core.
  */
 
-export type { AdminScanMode };
+// NO type re-export here. A "use server" module may only export async
+// functions; Turbopack compiled `export type { AdminScanMode }` into a value
+// reference and every render of /command-center/scan died with
+// "ReferenceError: AdminScanMode is not defined". Import the type from
+// @/lib/admin-scan-core, which is where it is declared.
 
 export interface AdminSelfScanInput {
   target: string;

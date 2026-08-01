@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { COLORS } from "@/app/command-center/_ui";
-import { runAdminSelfScan, type AdminScanMode } from "@/app/actions/admin-scan";
+import { runAdminSelfScan } from "@/app/actions/admin-scan";
+import type { AdminScanMode } from "@/lib/admin-scan-core";
 import type { ScanTier } from "@/lib/payment-links";
 
 /**

@@ -8,8 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test": "bun test",
     "check:contracts": "node scripts/check-payload-contracts.mjs",
-    "assert:deployed": "node scripts/assert-deployed.mjs"
+    "assert:deployed": "node scripts/assert-deployed.mjs",
+    "sync:docs": "node scripts/sync-doc-center.mjs",
+    "gates": "npm run typecheck && npm run test && npm run check:contracts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.0",

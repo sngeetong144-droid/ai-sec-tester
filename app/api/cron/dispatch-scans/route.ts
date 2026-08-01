@@ -3,6 +3,11 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { queueEmail } from "@/app/command-center/_email";
 import { deliverComposedEmail } from "@/lib/email-templates";
 import { runScanForRequest } from "@/lib/command-center/run-scan";
+import {
+  claimScanRequest,
+  releaseScanRequestClaim,
+  availableClaimFilter,
+} from "@/lib/command-center/claim";
 import { resolvePaymentLink } from "@/lib/payment-links";
 import { buildPaymentUrl, paymentCountdown } from "@/app/actions/scan-request-lifecycle";
 
@@ -79,10 +84,14 @@ export async function GET(request: Request): Promise<Response> {
   };
 
   // ── (B) run paid_scanning ────────────────────────────────────────────────────
+  // Only rows no live dispatcher already holds. Without this filter a second
+  // dispatcher would fetch the same 5 rows, lose every claim below, and do
+  // nothing — correct, but it would never reach the work further down the queue.
   const { data: paid } = await supabase
     .from("scan_requests")
     .select("*")
     .eq("status", "paid_scanning")
+    .or(availableClaimFilter())
     .limit(DISPATCH_BATCH);
 
   // Time budget. The platform kills this request at maxDuration, so the loop
@@ -90,6 +99,9 @@ export async function GET(request: Request): Promise<Response> {
   // deadline it stops itself at. Without both, a scan is killed mid-probe, no
   // results are persisted, and the row is stranded at "running".
   const startedAt = Date.now();
+  // Identifies THIS invocation in claimed_by, so a release can never free a row
+  // some other dispatcher owns. Diagnostic; the claim predicate keys on time.
+  const worker = `dispatch-${startedAt}-${Math.random().toString(36).slice(2, 8)}`;
   const HARD_MS = 300_000; // must match maxDuration above
   const PER_SCAN_MS = 200_000; // measured real scans: 68s-175s
   const SAFETY_MS = 15_000; // leave room to finalise, email, and respond
@@ -103,6 +115,13 @@ export async function GET(request: Request): Promise<Response> {
       result.skipped.push({ id: req.id, reason: "deferred — dispatch time budget" });
       continue;
     }
+    // ATOMIC CLAIM. The status check inside runScanForRequest is read-then-act
+    // and cannot stop two dispatchers from both running this row; this can.
+    // Losing the claim is a normal outcome, not an error.
+    if (!(await claimScanRequest(supabase, req.id, worker))) {
+      result.skipped.push({ id: req.id, reason: "claimed by another dispatcher" });
+      continue;
+    }
     try {
       const outcome = await runScanForRequest(supabase, req, {
         cronSecret: secret,
@@ -112,7 +131,14 @@ export async function GET(request: Request): Promise<Response> {
       else if (outcome.status === "reconciled") result.reconciled.push(req.id);
       else if (outcome.status === "in_flight") result.inFlight.push(req.id);
       else result.skipped.push({ id: req.id, reason: outcome.reason ?? "skipped" });
+      // Nothing ran, so hand the row straight back instead of parking it for the
+      // full TTL. A dispatched row keeps its claim: it is now `complete`, and the
+      // status predicate refuses it anyway.
+      if (outcome.status !== "dispatched") {
+        await releaseScanRequestClaim(supabase, req.id, worker);
+      }
     } catch (err) {
+      await releaseScanRequestClaim(supabase, req.id, worker);
       result.skipped.push({
         id: req.id,
         reason: err instanceof Error ? err.message : String(err),

@@ -163,8 +163,8 @@ flowchart TD
 | **Do** | Open the report email. Click through. |
 | **See** | A report email (`composeEmail("report", view)` → `deliverComposedEmail`) with an inline verdict summary and, when Storage is wired, a **30-day signed URL** (`storeReportArtifact`, bucket `reports`). Enterprise additionally gets a token-gated report page: `/enterprise/report/[token]`, HMAC-verified (`makeReportToken`), plus a PDF at `/api/scans/[id]/report?token=…`. **No login required** — the token *is* the credential. |
 | **Feel** | Relief, then either vindication ("all pass") or alarm ("we leak our system prompt"). |
-| **Friction** | The stored artifact is **plain text — the composed email body — not the rendered PDF.** A PDF renderer exists at `app/api/scans/[id]/report`, but it is not what gets uploaded. The landing promises a **"Branded PDF audit report"** on every tier. |
-| **Today** | Report email BUILT. Signed URL BUILT (fail-soft → null if bucket missing). HMAC token page BUILT. `[GAP: upload the rendered PDF instead of the text body — A6 in 02-fulfillment-ops-automation.md, ~1–2h]` `[NEEDS: verify the `reports` bucket is private / signed-URL-only]` |
+| **Friction** | RESOLVED 2026-08-01. The stored artifact is now the **rendered PDF** — `storeReportArtifact` calls `buildScanReportPdf` (the same renderer behind `/api/scans/[id]/report`) and uploads `application/pdf`, matching the **"Branded PDF audit report"** the landing promises on every tier. It previously uploaded the composed email body as text. |
+| **Today** | Report email BUILT. Signed URL BUILT (fail-soft → null if bucket missing). HMAC token page BUILT. PDF artifact BUILT (A6 closed 2026-08-01). `[NEEDS: verify the `reports` bucket is private / signed-URL-only]` |
 
 ---
 
@@ -226,9 +226,9 @@ flowchart TD
 2. Waits an unknown time for a human who has no aging alert.
 3. If approved, gets a pay link (gated — T-07 must be lifted by Creator first).
 4. Pays. **Possibly nothing happens**, because the webhook is unverified.
-5. If it does fire, waits up to **24h** for a daily cron.
-6. Receives a **5-check** scan — regardless of whether they paid $47 or $497.
-7. Gets a **plain-text** artifact where a "branded PDF" was promised.
+5. ~~If it does fire, waits up to **24h** for a daily cron.~~ FIXED 2026-08-01 — the cron can only run daily on this plan, so the dispatcher self-chains while work remains; the queue drains back-to-back at ~1 scan per 100–170s instead of waiting for midnight. `[UNVERIFIED: never exercised under real burst load]`
+6. ~~Receives a **5-check** scan — regardless of whether they paid $47 or $497.~~ FIXED 2026-08-01 — the tier resolves to its real check-set and the report states the commitment honestly ("4 of 15 checks passed, 11 NOT RUN") instead of dividing by what happened to run. Checks that do not run are still capped by the `/api/chat` rate limit — see the open blocker in §Risks.
+7. ~~Gets a **plain-text** artifact where a "branded PDF" was promised.~~ FIXED 2026-08-01 — the uploaded artifact is the rendered PDF.
 8. Never hears from us again.
 
-Fix order (cheapest → most valuable): **requester ack email → tier→engine wiring → PDF-in-storage → FPD webhook verification → paid/queued status emails → re-scan invite.**
+Fix order (cheapest → most valuable): ~~requester ack email → tier→engine wiring → PDF-in-storage~~ (all three closed 2026-08-01) → **FPD webhook verification → paid/queued status emails → re-scan invite.**

@@ -7,7 +7,7 @@ import { deliverComposedEmail } from "@/lib/email-templates";
 import { executeScan } from "@/app/actions/scans";
 import { discoverChatbotEndpoint } from "@/lib/chatbot-discovery";
 import { resolvePaymentLink } from "@/lib/payment-links";
-import { buildScanReportPdf } from "@/lib/report-pdf";
+import { storeReportArtifact } from "@/lib/command-center/report-artifact";
 import type { ScanWithResults } from "@/lib/types";
 
 /**
@@ -38,51 +38,9 @@ type Supa = ReturnType<typeof createServiceClient>;
 // with no retry; a permanent failure must still stop and fall to manual review.
 const MAX_SCAN_ATTEMPTS = 3;
 
-const REPORT_BUCKET = process.env.SCAN_REPORT_BUCKET ?? "reports";
-const REPORT_URL_TTL_SECONDS = 60 * 60 * 24 * 30; // 30d — matches the free-rescan window.
-
-/**
- * Render the scan's graded PDF report, upload it to Supabase Storage and return
- * a signed URL. The artifact IS the real multi-page PDF (same renderer as
- * GET /api/scans/[id]/report) — it used to be a .txt of the five-line email
- * body, which is not the "graded PDF report with evidence per finding" the
- * product sells.
- * Additive + fail-soft: any error (PDF build, bucket missing, storage disabled,
- * absent env) logs a warning and returns null so the finalize path is unchanged
- * — a failed artifact must never destroy a completed scan.
- */
-export async function storeReportArtifact(
-  supabase: Supa,
-  requestId: string,
-  scan: ScanWithResults,
-): Promise<string | null> {
-  try {
-    const pdf = await buildScanReportPdf(scan);
-    const path = `${requestId}.pdf`;
-    const { error: upErr } = await supabase.storage
-      .from(REPORT_BUCKET)
-      // Buffer copy: the Supabase JS client needs a concrete body, and Uint8Array
-      // from pdf-lib is fine — Buffer.from keeps it explicit about the byte range.
-      .upload(path, Buffer.from(pdf), { contentType: "application/pdf", upsert: true });
-    if (upErr) {
-      console.warn(`report artifact upload skipped: ${upErr.message}`);
-      return null;
-    }
-    const { data, error: signErr } = await supabase.storage
-      .from(REPORT_BUCKET)
-      .createSignedUrl(path, REPORT_URL_TTL_SECONDS);
-    if (signErr || !data?.signedUrl) {
-      console.warn(`report signed-url skipped: ${signErr?.message ?? "no url"}`);
-      return null;
-    }
-    return data.signedUrl;
-  } catch (e) {
-    console.warn(
-      `report artifact delivery failed: ${e instanceof Error ? e.message : String(e)}`,
-    );
-    return null;
-  }
-}
+// The PDF artifact upload lives in ./report-artifact (no "server-only" import,
+// so bun tests can reach it). Re-exported here for existing callers.
+export { storeReportArtifact };
 
 /** Minimal shape runScanForRequest needs off a scan_requests row. */
 export type RunScanRow = {
@@ -104,6 +62,9 @@ export interface DispatchOutcome {
  * route's maxDuration (300s) so a genuinely running scan is never stolen.
  */
 const STALE_RUN_MS = 6 * 60 * 1000;
+
+// The atomic dispatch claim lives in ./claim (no "server-only" import, so bun
+// tests can reach it). CLAIM_TTL_MS there must stay equal to STALE_RUN_MS.
 
 export async function runScanForRequest(
   supabase: Supa,

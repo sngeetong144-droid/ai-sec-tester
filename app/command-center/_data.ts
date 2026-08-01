@@ -14,9 +14,11 @@ import type { Scan, ScanResultRow } from "@/lib/types";
  * badges) the PRD screens need. It never mutates — mutations go through the
  * queries.ts helpers via app/actions/command-center.ts.
  *
- * NOTE: migration 0005 is not yet applied to the live DB, so at runtime these
- * reads return [] and every screen renders its honest EMPTY state. No seed rows
- * are invented (task honesty rule).
+ * NOTE (corrected 2026-08-01): migration 0005 IS applied in prod
+ * (20260710124121_0005_command_center) [VERIFIED: Supabase list_migrations], so
+ * these reads return real rows. The previous note claimed the tables did not
+ * exist and every screen rendered an empty state — that was true when written
+ * and false since. No seed rows are invented (task honesty rule).
  */
 
 // ── intake row (subset of scan_requests we render) ───────────────────────────

@@ -3,7 +3,8 @@
 -- Every statement is idempotent (ADD COLUMN IF NOT EXISTS / CREATE ... IF NOT
 -- EXISTS / DROP CONSTRAINT IF EXISTS). No column is ever dropped or renamed.
 --
--- NOT YET APPLIED — applying to the live DB is a gated deploy step.
+-- APPLIED in prod as 20260710180423_0006_scan_request_disclosure
+-- [VERIFIED: Supabase list_migrations, 2026-08-01].
 --
 -- NAMING NOTE (flagged for reconciliation, NOT silently resolved): the §2.1
 -- target names `name` and `declared_country` already exist on the table under

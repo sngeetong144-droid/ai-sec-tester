@@ -2,7 +2,9 @@
 -- Additive only. Backs POST /api/scan-request. No scan or payment happens here;
 -- this is the authorization-request record the approval flow acts on.
 --
--- NOT YET APPLIED — applying to the live DB is a gated deploy step.
+-- APPLIED in prod as 20260706225506_0004_scan_requests
+-- [VERIFIED: Supabase list_migrations, 2026-08-01]. The previous "NOT YET
+-- APPLIED" header here was stale and had propagated into docs/PRD.md.
 
 create table if not exists public.scan_requests (
   id                    uuid primary key default gen_random_uuid(),

@@ -1,5 +1,6 @@
 -- Sprint — Command Center data layer.
--- Additive only. NOT YET APPLIED — applying to the live DB is a gated deploy step.
+-- Additive only. APPLIED in prod as 20260710124121_0005_command_center
+-- [VERIFIED: Supabase list_migrations, 2026-08-01].
 --
 -- The console's single source of truth is a CASE record that threads an intake
 -- (scan_requests) through approval -> payment -> scan (scans) -> report ->
