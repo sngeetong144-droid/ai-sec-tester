@@ -43,26 +43,37 @@ afterEach(() => {
 });
 
 describe("free-tier ceiling on zero-charge checkouts", () => {
-  it("REFUSES a 100%-off enterprise scan under the default ceiling", async () => {
+  // REGRESSION: this guard shipped defaulting to "basic" and refused a real
+  // 100%-off enterprise checkout that Stripe had settled correctly (request
+  // 739486ac, 2026-08-01 13:00:57). Unset MUST mean no ceiling.
+  it("UNSET means NO ceiling — a 100%-off enterprise scan settles", async () => {
     delete process.env.FREE_SCAN_MAX_TIER;
     row = { id: "req-1", plan: "Enterprise — $497" };
-    expect(await markRequestPaid("ref-1", 0, 49700)).toBe(false);
-    expect(updated).toBeNull();
+    expect(await markRequestPaid("ref-1", 0, 49700)).toBe(true);
   });
 
-  it("ALLOWS a 100%-off basic scan — the lead-magnet case", async () => {
+  it("UNSET — a 100%-off basic scan settles", async () => {
     delete process.env.FREE_SCAN_MAX_TIER;
     row = { id: "req-2", plan: "Normal — $47" };
     expect(await markRequestPaid("ref-2", 0, 4700)).toBe(true);
   });
 
-  it("REFUSES a 100%-off advanced scan by default", async () => {
-    delete process.env.FREE_SCAN_MAX_TIER;
+  it("SET to basic — refuses a free advanced scan", async () => {
+    process.env.FREE_SCAN_MAX_TIER = "basic";
     row = { id: "req-3", plan: "Advanced — $197" };
     expect(await markRequestPaid("ref-3", 0, 19700)).toBe(false);
+    expect(updated).toBeNull();
   });
 
-  it("lets Creator raise the ceiling to test enterprise for free", async () => {
+  it("SET to basic — refuses a free enterprise scan but ALLOWS free basic", async () => {
+    process.env.FREE_SCAN_MAX_TIER = "basic";
+    row = { id: "req-3b", plan: "Enterprise — $497" };
+    expect(await markRequestPaid("ref-3b", 0, 49700)).toBe(false);
+    row = { id: "req-3c", plan: "Normal — $47" };
+    expect(await markRequestPaid("ref-3c", 0, 4700)).toBe(true);
+  });
+
+  it("SET to enterprise — allows a free enterprise scan", async () => {
     process.env.FREE_SCAN_MAX_TIER = "enterprise";
     row = { id: "req-4", plan: "Enterprise — $497" };
     expect(await markRequestPaid("ref-4", 0, 49700)).toBe(true);

@@ -173,13 +173,20 @@ export async function markRequestPaid(
     // that is dashboard configuration a human can forget — this is the same rule
     // enforced where the money actually settles.
     //
-    // FREE_SCAN_MAX_TIER is the highest tier a ZERO-CHARGE checkout may unlock.
-    // Default "basic": free leads get the $47 scan, paid tiers need real money.
-    // Set it to "enterprise" to run a full-price test without spending.
-    if (netCents === 0 && link) {
+    // OPT-IN, NOT DEFAULT-ON. FREE_SCAN_MAX_TIER is the highest tier a ZERO-CHARGE
+    // checkout may unlock. UNSET = no ceiling, which is the behaviour that existed
+    // before this guard.
+    //
+    // It shipped defaulting to "basic" and immediately broke the first real
+    // end-to-end test: a 100%-off enterprise checkout settled correctly in Stripe,
+    // the webhook fired and verified, and this function refused it — request
+    // 739486ac, 2026-08-01 13:00:57. A guard nobody asked for must not change the
+    // behaviour of a running system by default. Set it when you publish a public
+    // lead-magnet code; leave it unset to keep coupons working as they always did.
+    const ceilingName = (process.env.FREE_SCAN_MAX_TIER ?? "").trim().toLowerCase();
+    if (netCents === 0 && link && ceilingName) {
       const RANK: Record<string, number> = { basic: 0, advanced: 1, enterprise: 2 };
-      const ceilingName = (process.env.FREE_SCAN_MAX_TIER ?? "basic").trim().toLowerCase();
-      const ceiling = RANK[ceilingName] ?? RANK.basic;
+      const ceiling = RANK[ceilingName] ?? RANK.enterprise;
       if ((RANK[link.tier] ?? 99) > ceiling) {
         console.error(
           `markRequestPaid: refusing free ${link.tier} scan for ${(reqRow as { id: string }).id} — ` +
