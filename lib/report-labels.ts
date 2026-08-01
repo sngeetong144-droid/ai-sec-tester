@@ -100,9 +100,15 @@ export const LIVE_PROBE_MARKER = "live probe(s)";
  * again drift from what the scan did.
  */
 export function methodologyNoteFor(
-  results: ReadonlyArray<{ evidence?: string | null }>,
+  results: ReadonlyArray<{ evidence?: string | null; simulated?: boolean | null }>,
 ): string {
-  const anyLive = results.some((r) => r.evidence?.includes(LIVE_PROBE_MARKER));
+  // Prefer the PERSISTED fact over prose. `simulated === false` is the engine
+  // recording that this verdict came from a live probe (migration 0021). Evidence
+  // string-matching stays only as a fallback for rows written before 0021, where
+  // the column is NULL and genuinely unknown. NULL is never read as "live".
+  const anyLive =
+    results.some((r) => r.simulated === false) ||
+    results.some((r) => r.evidence?.includes(LIVE_PROBE_MARKER));
   const head = anyLive
     ? "Interactive OWASP LLM probes were sent live to the target's chat endpoint and " +
       "each reply was graded by an AI judge; transport and secret-exposure checks are " +

@@ -151,3 +151,31 @@ describe("methodologyNoteFor — the footnote must match what actually happened"
     expect(methodologyNoteFor([{ evidence: null }, {}])).toContain("could not be delivered");
   });
 });
+describe("methodologyNoteFor — persisted simulated flag beats prose", () => {
+  it("trusts simulated===false even when the evidence prose says nothing", () => {
+    expect(methodologyNoteFor([{ evidence: "Guardrails held.", simulated: false }]))
+      .toContain("sent live to the target");
+  });
+
+  it("does NOT treat simulated===true as live", () => {
+    expect(methodologyNoteFor([{ evidence: "Static evaluation.", simulated: true }]))
+      .toContain("could not be delivered");
+  });
+
+  it("NULL means unknown, never live", () => {
+    expect(methodologyNoteFor([{ evidence: "Static evaluation.", simulated: null }]))
+      .toContain("could not be delivered");
+  });
+
+  it("falls back to evidence for pre-0021 rows where the column is NULL", () => {
+    expect(methodologyNoteFor([{ evidence: "All 4 live probe(s) were refused.", simulated: null }]))
+      .toContain("sent live to the target");
+  });
+
+  it("one live row is enough among simulated ones", () => {
+    expect(methodologyNoteFor([
+      { evidence: "Static.", simulated: true },
+      { evidence: "Static.", simulated: false },
+    ])).toContain("sent live to the target");
+  });
+});

@@ -46,6 +46,13 @@ export async function runEngineAndPersist(
       // check still carries hardening guidance, and advisory checks carry the
       // only guidance they will ever have. The report groups it (lib/report-recommendations).
       remediation: r.remediation ?? null,
+      // Whether this verdict came from a LIVE probe sent to the customer's chat
+      // endpoint, or from a static evaluation. The engine has always computed it
+      // and this insert always dropped it, so nothing on disk could prove a paying
+      // customer's PASS came from actually attacking their bot — it was
+      // recoverable only by string-matching the evidence prose. Column added in
+      // migration 0021; NULL there means "unknown, row predates 0021".
+      simulated: r.simulated ?? null,
       sort_order: r.sort_order,
     }));
     const { error: resErr } = await supabase.from("scan_results").insert(rows);
