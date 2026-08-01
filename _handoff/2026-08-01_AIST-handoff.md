@@ -344,3 +344,42 @@ evidence and kept as the running record. Left alone, a future session "fixes" a 
 | Claim atomicity at Postgres level | Tests prove the predicate sent and the zero-rows reading, not DB-level atomicity. Needs a real concurrent dispatch. |
 | Advanced vs Enterprise price gap | `testsForTier` returns an IDENTICAL 15-check set for both [VERIFIED: lib/scan-engine.ts:280]. Enterprise bullets claim process extras, not more checks, so this is a pricing decision, not a defect. |
 | Local `npm run build` | `.env.local` Sensitive values are blank on `vercel env pull`. Restoring them is a secrets action. Pre-existing [VERIFIED: control build at clean HEAD fails identically]. |
+
+## SESSION 7 addendum - the "unproven" list re-examined, three of six closed
+
+Production `7c3240c`, 259 tests 0 fail.
+
+Three items had been listed as blocked that were only PARTLY blocked. The live
+half genuinely needs a session or a load run; the logic half was provable here and
+now is.
+
+- **Countdown** - the component now renders through `react-dom/server` and is
+  asserted on what a viewer sees (real hh:mm:ss when waiting, none while draining
+  or empty, zeroes not negatives past the deadline, `suppressHydrationWarning`
+  present). 6 tests. Control: removing the clamp fails 2 of 12. STILL OPEN: that
+  the 1s interval ticks in a real browser - needs an admin session.
+- **Admin-bypass positive case** - was ALREADY closed and mis-listed.
+  `decideScanAuthorization` has 11 tests including two positive admin cases
+  ("allows an admin session on an activated + paid case", "admin self-scan:
+  allows an admin session with no case"). STILL OPEN: only the live signed-in click.
+- **Claim atomicity** - Postgres-level serialisation is not provable in a unit
+  test, and faking that proof would be worse than the gap. What IS ours is the
+  shape that makes Postgres atomicity apply: ONE conditional UPDATE carrying both
+  the status predicate and the availability filter, with `error` destructured so a
+  broken claim cannot read as a lost race. Rewritten as read-then-write it would
+  race silently and every pre-existing test in that file would still pass. Now
+  pinned. Control: dropping the status predicate fails 3 of 6.
+
+### Genuinely still open - 3, and each names its blocker
+1. Live browser tick of the countdown + the admin-bypass click - `/command-center/*`
+   requires Google admin sign-in. Nova will not authenticate as Creator.
+2. Self-chaining drain under real burst load - needs a genuine production load run.
+3. Advanced vs Enterprise price gap - `testsForTier` returns an IDENTICAL 15-check
+   set for both [VERIFIED: lib/scan-engine.ts:280]. Enterprise bullets claim process
+   extras, not more checks, so it is a pricing decision and not a defect.
+
+Plus one environmental, not an AIST defect: local `npm run build` cannot run because
+`vercel env pull` writes Sensitive values blank. Pre-existing [VERIFIED: control build
+at clean HEAD fails identically].
+
+NO OPEN CODE DEFECTS.
