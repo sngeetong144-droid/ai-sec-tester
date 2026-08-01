@@ -9,6 +9,15 @@ export function GET() {
   return NextResponse.json({
     status: "ok",
     timestamp: new Date().toISOString(),
+    /**
+     * The git SHA this build was made from. Exists so a push can be PROVEN to
+     * have reached production. Twice now a deployment was refused with no build,
+     * no deployment record and no error — most recently a five-minute cron schedule Vercel
+     * rejected outright, which silently kept a customer-facing fix off prod while
+     * the commit sat on origin/main. Comparing this to local HEAD is the only
+     * cheap check that catches it. See scripts/assert-deployed.mjs.
+     */
+    commit: process.env.VERCEL_GIT_COMMIT_SHA ?? "unknown",
     scanner: {
       realScanEnabled: realScanEnabled(),
       judgeKeyPresent:
