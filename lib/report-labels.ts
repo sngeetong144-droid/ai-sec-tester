@@ -85,3 +85,34 @@ export function scoreHeadlineFor(
     ? `Security score: ${n}/100 over ${ran} of ${total} checks`
     : `Security score: ${n}/100`;
 }
+/** Marker written ONLY by the live-probe path in real-scan-engine.ts. */
+export const LIVE_PROBE_MARKER = "live probe(s)";
+
+/**
+ * The methodology footnote. It was a hardcoded sentence claiming "Interactive
+ * jailbreak probes are simulated and labelled" — true of the original engine,
+ * false since real probing shipped, and actively harmful: it tells a paying
+ * customer to discount the only part of the report that involved actually
+ * attacking their bot. Report 7fdd21ea carried it while every interactive
+ * category had been probed live and judged.
+ *
+ * Derived from the evidence the engine itself wrote, so the footnote can never
+ * again drift from what the scan did.
+ */
+export function methodologyNoteFor(
+  results: ReadonlyArray<{ evidence?: string | null }>,
+): string {
+  const anyLive = results.some((r) => r.evidence?.includes(LIVE_PROBE_MARKER));
+  const head = anyLive
+    ? "Interactive OWASP LLM probes were sent live to the target's chat endpoint and " +
+      "each reply was graded by an AI judge; transport and secret-exposure checks are " +
+      "performed live against the target."
+    : "Interactive probes could not be delivered to the target, so interactive " +
+      "categories are unverified and are labelled as such; transport and " +
+      "secret-exposure checks are performed live against the target.";
+  return (
+    "Checks are aligned with the OWASP Top-10 for LLM Applications. " +
+    head +
+    " Only scan chatbots you own or are authorized to test."
+  );
+}

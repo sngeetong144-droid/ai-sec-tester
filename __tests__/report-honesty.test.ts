@@ -3,7 +3,7 @@ import { describe, expect, it, mock } from "bun:test";
 // `server-only` is a Next build-time marker with no npm package; stub it (repo pattern).
 mock.module("server-only", () => ({}));
 
-import { coverageLineFor, rowLabelFor, scoreHeadlineFor } from "../lib/report-labels";
+import { coverageLineFor, methodologyNoteFor, rowLabelFor, scoreHeadlineFor } from "../lib/report-labels";
 
 /**
  * Regression cover for two defects found in a REAL delivered $497 report
@@ -114,5 +114,40 @@ describe("coverageLineFor — partials are pulled out of the passed count", () =
 
   it("never reports more passed than were fully verified", () => {
     expect(coverageLineFor(12, 12, 3, 15)).toBe("0/15 checks passed, 12 PARTIAL, 3 NOT RUN.");
+  });
+});
+/**
+ * Report 7fdd21ea told the customer "Interactive jailbreak probes are simulated"
+ * while every interactive category had been probed LIVE and judged. The footnote
+ * must be derived from what the scan did, not hardcoded.
+ */
+describe("methodologyNoteFor — the footnote must match what actually happened", () => {
+  const live = [{ evidence: "All 4 live probe(s) were refused by the chatbot. Guardrails held." }];
+  const notLive = [{ evidence: "Advisory only — cannot be verified by an external black-box scan." }];
+
+  it("says probes were sent LIVE when the engine recorded live probes", () => {
+    const note = methodologyNoteFor(live);
+    expect(note).toContain("sent live to the target");
+    expect(note).not.toContain("simulated");
+  });
+
+  it("never claims live probing when none was recorded", () => {
+    const note = methodologyNoteFor(notLive);
+    expect(note).toContain("could not be delivered");
+    expect(note).not.toContain("sent live to the target");
+  });
+
+  it("one live category is enough to stop calling the scan simulated", () => {
+    expect(methodologyNoteFor([...notLive, ...live])).toContain("sent live to the target");
+  });
+
+  it("always keeps the authorization warning", () => {
+    for (const r of [live, notLive, []]) {
+      expect(methodologyNoteFor(r)).toContain("Only scan chatbots you own or are authorized to test.");
+    }
+  });
+
+  it("tolerates missing evidence without claiming live probing", () => {
+    expect(methodologyNoteFor([{ evidence: null }, {}])).toContain("could not be delivered");
   });
 });

@@ -1,7 +1,7 @@
 import { consumerOptionsFor, remediationStepsFor } from "@/lib/remediation-guidance";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import type { ScanWithResults } from "@/lib/types";
-import { coverageLineFor, rowLabelFor, scoreHeadlineFor } from "@/lib/report-labels";
+import { coverageLineFor, methodologyNoteFor, rowLabelFor, scoreHeadlineFor } from "@/lib/report-labels";
 
 
 /**
@@ -183,7 +183,7 @@ export async function buildScanReportPdf(scan: ScanWithResults): Promise<Uint8Ar
 
   hr();
   drawWrapped(
-    "Checks are aligned with the OWASP Top-10 for LLM Applications. Interactive jailbreak probes are simulated and labelled; transport and secret-exposure checks are performed live against the target. Only scan chatbots you own or are authorized to test.",
+    methodologyNoteFor(scan.results),
     { size: 8, color: muted },
   );
 
