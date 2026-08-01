@@ -13,7 +13,7 @@ const META: Record<ScanTier, { name: string; unit: string; mode: string; product
     features: [
       "5 OWASP LLM checks",
       "Pass/Fail scorecard",
-      "Priority scan processing",
+      "Scan starts automatically after payment",
       "Branded PDF audit report",
       "Evidence per finding + remediation",
     ],

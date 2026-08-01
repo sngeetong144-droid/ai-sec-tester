@@ -80,7 +80,12 @@ const TIERS = [
     features: [
       "5 OWASP LLM checks",
       "Pass/Fail scorecard",
-      "Priority scan processing",
+      // Was "Priority scan processing". Nothing prioritised anything — the
+      // dispatcher had no ORDER BY at all, so the queue was not even FIFO (fixed
+      // in the same change). Replaced with a claim the code backs: settlement
+      // triggers dispatch with no human step. Measured on request 7fdd21ea,
+      // 2026-08-01 — paid to delivered PDF in under four minutes.
+      "Scan starts automatically after payment",
       "Branded PDF audit report",
       "Evidence per finding + remediation",
     ],
