@@ -87,12 +87,22 @@ export async function GET(request: Request): Promise<Response> {
   // Only rows no live dispatcher already holds. Without this filter a second
   // dispatcher would fetch the same 5 rows, lose every claim below, and do
   // nothing — correct, but it would never reach the work further down the queue.
-  const { data: paid } = await supabase
+  const { data: paid, error: paidErr } = await supabase
     .from("scan_requests")
     .select("*")
     .eq("status", "paid_scanning")
     .or(availableClaimFilter())
     .limit(DISPATCH_BATCH);
+  // Destructuring only `data` here would turn a broken query into an empty
+  // queue: dispatch would silently stop for every paid customer and this route
+  // would still answer 200. Surface it instead — a 500 is discoverable, a
+  // permanently idle money path is not.
+  if (paidErr) {
+    return NextResponse.json(
+      { error: "queue read failed", detail: paidErr.message },
+      { status: 500 },
+    );
+  }
 
   // Time budget. The platform kills this request at maxDuration, so the loop
   // must (a) never START a scan it cannot finish, and (b) hand each scan a
