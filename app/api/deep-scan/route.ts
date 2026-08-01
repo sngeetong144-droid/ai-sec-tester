@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resolvePaymentLink } from "@/lib/payment-links";
+import { buildPaymentUrl } from "@/app/actions/scan-request-lifecycle";
 import { getRequestIdentity, getScan, getVerifiedOwnership } from "@/lib/queries";
 import { extractDomain } from "@/lib/ownership-verification";
 import { recordScanAudit } from "@/lib/audit-log";
@@ -94,8 +95,9 @@ export async function POST(request: Request) {
   }
 
   // MEDIUM #5 fix: fail closed — no audit row, no Stripe session.
+  let auditId: string | null = null;
   try {
-    await recordScanAudit({
+    auditId = await recordScanAudit({
       scanId: body.scanId || null,
       email: body.email || proof.email,
       targetUrl: proof.target_domain,
@@ -123,5 +125,13 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ configured: true, url: link.url });
+  // Carry a client_reference_id. This checkout previously handed back the RAW
+  // payment link, so a settled $497 enterprise payment arrived at the webhook with
+  // NOTHING on it to identify the buyer, the target, or the ownership proof it was
+  // taken for - unmatchable even by hand. It still does not auto-fulfil (this flow
+  // captures no full_name/country_declared, which scan_requests requires NOT NULL,
+  // and fabricating those on a compliance product is not acceptable), but every
+  // payment is now traceable to its audit row.
+  const url = auditId ? buildPaymentUrl(link.url, auditId, body.email || proof.email) : link.url;
+  return NextResponse.json({ configured: true, url });
 }

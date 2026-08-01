@@ -353,3 +353,26 @@ test("MANUAL console activation writes NO settlement evidence", async () => {
   expect(row.stripe_session_id).toBeUndefined();
   expect(row.paid_amount_cents).toBeUndefined();
 });
+test("a settled payment matching no request is LOGGED, never silently discarded", async () => {
+  // Before this, an unmatched settlement was an indistinguishable no-op: real money
+  // arrived, nothing claimed it, and nothing said so. It is the expected shape for an
+  // enterprise deep-scan checkout (whose client_reference_id is a scan_audit_log id)
+  // and also what a genuine bug looks like - both need a human to look.
+  row.stripe_client_reference_id = "some-other-ref"; // nothing will match "ref-123"
+  const errors: string[] = [];
+  const realError = console.error;
+  console.error = (...a: unknown[]) => {
+    errors.push(a.join(" "));
+  };
+  try {
+    const res = await POST(req(paidEvent(), "good"));
+    expect(res.status).toBe(200);
+  } finally {
+    console.error = realError;
+  }
+  const alert = errors.find((e) => e.includes("SETTLED PAYMENT NOT MATCHED"));
+  expect(alert).toBeDefined();
+  // It must carry enough to reconcile against the Stripe dashboard by hand.
+  expect(alert).toContain("cs_test_paid");
+  expect(alert).toContain("ref-123");
+});

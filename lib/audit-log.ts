@@ -15,22 +15,31 @@ export interface ScanAuditInput {
  * instead of silently proceeding. Callers that only want best-effort logging
  * (e.g. the dev-only local scanner) should catch and continue explicitly.
  */
-export async function recordScanAudit(input: ScanAuditInput): Promise<void> {
+export async function recordScanAudit(input: ScanAuditInput): Promise<string | null> {
   // Service client: audit rows are server-owned, so anon needs no INSERT policy
   // on scan_audit_log (an anon-writable audit log can be poisoned).
   const supabase = createServiceClient();
-  const { error } = await supabase.from("scan_audit_log").insert({
-    scan_id: input.scanId,
-    email: input.email,
-    target_url: input.targetUrl,
-    tier: input.tier,
-    ownership_proof_id: input.ownershipProofId,
-    result_hash: input.resultHash,
-  });
+  // Returns the row id: the enterprise deep-scan checkout uses it as the Stripe
+  // client_reference_id, so a settled payment can always be traced back to the
+  // ownership proof and target it was taken for. Before this the deep-scan link
+  // carried NO reference at all and a $497 settlement landed with nothing on it.
+  const { data, error } = await supabase
+    .from("scan_audit_log")
+    .insert({
+      scan_id: input.scanId,
+      email: input.email,
+      target_url: input.targetUrl,
+      tier: input.tier,
+      ownership_proof_id: input.ownershipProofId,
+      result_hash: input.resultHash,
+    })
+    .select("id")
+    .maybeSingle();
   if (error) {
     console.error("recordScanAudit error:", error.message);
     throw new Error("Failed to record scan audit.");
   }
+  return (data as { id?: string } | null)?.id ?? null;
 }
 
 /**

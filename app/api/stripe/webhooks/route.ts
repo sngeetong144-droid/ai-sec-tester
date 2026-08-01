@@ -117,7 +117,27 @@ export async function POST(request: Request) {
           // Only kick when THIS delivery performed the transition (markRequestPaid
           // returns false for a duplicate/underpaid delivery), so a replayed webhook
           // cannot start a second dispatch run.
-          if (paid) await kickDispatch();
+          if (paid) {
+            await kickDispatch();
+          } else {
+            // MONEY LANDED AND NOTHING CLAIMED IT. Previously this was a silent
+            // no-op indistinguishable from a duplicate delivery, so a real payment
+            // that matched no approved_awaiting_payment row simply vanished. It is
+            // the expected path for an enterprise deep-scan checkout (whose
+            // client_reference_id is a scan_audit_log id, not a scan_request id),
+            // and it is ALSO what an underpayment or a genuine bug looks like -
+            // all three need a human to look, so all three get logged loudly with
+            // enough to reconcile against Stripe.
+            console.error(
+              "[stripe/webhooks] SETTLED PAYMENT NOT MATCHED TO A SCAN REQUEST - " +
+                `session=${session.id} ref=${clientRef} ` +
+                `amount_total=${session.amount_total} ` +
+                `discount=${session.total_details?.amount_discount ?? 0} ` +
+                `email=${session.customer_details?.email ?? "unknown"}. ` +
+                "Reconcile by hand: this is either a deep-scan purchase, a duplicate " +
+                "delivery, or an underpayment that was refused.",
+            );
+          }
         }
 
         // ── Legacy cc_cases metadata activation (kept; never fires for FastPayDirect
