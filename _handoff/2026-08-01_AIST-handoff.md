@@ -418,3 +418,67 @@ STATUS: empty-queue branch VERIFIED live; ticking branch render-tested only.
    lib/scan-engine.ts:280]; Enterprise bullets claim process extras, not more checks.
    A pricing decision, and "approve all" did not say WHICH way to take it, so nothing
    was changed.
+
+## SESSION 8 (2026-08-02) - enumeration FIRST, then an adversarial sweep
+
+Production `2bff07a`, 264 tests 0 fail, typecheck clean, contracts PASS.
+
+### The OWASP defect was on 13 surfaces, not 3
+Enumerating BEFORE claiming (the lesson of session 7) found it in 9 more files
+beyond the three already fixed, including `public/llms.txt` - served publicly to
+crawlers - plus `README.md`, `docs/PRD.md` and five marketing launch docs.
+83 phrase-scoped replacements across 16 files, then re-counted to **0 real
+mismatches across 200 scanned files**.
+Two things the re-count caught that would otherwise have shipped: my own sweep
+CREATED a collision in `02-launch-announcement.md` (fixed LLM08->LLM06 for
+excessive agency, missed `sensitive-data exposure (LLM06)` because of the
+hyphen, leaving LLM06 on both); and three apparent hits were my own comments
+describing the old numbering, not live defects.
+
+### Adversarial sweep: 36 candidates, 12 confirmed, 9 refuted
+6 read-only lenses (claims-vs-code, duplication, money path, report integrity,
+security, data integrity), each finding independently attacked by a refuter.
+
+FIXED THIS SESSION:
+- **$497 deep-scan payment was untraceable** (`13c4e63`). `/api/deep-scan`
+  returned the RAW Stripe link with no `client_reference_id`, so a settled
+  enterprise payment arrived carrying nothing - no buyer, no target, no
+  ownership proof. `recordScanAudit` now returns its row id and the checkout
+  carries it. NOT auto-fulfilling: `scan_requests` requires `full_name` and
+  `country_declared` NOT NULL and this flow captures neither; fabricating them
+  on a compliance product is not acceptable.
+- **Unmatched settlements were silently discarded** (`13c4e63`). `markRequestPaid`
+  returning false was an invisible no-op. Now logged with session id, reference,
+  gross, discount and email - enough to reconcile against Stripe by hand.
+  Control: removing the alert text fails 1 of 17.
+- **Three false claims** (`2bff07a`). "Deeper probes per category" is FALSE -
+  `real-scan-engine.ts` iterates ONE flat PROBES array (:1083) with no tier
+  comparison anywhere; the only tier switch selects CATEGORIES. Replaced with
+  "Extended checks the $47 tier never runs". The coverage claim also survived in
+  the JSON-LD Offer schema and `llms.txt`, which is written FOR model crawlers,
+  and llms.txt still sold "priority processing" retired hours earlier.
+
+## OPEN - Creator decision required, NOT code defects
+
+Every one is the same question: **what does the $497 Enterprise tier actually
+include?** Each promise below is live buyer-facing copy with no implementation.
+Nova did not guess at the answer while Creator slept.
+
+| Claim | Where | Reality |
+|---|---|---|
+| "expert-led, manual pentest" | `deep-scan-cta.tsx:165` | Enterprise runs the identical automated 15-check suite as Advanced |
+| "Authorization + identity verification" | `tier-features.ts:48` | No identity verification exists in the paid path |
+| "Secure token-gated report page" | `tier-features.ts:52` | Nothing ever populates the row it reads |
+| "1 free re-scan after fixes" | `tier-features.ts:51` | No execution path |
+| "report within 24 hours" | `app/enterprise/page.tsx:22` | `app/api/enterprise/approve` returns 410 Gone |
+| Deep-scan fulfilment | `api/deep-scan` | Traceable now; still no automated fulfilment |
+
+Two options for each: build it, or stop advertising it. Both are Creator's call.
+`testsForTier` returning an IDENTICAL 15-check set for advanced and enterprise
+[VERIFIED: lib/scan-engine.ts:280] is the same decision in a different shape.
+
+## Also open, unchanged
+- Self-chaining drain under real burst load - needs production traffic.
+- Countdown ticking branch - render-tested; live page shows the empty-queue
+  branch correctly, and the clock is deliberately suppressed at queued=0.
+- Local `npm run build` - blank Sensitive values from `vercel env pull`.
