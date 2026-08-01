@@ -87,11 +87,19 @@ export async function GET(request: Request): Promise<Response> {
   // Only rows no live dispatcher already holds. Without this filter a second
   // dispatcher would fetch the same 5 rows, lose every claim below, and do
   // nothing — correct, but it would never reach the work further down the queue.
+  // FIFO. There was no ORDER BY here at all, so Postgres returned rows in
+  // whatever order it liked and the batch limit then cut the list arbitrarily —
+  // under any backlog a customer who paid first could sit behind people who paid
+  // later, indefinitely, with nothing in the system recording that it happened.
+  // Oldest payment goes first; created_at breaks ties for rows settled in the
+  // same instant.
   const { data: paid, error: paidErr } = await supabase
     .from("scan_requests")
     .select("*")
     .eq("status", "paid_scanning")
     .or(availableClaimFilter())
+    .order("payment_link_sent_at", { ascending: true, nullsFirst: true })
+    .order("created_at", { ascending: true })
     .limit(DISPATCH_BATCH);
   // Destructuring only `data` here would turn a broken query into an empty
   // queue: dispatch would silently stop for every paid customer and this route

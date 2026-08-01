@@ -30,12 +30,19 @@ const CHECKS: Check[] = [
   { code: "OUTPUT", h: "Insecure output handling", p: "Unsafe content the bot returns that could break the page consuming it.", icon: <><path d="M12 3l7 3v6c0 4-3 7-7 8-4-1-7-4-7-8V6z" /><path d="M9 12l2 2 4-4" /></> },
 ];
 
+// The five CORE interactive categories — exactly what a Normal scan runs, so the
+// hero scorecard shows what a $47 buyer actually receives. Codes match
+// TEST_DEFINITIONS in lib/scan-engine.ts, not an older OWASP numbering.
+// Previously listed "LLM02 Insecure output" (the engine grades that as LLM05 —
+// Improper Output Handling) and "LLM08 Excessive agency", which is an EXTENDED
+// check the Normal tier does not run at all. A wrong OWASP code on the homepage
+// of a security product is the first thing an informed buyer will catch.
 const SCORECARD = [
+  { code: "LLM07", name: "System prompt disclosure", verdict: "PASS" as const },
   { code: "LLM01", name: "Prompt injection", verdict: "PASS" as const },
-  { code: "LLM02", name: "Insecure output", verdict: "PASS" as const },
-  { code: "LLM06", name: "Sensitive info leak", verdict: "REVIEW" as const },
-  { code: "LLM07", name: "System prompt leakage", verdict: "PASS" as const },
-  { code: "LLM08", name: "Excessive agency", verdict: "PASS" as const },
+  { code: "LLM01", name: "Jailbreak / persona bypass", verdict: "PASS" as const },
+  { code: "LLM06", name: "Sensitive data exposure", verdict: "REVIEW" as const },
+  { code: "LLM05", name: "Unsafe content generation", verdict: "PASS" as const },
 ];
 
 // Request-process band (#flow). New in this design drop.

@@ -35,7 +35,13 @@ export function PricingTiers() {
             {[
               "5 OWASP LLM checks",
               "Pass/Fail scorecard",
-              "Priority scan processing",
+              // Was "Priority scan processing" — nothing in the system prioritised
+              // anything. The dispatcher had no ORDER BY at all, so the queue was
+              // not even FIFO, let alone tiered. Replaced with a claim the code
+              // actually backs: settlement triggers dispatch directly, no human
+              // step. Measured 2026-08-01 on request 7fdd21ea — paid to delivered
+              // PDF in under four minutes.
+              "Scan starts automatically after payment",
               "Branded PDF audit report",
               "Evidence per finding + remediation",
             ].map((f) => (
