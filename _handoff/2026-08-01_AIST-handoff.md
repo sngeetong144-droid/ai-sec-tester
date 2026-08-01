@@ -289,3 +289,58 @@ the same listing].
   deliberate pricing decision rather than an accident.
 - Rows completed before this change can never be retroactively evidenced; `paid_at`
   stays NULL for them by design (backfilling would assert a settlement nothing vouches for).
+
+## SESSION 7 (2026-08-01) - "complete ALL AIST": four more real defects found and shipped
+
+Production serving `aed55a4` [VERIFIED: assert-deployed polled /api/health].
+249 tests, 0 fail; typecheck clean; check:contracts PASS.
+
+### 1. OWASP codes were wrong in the product (`dde97f6`, `6ff0d12`)
+Per OWASP Top 10 for LLM Applications 2025, LLM02 is Sensitive Information
+Disclosure and LLM06 is Excessive Agency. The engines labelled BOTH as LLM06, and
+that shipped inside the paid $497 report (scan c498084a). Worse, `pro-scan-engine.ts`
+was still on the 2023 list entirely (LLM02 Insecure Output, LLM04 Model DoS, LLM09
+Overreliance) - one product reporting two taxonomies depending on the surface.
+The hero scorecard also still said "LLM06 Sensitive data exposure" after the first
+fix; the browser caught that, the suite could not, because the test read only `lib/`.
+DURABLE PART: `__tests__/owasp-ids.test.ts` reads the engine sources AND the homepage
+and refuses any non-canonical pairing, any id used for two categories, and any
+category filed under two ids. It found the 2023 numbering on its first run - a defect
+nobody had reported. Controls: engine collision fails 3 of 4; scorecard defect fails 1 of 6.
+
+### 2. A probe lost to a timeout was never retried (`f4c29e9`)
+The paid report's LLM09 shipped at 3-of-4 PARTIAL COVERAGE. Stored evidence named the
+cause exactly: `mi-1: error (Endpoint request failed (offline, blocked, or timed out).)`
+`sendProbe` retried 429s but not a thrown fetch, though the coverage cost is identical.
+Now bounded at one retry, carried explicitly as `transient`, set ONLY where the fetch
+threw. Deliberately NOT retried: any HTTP status and a blocked target - deterministic,
+so a retry buys the same answer and spends the scanned bot's rate-limit budget.
+Control: disabling the retry loop fails 2 of that file's 51 tests.
+NOTE: this corrects the standing theory. The lost probe was NOT rate limiting - the
+cap raise (cedf909) was already in effect. It was a transport blip.
+
+### 3. Advanced was sold as "Full OWASP LLM Top-10 coverage" (`aed55a4`)
+All 10 categories are declared, but LLM03/LLM04/LLM08 are advisory-only and the
+engine's own evidence text says an external black-box scan "cannot" verify them.
+Now "All 10 OWASP LLM categories - 7 probed live, 3 advisory" [VERIFIED: read off the
+deployed page]. A test derives all three numbers from `ADVISORY_KEYS` and the declared
+id set, so the sentence cannot drift from the code.
+
+### 4. Three docs asserted a defect that no longer exists (`aed55a4`)
+BUSINESS-OPS-JOURNEY-MAP, USER-JOURNEY-MAP and the generated doc-center all still said
+"an Advanced ($197) or Enterprise ($497) customer receives the same 5-check scan as a
+$47 customer". FALSE now: `runEngineAndPersist` takes a required `tier` and forwards it,
+`testsForTier` returns core+extended for advanced/enterprise, and Enterprise scan
+c498084a persisted 15 rows [VERIFIED: code read + direct query]. Marked CORRECTED with
+evidence and kept as the running record. Left alone, a future session "fixes" a non-bug.
+
+## Still open - and WHY each one is not mine to close
+
+| Item | Blocker |
+|---|---|
+| Queue countdown browser render | `/command-center/*` redirects to Google admin sign-in. Nova will not authenticate as Creator. Pure functions are unit-tested; the DOM render is not. |
+| Admin-bypass positive case | Same admin sign-in gate. |
+| Self-chaining drain under real burst | Needs a genuine load run against production. |
+| Claim atomicity at Postgres level | Tests prove the predicate sent and the zero-rows reading, not DB-level atomicity. Needs a real concurrent dispatch. |
+| Advanced vs Enterprise price gap | `testsForTier` returns an IDENTICAL 15-check set for both [VERIFIED: lib/scan-engine.ts:280]. Enterprise bullets claim process extras, not more checks, so this is a pricing decision, not a defect. |
+| Local `npm run build` | `.env.local` Sensitive values are blank on `vercel env pull`. Restoring them is a secrets action. Pre-existing [VERIFIED: control build at clean HEAD fails identically]. |
