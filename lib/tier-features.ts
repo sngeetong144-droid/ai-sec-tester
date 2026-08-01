@@ -34,7 +34,12 @@ export const TIER_FEATURES: Record<ScanTier, readonly string[]> = {
   ],
   advanced: [
     "Everything in Normal",
-    "Full OWASP LLM Top-10 coverage",
+    // Was "Full OWASP LLM Top-10 coverage". All 10 categories ARE declared, but
+    // LLM03 (supply chain), LLM04 (data/model poisoning) and LLM08 (vector store)
+    // are advisory-only - scan-engine.ts ADVISORY_KEYS, and its own evidence text
+    // says an external black-box scan "cannot" verify them. A buyer reads
+    // "coverage" as "tested", so the honest claim states the split.
+    "All 10 OWASP LLM categories — 7 probed live, 3 advisory",
     "Deeper probes per category",
     "PDF reports emailed automatically",
   ],

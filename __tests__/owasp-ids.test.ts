@@ -121,3 +121,32 @@ test("no category name is filed under two different OWASP ids", () => {
     .map(([name, ids]) => `${name} -> ${[...ids].join(" | ")}`);
   expect(split).toEqual([]);
 });
+// ── the tier claim must match what the engine actually probes ────────────────
+// The Advanced bullet used to read "Full OWASP LLM Top-10 coverage". All 10
+// categories are declared, but three are advisory-only and the engine's own
+// evidence text says a black-box scan "cannot" verify them. A buyer reads
+// "coverage" as "tested". This binds the sentence to the code so it cannot drift.
+
+test("the Advanced tier claim states the real probed/advisory split", async () => {
+  const { TIER_FEATURES } = await import("../lib/tier-features");
+  const engineSrc = readFileSync(join(LIB, "scan-engine.ts"), "utf8");
+
+  const advisoryMatch = engineSrc.match(/const ADVISORY_KEYS = new Set\(\[([^\]]*)\]\)/);
+  expect(advisoryMatch).not.toBeNull();
+  const advisory = advisoryMatch![1].split(",").filter((s) => s.trim().length > 0).length;
+
+  const declared = new Set([...engineSrc.matchAll(/OWASP (LLM\d{2})/g)].map((m) => m[1])).size;
+  const probed = declared - advisory;
+
+  // Guards the guard: if either count collapses the assertion below is vacuous.
+  expect(declared).toBe(10);
+  expect(advisory).toBeGreaterThan(0);
+
+  const claim = TIER_FEATURES.advanced.find((f) => /OWASP/i.test(f));
+  expect(claim).toBeDefined();
+  for (const n of [declared, probed, advisory]) {
+    expect(claim!).toContain(String(n));
+  }
+  // The overstated wording must not come back.
+  expect(TIER_FEATURES.advanced.join(" ").toLowerCase()).not.toContain("full owasp");
+});

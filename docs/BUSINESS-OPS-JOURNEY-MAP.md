@@ -117,6 +117,15 @@ The product's differentiator — *authorization-first, a human approves before a
 
 > ### 🔴 CRITICAL — the paid tier never reaches the engine
 > `executeScan` → `runEngineAndPersist` → **`runScanEngine`** (`lib/scan-engine.ts`, **5 checks, fixed**). `runEngineAndPersist` accepts **no tier parameter**. The tiered engine (`runTieredScanEngine`: basic 5 / pro 10 / enterprise 15) is only reachable from `app/api/local-scan/route.ts` — **never from the paid path.**
+
+> **[CORRECTED 2026-08-01]** The claim below is STALE and no longer true.
+> `runEngineAndPersist` (lib/scan-persistence.ts:21) now takes a required
+> `tier: ScanTier` argument and forwards it to `runScanEngine`, and
+> `testsForTier` (lib/scan-engine.ts:279) returns the core 5 for basic and
+> core 5 + 10 extended for advanced/enterprise. Verified against production:
+> Enterprise scan `c498084a` persisted 15 result rows, not 5. Kept below as
+> the running record of a real defect that was fixed, NOT as current state.
+
 > **An Advanced ($197) or Enterprise ($497) customer receives the same 5-check scan as a $47 customer.** The landing's "Full OWASP LLM Top-10 coverage" (landing.tsx L92) is not delivered by the live code.
 > **This is a fulfilment-integrity defect on the money path. Wire tier → engine before selling Advanced/Enterprise, or stop selling them.**
 

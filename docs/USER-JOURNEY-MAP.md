@@ -89,6 +89,15 @@ flowchart TD
 
 > ### CRITICAL — the paid tier does not change the scan
 > `executeScan` (`app/actions/scans.ts`) → `runEngineAndPersist` (`lib/scan-persistence.ts`) → **`runScanEngine`** (`lib/scan-engine.ts`, **5 checks, fixed**). `runEngineAndPersist` takes **no tier argument**. The multi-tier engine `runTieredScanEngine` (basic 5 / pro 10 / enterprise 15 checks, `lib/tiered-scan-engine.ts`) is called **only** from `app/api/local-scan/route.ts` — a route the paid pipeline never touches.
+
+> **[CORRECTED 2026-08-01]** The claim below is STALE and no longer true.
+> `runEngineAndPersist` (lib/scan-persistence.ts:21) now takes a required
+> `tier: ScanTier` argument and forwards it to `runScanEngine`, and
+> `testsForTier` (lib/scan-engine.ts:279) returns the core 5 for basic and
+> core 5 + 10 extended for advanced/enterprise. Verified against production:
+> Enterprise scan `c498084a` persisted 15 result rows, not 5. Kept below as
+> the running record of a real defect that was fixed, NOT as current state.
+
 > **Therefore:** an Advanced ($197) or Enterprise ($497) customer today receives the **same 5-check scan** as a Normal ($47) customer. The landing's "Full OWASP LLM Top-10 coverage" claim is **not delivered by the live code path.**
 > **[GAP: wire tier → engine before any Advanced/Enterprise sale, or stop selling those tiers.]** This is a refund/chargeback and a false-advertising exposure, not a nice-to-have.
 
