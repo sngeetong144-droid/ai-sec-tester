@@ -8,6 +8,21 @@ import { useEffect, useState } from "react";
  * showing that is the point. While the dispatcher is self-chaining the daily
  * clock is irrelevant, so it says so rather than counting to a moot trigger.
  */
+/** hh:mm:ss, clamped at zero so a passed deadline never renders negatives. */
+export function formatCountdown(msLeft: number): string {
+  const s = Math.max(0, Math.floor(msLeft / 1000));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+}
+
+/** The whole sentence, as a pure function so it is testable without a DOM. */
+export function countdownLabel(queued: number, draining: boolean, msLeft: number): string {
+  const head = `${queued} paid scan${queued === 1 ? "" : "s"} queued`;
+  if (queued === 0) return `${head} — queue empty.`;
+  if (draining) return `${head} — draining now, ~100–170s each; the dispatcher re-triggers itself.`;
+  return `${head} — next dispatch in ${formatCountdown(msLeft)} (daily cron, 00:00 UTC).`;
+}
+
 export function QueueCountdown({
   queued,
   draining,
@@ -23,26 +38,9 @@ export function QueueCountdown({
     return () => clearInterval(t);
   }, [nextRunIso]);
 
-  const pad = (n: number) => String(Math.max(0, n)).padStart(2, "0");
-  const hh = pad(Math.floor(left / 3_600_000));
-  const mm = pad(Math.floor((left % 3_600_000) / 60_000));
-  const ss = pad(Math.floor((left % 60_000) / 1000));
-
   return (
     <p className="text-sm text-slate-500" suppressHydrationWarning>
-      <span className="font-medium text-slate-800">
-        {queued} paid scan{queued === 1 ? "" : "s"} queued
-      </span>
-      {queued === 0 ? (
-        " — queue empty."
-      ) : draining ? (
-        " — draining now, ~100–170s each; the dispatcher re-triggers itself."
-      ) : (
-        <>
-          {" "}
-          — next dispatch in {hh}:{mm}:{ss} (daily cron, 00:00 UTC).
-        </>
-      )}
+      {countdownLabel(queued, draining, left)}
     </p>
   );
 }
