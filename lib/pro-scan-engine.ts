@@ -2,12 +2,17 @@
  * pro-scan-engine.ts — Pro tier scan checks (5 additional OWASP LLM tests).
  *
  * Adds to the Basic 5:
- *   LLM02 — Insecure Output Handling (XSS / content injection risk)
- *   LLM04 — Model Denial-of-Service (rate limiting absent)
- *   LLM08 — Excessive Agency (bot claims external action capability)
- *   LLM09 — Overreliance (no disclaimers for high-stakes advice)
+ *   LLM05 — Improper Output Handling (XSS / content injection risk)
+ *   LLM10 — Unbounded Consumption (rate limiting absent)
+ *   LLM06 — Excessive Agency (bot claims external action capability)
+ *   LLM09 — Misinformation (no disclaimers for high-stakes advice)
  *   API01 — CORS Misconfiguration (wildcard or permissive Access-Control-Allow-Origin)
  *
+ *
+ * OWASP numbering: this file follows the 2025 Top 10 for LLM Applications,
+ * same as every other engine. It was previously on the 2023 list (LLM02
+ * Insecure Output, LLM04 Model DoS, LLM09 Overreliance), so one product
+ * reported two different taxonomies. Pinned by __tests__/owasp-ids.test.ts.
  * Same design rules as scan-engine.ts:
  *   - No LLM used. Deterministic + real front-end signals only.
  *   - Simulated verdicts are clearly labelled.
@@ -27,7 +32,7 @@ export const PRO_TEST_DEFINITIONS: TestDefinition[] = [
   {
     key: "insecure_output_handling",
     name: "Insecure Output Handling (XSS / Injection)",
-    category: "OWASP LLM02 — Insecure Output Handling",
+    category: "OWASP LLM05 — Improper Output Handling",
     severity: "high",
     detail:
       "Checks whether chatbot output is rendered as raw HTML or executes dynamic scripts, enabling cross-site scripting or content injection if the bot is manipulated into producing malicious markup.",
@@ -37,7 +42,7 @@ export const PRO_TEST_DEFINITIONS: TestDefinition[] = [
   {
     key: "model_dos",
     name: "Model Denial-of-Service (No Rate Limiting)",
-    category: "OWASP LLM04 — Model Denial of Service",
+    category: "OWASP LLM10 — Unbounded Consumption",
     severity: "medium",
     detail:
       "Probes whether the chatbot endpoint enforces rate-limiting controls. Absence of rate-limit headers or throttling responses means an attacker can flood the endpoint with expensive inference requests, exhausting quota and causing service outages.",
@@ -47,7 +52,7 @@ export const PRO_TEST_DEFINITIONS: TestDefinition[] = [
   {
     key: "excessive_agency",
     name: "Excessive Agency (External Action Claims)",
-    category: "OWASP LLM08 — Excessive Agency",
+    category: "OWASP LLM06 — Excessive Agency",
     severity: "high",
     detail:
       "Tests whether the chatbot or its surrounding page signals that the bot can autonomously browse the web, execute code, send emails, or take other external actions without explicit user confirmation — a vector that attackers exploit via indirect prompt injection.",
@@ -57,7 +62,7 @@ export const PRO_TEST_DEFINITIONS: TestDefinition[] = [
   {
     key: "overreliance_disclaimer",
     name: "Overreliance Risk (No High-Stakes Disclaimers)",
-    category: "OWASP LLM09 — Overreliance",
+    category: "OWASP LLM09 — Misinformation",
     severity: "medium",
     detail:
       "Checks whether the chatbot or its host page provides appropriate disclaimers when the bot is used in high-stakes domains (medical, legal, financial, safety). Without these, users may act on AI output as if it were authoritative professional advice.",

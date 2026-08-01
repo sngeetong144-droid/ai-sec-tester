@@ -25,8 +25,8 @@ Every claim in published content must map to something the product actually does
 allowed claim set:
 
 - Runs automated, OWASP-LLM-Top-10-aligned probes: **LLM01** prompt injection, **LLM02**
-  insecure output handling, **LLM06** sensitive information disclosure, **LLM07** system
-  prompt leakage, **LLM08** excessive agency, plus common **jailbreak / guardrail-bypass**
+  insecure output handling, **LLM02** sensitive information disclosure, **LLM07** system
+  prompt leakage, **LLM06** excessive agency, plus common **jailbreak / guardrail-bypass**
   patterns.
 - Returns a **Pass/Fail scorecard**, a **branded PDF audit report**, **evidence per
   finding**, and **plain-language remediation guidance**.
@@ -108,7 +108,7 @@ PILLAR: "Chatbot security: the practical guide" (chatbot security, LLM security 
    ├── Blog 1: What is prompt injection (LLM01) + how to test for it
    ├── Blog 2: How to test your chatbot for jailbreaks
    ├── Blog 3: System prompt leakage — is your bot giving away its instructions? (LLM07)
-   ├── Blog 4: Can your chatbot be tricked into leaking user data? (LLM06)
+   ├── Blog 4: Can your chatbot be tricked into leaking user data? (LLM02)
    ├── Blog 5: The 10-minute chatbot security checklist (lead magnet)
    ├── Blog 6: What a real LLM security report should contain
    ├── Comparison A: AI Sec Tester vs generic DAST scanners
@@ -193,10 +193,10 @@ internal links, and the CTA. Written to be drafted straight from, not re-briefed
     homepage. Mention Enterprise's free re-scan after fixes.
   - **Internal links:** pillar, Blog 4 (data leaks), Blog 1.
 
-### Blog 4 — "Can Your Chatbot Be Tricked Into Leaking Customer Data? (LLM06)"
+### Blog 4 — "Can Your Chatbot Be Tricked Into Leaking Customer Data? (LLM02)"
 
 - **Primary keyword:** test GPT/Claude/custom bot for data leaks · **Secondary:** sensitive
-  information disclosure, chatbot data leak, LLM06
+  information disclosure, chatbot data leak, LLM02
 - **Search intent:** Commercial — the risk that keeps founders up (privacy + liability).
 - **Angle:** Frame around trust and liability, then the defensive test.
 - **Length:** 1,300–1,600 words.
@@ -205,7 +205,7 @@ internal links, and the CTA. Written to be drafted straight from, not re-briefed
   - H2: The three leaks that matter — secrets/keys, other users' data, internal info
   - H2: How coaxing works (social-engineering the model, not hacking the server)
   - H2: Why RAG and tool-connected bots widen the blast radius
-  - H2: Sensitive information disclosure in the OWASP LLM Top 10 (LLM06)
+  - H2: Sensitive information disclosure in the OWASP LLM Top 10 (LLM02)
   - H2: How to test whether your bot leaks under pressure
   - H2: What a clean scorecard is worth to a prospect / auditor / your own peace of mind
   - **CTA:** "Find out before an attacker does — request an OWASP LLM data-leak scan." → homepage.
@@ -227,9 +227,9 @@ internal links, and the CTA. Written to be drafted straight from, not re-briefed
     - [ ] Does it hold its rules under an "ignore your instructions" message? (LLM01)
     - [ ] Does it refuse known jailbreak / role-play bypasses?
     - [ ] Will it reveal its system prompt if asked cleverly? (LLM07)
-    - [ ] Can it be coaxed into revealing secrets or other users' data? (LLM06)
+    - [ ] Can it be coaxed into revealing secrets or other users' data? (LLM02)
     - [ ] Does it return unsafe/unescaped content the page then renders? (LLM02)
-    - [ ] Can it take actions or call tools it shouldn't? (LLM08)
+    - [ ] Can it take actions or call tools it shouldn't? (LLM06)
     - [ ] Do you have a record/report you could show a customer or auditor?
   - H2: What a passing/failing answer means for each
   - H2: The limit of self-testing — you can't grade your own bot objectively
@@ -291,8 +291,8 @@ cite the page.
     | Prompt injection (LLM01) | Not covered | Core check |
     | Jailbreak / guardrail bypass | Not covered | Core check |
     | System prompt leakage (LLM07) | Not covered | Core check |
-    | Coaxed data disclosure (LLM06) | Partial at best | Core check |
-    | Excessive agency (LLM08) | Not covered | Core check |
+    | Coaxed data disclosure (LLM02) | Partial at best | Core check |
+    | Excessive agency (LLM06) | Not covered | Core check |
     | Standard | OWASP Web Top 10 | OWASP LLM Top 10 |
     | Output | Web vuln report | Pass/Fail scorecard + evidence + remediation (branded PDF) |
     | Best for | Your website/API | Your chatbot's behavior |

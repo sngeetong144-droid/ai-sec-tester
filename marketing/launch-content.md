@@ -49,9 +49,9 @@ Checks aligned with the OWASP Top-10 for LLM Applications — the failure modes 
 
 - **LLM01 · Prompt injection** — Can a crafted message override your instructions or hijack the bot's behavior?
 - **LLM02 · Insecure output handling** — Does the bot return unsafe content that could break the page consuming it?
-- **LLM06 · Sensitive info disclosure** — Will it reveal secrets, keys, or other users' data when coaxed?
+- **LLM02 · Sensitive info disclosure** — Will it reveal secrets, keys, or other users' data when coaxed?
 - **LLM07 · System prompt leakage** — Can an attacker extract your hidden system prompt and business logic?
-- **LLM08 · Excessive agency** — Does the bot take actions or call tools it shouldn't be allowed to?
+- **LLM06 · Excessive agency** — Does the bot take actions or call tools it shouldn't be allowed to?
 - **Guardrail bypass** — Common jailbreak patterns that trick the model past its safety rules.
 
 ---

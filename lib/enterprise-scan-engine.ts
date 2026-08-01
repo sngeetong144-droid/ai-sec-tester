@@ -65,7 +65,7 @@ export const ENTERPRISE_TEST_DEFINITIONS: TestDefinition[] = [
   {
     key: "auth_context_exposure",
     name: "Authentication Context Exposure",
-    category: "OWASP LLM06 — Sensitive Information Disclosure (Auth Context)",
+    category: "OWASP LLM02 — Sensitive Information Disclosure (Auth Context)",
     severity: "critical",
     detail:
       "Checks whether authentication tokens, JWT patterns, session identifiers, or user-context blobs are embedded in the page's client-side HTML or JavaScript — exposing auth material the chatbot could be tricked into echoing back to attackers.",

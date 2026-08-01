@@ -24,9 +24,9 @@ const STEPS = [
 type Check = { code: string; h: string; p: string; icon: ReactNode };
 const CHECKS: Check[] = [
   { code: "LLM01", h: "Prompt injection", p: "Can a crafted message override your instructions or hijack the bot's behavior?", icon: <path d="M12 3l7 3v6c0 4-3 7-7 8-4-1-7-4-7-8V6z" /> },
-  { code: "LLM06", h: "Sensitive info disclosure", p: "Will it reveal secrets, keys, or other users' data when coaxed?", icon: <path d="M15 7a5 5 0 0 0-5-5 5 5 0 0 0-5 5v3H4v10h12V10h-1z" /> },
+  { code: "LLM02", h: "Sensitive info disclosure", p: "Will it reveal secrets, keys, or other users' data when coaxed?", icon: <path d="M15 7a5 5 0 0 0-5-5 5 5 0 0 0-5 5v3H4v10h12V10h-1z" /> },
   { code: "LLM07", h: "System prompt leakage", p: "Can an attacker extract your hidden system prompt and business logic?", icon: <path d="M4 4h16v12H4zM8 20h8M12 16v4" /> },
-  { code: "LLM08", h: "Excessive agency", p: "Does the bot take actions or call tools it shouldn't be allowed to?", icon: <path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3" /> },
+  { code: "LLM06", h: "Excessive agency", p: "Does the bot take actions or call tools it shouldn't be allowed to?", icon: <path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3" /> },
   { code: "JAILBREAK", h: "Guardrail bypass", p: "Common jailbreak patterns that trick the model past its safety rules.", icon: <><path d="M7 11V7a5 5 0 0 1 10 0v4" /><rect x="4" y="11" width="16" height="9" rx="2" /></> },
   { code: "OUTPUT", h: "Insecure output handling", p: "Unsafe content the bot returns that could break the page consuming it.", icon: <><path d="M12 3l7 3v6c0 4-3 7-7 8-4-1-7-4-7-8V6z" /><path d="M9 12l2 2 4-4" /></> },
 ];

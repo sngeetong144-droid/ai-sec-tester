@@ -1,6 +1,6 @@
 # AI Sec Tester — Video / Social Scripts (Draft)
 
-Grounded in actual product (read `app/_components/landing.tsx`, `lib/tier-features.ts`): scanner runs OWASP LLM Top-10-aligned checks (prompt injection LLM01, sensitive info disclosure LLM06, system prompt leakage LLM07, excessive agency LLM08, jailbreak/guardrail bypass, insecure output handling) against a customer's chatbot; returns a Pass/Fail scorecard with a letter grade, evidence per finding, and remediation guidance as a branded PDF. Flow is NOT self-serve: Request → human/automated review of authorization (usually within 1 business day) → approved requests get an emailed Stripe payment link → scan runs → report emailed. Tiers: Normal $47 (5 checks, 1 scan), Advanced $197 (full OWASP LLM Top-10 coverage, deeper probes), Enterprise $497 (identity verification, human review, 1 free re-scan). Brand: The Souls of AI, site scan.thesoulsofai.com. No invented stats/testimonials used below — social-proof slots are marked TBD.
+Grounded in actual product (read `app/_components/landing.tsx`, `lib/tier-features.ts`): scanner runs OWASP LLM Top-10-aligned checks (prompt injection LLM01, sensitive info disclosure LLM02, system prompt leakage LLM07, excessive agency LLM06, jailbreak/guardrail bypass, insecure output handling) against a customer's chatbot; returns a Pass/Fail scorecard with a letter grade, evidence per finding, and remediation guidance as a branded PDF. Flow is NOT self-serve: Request → human/automated review of authorization (usually within 1 business day) → approved requests get an emailed Stripe payment link → scan runs → report emailed. Tiers: Normal $47 (5 checks, 1 scan), Advanced $197 (full OWASP LLM Top-10 coverage, deeper probes), Enterprise $497 (identity verification, human review, 1 free re-scan). Brand: The Souls of AI, site scan.thesoulsofai.com. No invented stats/testimonials used below — social-proof slots are marked TBD.
 
 ---
 
@@ -15,7 +15,7 @@ Length: 32s
 | 0:00–0:03 | Screen recording: typing into a company chatbot widget | "Would YOUR chatbot fall for this?" | "Watch what happens when I try this on a live support bot." |
 | 0:03–0:10 | Type a jailbreak-style prompt into the widget (generic, non-working example — do not demo a real exploit against a real target) | "Prompt injection: LLM01" | "This is called prompt injection — it's #1 on the OWASP LLM Top 10." |
 | 0:10–0:18 | Cut to AI Sec Tester scorecard mock (from landing page) — grade "A-", rows PASS/REVIEW | "Pass/Fail scorecard. Evidence per finding." | "AI Sec Tester runs checks like this against your chatbot automatically — prompt injection, jailbreaks, system prompt leaks, data disclosure." |
-| 0:18–0:25 | Scroll through the 6 check cards (LLM01, LLM06, LLM07, LLM08, jailbreak, insecure output) | "5–10 OWASP-aligned checks" | "You get a graded report with exactly what failed and how to fix it." |
+| 0:18–0:25 | Scroll through the 6 check cards (LLM01, LLM02, LLM07, LLM06, jailbreak, insecure output) | "5–10 OWASP-aligned checks" | "You get a graded report with exactly what failed and how to fix it." |
 | 0:25–0:30 | Pricing tiers on screen, $47 highlighted | "Scans start at $47" | "Request a scan — we verify you're authorized to test the bot, then send you a report." |
 | 0:30–0:32 | Logo card | "scan.thesoulsofai.com" | "Link in bio." |
 
@@ -100,7 +100,7 @@ VO tone: calm, procedural, credibility-first — this is the trust-building asse
 Purpose: prove the report has real technical substance, not just a letter grade — for a more technical ICP (eng leads, security-adjacent buyers).
 
 Shot list:
-1. (0:00–0:08) Open directly on a scorecard row flipped to "REVIEW" (LLM06 — sensitive info disclosure), no landing-page preamble.
+1. (0:00–0:08) Open directly on a scorecard row flipped to "REVIEW" (LLM02 — sensitive info disclosure), no landing-page preamble.
 2. (0:08–0:20) Click/scroll into the finding detail: the evidence block (what was sent, what came back) — VO explains this is exactly what an attacker would see.
 3. (0:20–0:35) Scroll to remediation guidance section — VO reads the plain-language fix, emphasizes it's dev-actionable, not generic advice.
 4. (0:35–0:50) Zoom out to full report structure: grade, 5-6 category rows, evidence-per-finding pattern repeats.
