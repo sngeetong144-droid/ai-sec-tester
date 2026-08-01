@@ -44,6 +44,44 @@ function pairs(): { id: string; name: string; file: string }[] {
   return out;
 }
 
+// The homepage carries bare codes next to a category NAME, in a different shape
+// from the engines. The first version of this test read only lib/, so it passed
+// green while the hero scorecard still said "LLM06 Sensitive data exposure" -
+// caught by reading the deployed page, not by the suite. Covered now.
+const LANDING = join(import.meta.dir, "..", "app", "_components", "landing.tsx");
+const LANDING_PAIR = /code:\s*"(LLM\d{2})",\s*(?:h|name):\s*"([^"]+)"/g;
+
+const HOMEPAGE_ALIASES: Record<string, string> = {
+  "sensitive data exposure": "sensitive information disclosure",
+  "sensitive info disclosure": "sensitive information disclosure",
+  "unsafe content generation": "improper output handling",
+  "jailbreak / persona bypass": "prompt injection",
+  "system prompt disclosure": "system prompt leakage",
+  "system prompt leakage": "system prompt leakage",
+  "excessive agency": "excessive agency",
+  "prompt injection": "prompt injection",
+};
+
+function landingPairs(): { id: string; name: string }[] {
+  const src = readFileSync(LANDING, "utf8");
+  return [...src.matchAll(LANDING_PAIR)].map((m) => ({
+    id: m[1],
+    name: m[2].trim().toLowerCase(),
+  }));
+}
+
+test("the homepage actually declares OWASP codes", () => {
+  expect(landingPairs().length).toBeGreaterThan(5);
+});
+
+test("every homepage code matches the canonical category it names", () => {
+  const wrong = landingPairs().filter(({ id, name }) => {
+    const canonicalName = HOMEPAGE_ALIASES[name];
+    if (!canonicalName) return true; // an unmapped label is itself a defect
+    return CANONICAL[id] !== canonicalName;
+  });
+  expect(wrong.map((w) => `${w.id} = ${w.name}`)).toEqual([]);
+});
 test("the engines actually declare OWASP categories", () => {
   // Guards the guard: if the regex stops matching, every assertion below passes
   // vacuously and the test becomes decoration.

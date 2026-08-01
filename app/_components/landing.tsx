@@ -42,7 +42,7 @@ const SCORECARD = [
   { code: "LLM07", name: "System prompt disclosure", verdict: "PASS" as const },
   { code: "LLM01", name: "Prompt injection", verdict: "PASS" as const },
   { code: "LLM01", name: "Jailbreak / persona bypass", verdict: "PASS" as const },
-  { code: "LLM06", name: "Sensitive data exposure", verdict: "REVIEW" as const },
+  { code: "LLM02", name: "Sensitive data exposure", verdict: "REVIEW" as const },
   { code: "LLM05", name: "Unsafe content generation", verdict: "PASS" as const },
 ];
 
