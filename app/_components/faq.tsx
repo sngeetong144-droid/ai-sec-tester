@@ -10,7 +10,10 @@ import { FAQS } from "@/app/_components/landing";
 
 const SITE_URL = "https://scan.thesoulsofai.com";
 
-const { basic: NORMAL, advanced: ADVANCED, enterprise: ENTERPRISE } = PAYMENT_LINKS;
+// Enterprise is NOT destructured — retired by ruling R-15. A schema.org Offer is a
+// machine-readable price quote to answer engines; emitting one for a tier nobody can
+// buy advertises a product that does not exist.
+const { basic: NORMAL, advanced: ADVANCED } = PAYMENT_LINKS;
 
 export function SeoJsonLd() {
   const organization = {
@@ -34,7 +37,6 @@ export function SeoJsonLd() {
     offers: [
       { "@type": "Offer", name: "Normal", price: String(NORMAL.priceUsd), priceCurrency: "USD", description: "One-time reviewed scan with 5 OWASP LLM checks and a branded PDF scorecard." },
       { "@type": "Offer", name: "Advanced", price: String(ADVANCED.priceUsd), priceCurrency: "USD", description: "One-time scan covering all 10 OWASP LLM categories: 7 probed live, 3 advisory." },
-      { "@type": "Offer", name: "Enterprise", price: String(ENTERPRISE.priceUsd), priceCurrency: "USD", description: "Human-reviewed authorization before the scan runs, plus the full branded PDF report with evidence per finding." },
     ],
   };
 

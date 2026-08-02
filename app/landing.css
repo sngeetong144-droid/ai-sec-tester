@@ -180,7 +180,9 @@
 }
 
 /* pricing */
-.aist-landing .price { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; align-items: stretch; }
+/* Two columns since ruling R-15 retired the Enterprise tier. Was repeat(3, 1fr),
+   which left an empty third column once the tier came off the page. */
+.aist-landing .price { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; align-items: stretch; max-width: 760px; margin: 0 auto; }
 .aist-landing .tier { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 32px; display: flex; flex-direction: column; transition: 0.3s; }
 .aist-landing .tier:hover { box-shadow: var(--shadow-md); }
 .aist-landing .tier.feat { border-color: var(--accent); box-shadow: var(--shadow-lg); position: relative; }

@@ -108,7 +108,7 @@ export default async function ScanDetail({
         {purchase === "success" && (
           <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             Payment received — thank you! Our team will reach out to schedule
-            your Enterprise deep scan.
+            your Advanced deep scan.
           </div>
         )}
         {purchase === "cancelled" && (
@@ -269,8 +269,8 @@ export default async function ScanDetail({
 
         {/* Upsell only makes sense BELOW the top tier. The extended checks
             (transport/HSTS/CSP/clickjacking + the advisory set) exist only on
-            advanced/enterprise, so their presence means this buyer already has
-            the deep scan — showing them a $497 upgrade card is insulting and
+            advanced (and the retired enterprise), so their presence means this
+            buyer already has the deep scan — showing them an upgrade card is insulting and
             makes the report look like a sales page. */}
         {!scan.results.some((r) => r.test_key === "transport_https") && (
           <DeepScanCta

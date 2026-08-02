@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, type FocusEvent, type FormEvent } from "react";
-import { PAYMENT_LINKS } from "@/lib/payment-links";
+import { PAYMENT_LINKS, SELLABLE_TIERS } from "@/lib/payment-links";
 import { COUNTRIES } from "@/lib/jurisdiction-policy";
 
-const PLAN_LABELS: Record<string, string> = {
-  basic: PAYMENT_LINKS.basic.label,
-  advanced: PAYMENT_LINKS.advanced.label,
-  enterprise: PAYMENT_LINKS.enterprise.label,
-};
+// Derived from SELLABLE_TIERS, never hand-listed: this is the plan a customer
+// actually submits, so a retired tier appearing here would take real orders for a
+// product that is no longer sold. Enterprise was retired by ruling R-15.
+const PLAN_LABELS: Record<string, string> = Object.fromEntries(
+  SELLABLE_TIERS.map((t) => [t, PAYMENT_LINKS[t].label]),
+);
 
 /**
  * Progressive-enhancement scroll reveal, ported from soul-site.js.
@@ -370,7 +371,7 @@ export function RequestForm() {
       : GEO_BLOCK_TARGET
     : "";
 
-  // Tier CTAs elsewhere on the page carry data-plan="basic|advanced|enterprise";
+  // Tier CTAs elsewhere on the page carry data-plan="basic|advanced";
   // clicking one preselects the matching plan here (static data-tier behavior).
   useEffect(() => {
     const btns = Array.from(document.querySelectorAll<HTMLElement>(".aist-landing [data-plan]"));
@@ -531,7 +532,7 @@ export function RequestForm() {
       <div className="field">
         <label htmlFor="rf-plan">Plan</label>
         <select id="rf-plan" name="plan" value={plan} onChange={(e) => setPlan(e.target.value)} required>
-          {(["basic", "advanced", "enterprise"] as const).map((k) => (
+          {SELLABLE_TIERS.map((k) => (
             <option key={k} value={PLAN_LABELS[k]}>
               {PLAN_LABELS[k]}
             </option>

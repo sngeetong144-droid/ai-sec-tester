@@ -25,7 +25,9 @@ per finding and plain-language remediation guidance — in seconds.
 
 - Normal — $47 per scan: 5 OWASP LLM checks, Pass/Fail scorecard, branded PDF, evidence + remediation per finding, scan starts automatically after payment
 - Advanced — $197 per scan: all 10 OWASP LLM categories: 7 probed live, 3 advisory (most popular)
-- Enterprise — $497 per chatbot: automated risk triage, authorization reviewed by a human before the scan runs, full branded PDF report with evidence per finding
+
+Every scan, at every price, includes automated risk triage and an authorization review
+by a human before the scan runs. There is no higher tier.
 
 ## Compliance
 
@@ -35,6 +37,6 @@ non-invasive and aligned with the OWASP Top-10 for LLM Applications.
 ## Links
 
 - Scanner: https://scan.thesoulsofai.com/
-- Enterprise deep scan: https://scan.thesoulsofai.com/enterprise
+- Authorized deep scan request: https://scan.thesoulsofai.com/enterprise
 - Sign in: https://scan.thesoulsofai.com/auth/login
 - Parent brand — The Souls of AI: https://thesoulsofai.com

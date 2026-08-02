@@ -10,8 +10,10 @@ import { RevealScripts, ChatBubble, RequestForm } from "@/app/_components/landin
 // design's own site.css + inline <style>, scoped under `.aist-landing`).
 //
 // Product flow: the public landing takes NO payment and shows NO checkout link.
-// Every "Request a scan" / tier CTA routes to /enterprise (the existing scan
-// authorization request flow). Prices are sourced from lib/payment-links.ts.
+// Every "Request a scan" / tier CTA routes to the #request form ON THIS PAGE
+// (RequestForm, in landing-client). It does NOT route to /enterprise — that is a
+// separate ownership-verification funnel writing enterprise_requests. Prices are
+// sourced from lib/payment-links.ts.
 
 const REQUEST_HREF = "#request";
 
@@ -66,7 +68,10 @@ export const FAQS = [
   { q: "What do I actually get?", a: "A branded PDF scorecard with a grade, each check's Pass/Fail status, evidence for every finding, and remediation guidance you can hand to a developer." },
 ];
 
-const { basic: NORMAL, advanced: ADVANCED, enterprise: ENTERPRISE } = PAYMENT_LINKS;
+// Enterprise is NOT destructured: ruling R-15 retired it. The key still exists in
+// PAYMENT_LINKS for the underpayment guard and the historical rows, so pulling it
+// in here would silently put a retired tier back on the page.
+const { basic: NORMAL, advanced: ADVANCED } = PAYMENT_LINKS;
 
 const TIERS = [
   {
@@ -90,17 +95,6 @@ const TIERS = [
     cta: "Request Advanced scan",
     btnClass: "btn btn-accent",
     features: TIER_FEATURES.advanced,
-  },
-  {
-    name: "Enterprise",
-    price: ENTERPRISE.priceUsd,
-    unit: "one-time · per chatbot",
-    desc: "Authorized deep scan with human review.",
-    feat: false,
-    tier: "enterprise",
-    cta: "Request Enterprise scan",
-    btnClass: "btn btn-ghost",
-    features: TIER_FEATURES.enterprise,
   },
 ];
 
@@ -408,7 +402,9 @@ export function LandingFooter() {
               <a href="#how">How it works</a>
               <a href="#checks">What we check</a>
               <a href="#pricing">Pricing</a>
-              <Link href="/enterprise">Enterprise</Link>
+              {/* Route kept (it is the ownership-verification funnel), but the
+                  label no longer names the tier retired by R-15. */}
+              <Link href="/enterprise">Authorized deep scan</Link>
             </div>
             <div>
               <h5>The Souls of AI</h5>

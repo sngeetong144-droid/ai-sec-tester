@@ -20,11 +20,14 @@ const META: Record<ScanTier, { name: string; unit: string; mode: string; product
     productLink: "scan.thesoulsofai.com/#pricing",
     features: TIER_FEATURES.advanced,
   },
+  // RETIRED by ruling R-15 (2026-08-02). Kept on this ADMIN surface only, so the
+  // operator can still read the price and link behind the three historical
+  // Enterprise sales. It is off every public buying surface.
   enterprise: {
     name: "Enterprise",
     unit: "one-time · per chatbot",
-    mode: "Reviewed by a human",
-    productLink: "scan.thesoulsofai.com/enterprise",
+    mode: "Retired — no longer sold",
+    productLink: "— withdrawn from sale",
     features: TIER_FEATURES.enterprise,
   },
 };
@@ -56,7 +59,7 @@ export default async function ProductsPage({
                 ${link.priceUsd}
               </div>
               <div style={{ fontSize: 11.5, color: COLORS.ink3 }}>{m.unit}</div>
-              <div style={{ marginTop: 8 }}><Badge kind={t === "enterprise" ? "warn" : "subtle"}>{m.mode}</Badge></div>
+              <div style={{ marginTop: 8 }}><Badge kind={PAYMENT_LINKS[t].retired ? "warn" : "subtle"}>{m.mode}</Badge></div>
               <ul style={{ listStyle: "none", padding: 0, margin: "12px 0", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
                 {m.features.map((f) => (
                   <li key={f} style={{ fontSize: 12.5, color: COLORS.ink2, display: "flex", gap: 6 }}>
@@ -85,14 +88,16 @@ export default async function ProductsPage({
         <Card>
           <CardTitle>Add-ons</CardTitle>
           <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8, fontSize: 12.5, color: COLORS.ink2 }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Included re-scan (Enterprise)</span><Badge kind="ok">Free</Badge></div>
-                      </div>
+            {/* "Included re-scan (Enterprise)" removed with ruling R-15. It was also
+                never real — app/actions/scans.ts:90 says the rescan path is not live. */}
+            <div style={{ color: COLORS.ink3 }}>No add-ons configured.</div>
+          </div>
         </Card>
         <Card style={{ background: COLORS.darkCard, border: "none" }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>Every plan is reviewed before pay</div>
           <div style={{ marginTop: 8, fontSize: 12.5, color: "#c9c6de", lineHeight: 1.5 }}>
-            Normal ($47) and Advanced ($197) run after approval + payment. Enterprise ($497) adds automated risk triage on top of the
-            same human authorization review every tier gets. No charge until approved. USD. Payments are Scalendo · Stripe-backed.
+            Normal ($47) and Advanced ($197) run after approval + payment — the two tiers on sale. Every tier gets the same automated
+            risk triage and human authorization review. No charge until approved. USD. Payments are Scalendo · Stripe-backed.
           </div>
         </Card>
       </div>

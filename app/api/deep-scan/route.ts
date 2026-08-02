@@ -12,9 +12,9 @@ export const dynamic = "force-dynamic";
  * POST /api/deep-scan
  * Body: { scanId?: string, email?: string, ownership_proof_id?: string }
  *
- * Authorizes an "Enterprise Grade" deep-scan request (ownership + domain
- * binding + SSRF/sanctions gate + audit), then hands back the canonical
- * Scalendo (Stripe-backed) enterprise payment link. Payment/settlement happen
+ * Authorizes a deep-scan upgrade request (ownership + domain binding +
+ * SSRF/sanctions gate + audit), then hands back the canonical
+ * Scalendo (Stripe-backed) Advanced payment link. Payment/settlement happen
  * on Scalendo — this route does NOT create a Stripe Checkout session. No auth
  * (demo-first).
  */
@@ -101,7 +101,11 @@ export async function POST(request: Request) {
       scanId: body.scanId || null,
       email: body.email || proof.email,
       targetUrl: proof.target_domain,
-      tier: "enterprise",
+      // Was "enterprise" — retired by ruling R-15. This upsell now sells Advanced,
+      // which runs the identical 15-check set (scan-engine.ts testsForTier returns
+      // the same tests for advanced and enterprise), so the delivered scan is
+      // unchanged; only the price and the label move.
+      tier: "advanced",
       ownershipProofId,
       resultHash: null,
     });
@@ -115,18 +119,18 @@ export async function POST(request: Request) {
     );
   }
 
-  // Payment is the canonical Scalendo (Stripe-backed) enterprise link. The link
+  // Payment is the canonical Scalendo (Stripe-backed) Advanced link. The link
   // owns its own checkout + success/cancel pages; we only hand it back.
-  const link = resolvePaymentLink("enterprise");
+  const link = resolvePaymentLink("advanced");
   if (!link) {
     return NextResponse.json(
-      { configured: true, error: "Enterprise payment link is not configured." },
+      { configured: true, error: "Advanced payment link is not configured." },
       { status: 500 },
     );
   }
 
   // Carry a client_reference_id. This checkout previously handed back the RAW
-  // payment link, so a settled $497 enterprise payment arrived at the webhook with
+  // payment link, so a settled deep-scan payment arrived at the webhook with
   // NOTHING on it to identify the buyer, the target, or the ownership proof it was
   // taken for - unmatchable even by hand. It still does not auto-fulfil (this flow
   // captures no full_name/country_declared, which scan_requests requires NOT NULL,

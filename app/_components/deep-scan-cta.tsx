@@ -161,7 +161,7 @@ export function DeepScanCta({
               ? `This scan ran ${categoriesRun} of the 5 core attack categories against your bot. `
               : "This scan did not complete any of the 5 core attack categories against your bot. "}
             Our{" "}
-            <span className="font-semibold text-brand-600">Enterprise Grade</span>{" "}
+            <span className="font-semibold text-brand-600">Advanced</span>{" "}
             deep scan runs the full 15-check suite against your live chatbot — all 10
             OWASP LLM categories, 7 probed live and 3 advisory, with a branded PDF
             report, evidence per finding and a remediation plan.
@@ -169,7 +169,7 @@ export function DeepScanCta({
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold text-slate-800">
-            ${PAYMENT_LINKS.enterprise.priceUsd}
+            ${PAYMENT_LINKS.advanced.priceUsd}
           </div>
           <div className="text-xs text-slate-400">one-time</div>
         </div>
@@ -184,7 +184,7 @@ export function DeepScanCta({
           >
             {busy === "challenge"
               ? "Preparing…"
-              : "Upgrade to Enterprise Deep Scan →"}
+              : "Upgrade to Advanced Deep Scan →"}
           </button>
           <p className="mt-2 text-xs text-slate-400">
             A deep scan actively attacks a live system, so we first ask you to

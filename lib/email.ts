@@ -195,7 +195,7 @@ export async function sendOwnerAlert(params: {
 
   const html = `<!DOCTYPE html>
 <html><body style="background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;padding:32px;max-width:640px">
-<h2 style="color:#a78bfa;margin-top:0">New Enterprise Scan Request</h2>
+<h2 style="color:#a78bfa;margin-top:0">New Authorized Deep Scan Request</h2>
 <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
   <tr><td style="padding:5px 0;color:#94a3b8;width:140px">Requester</td><td>${esc(params.requesterName)} &lt;${esc(params.requesterEmail)}&gt;</td></tr>
   <tr><td style="padding:5px 0;color:#94a3b8">Company</td><td>${esc(params.company ?? "—")}</td></tr>
@@ -218,7 +218,7 @@ export async function sendOwnerAlert(params: {
   await send({
     from: "AI Sec Tester <alerts@thesoulsofai.com>",
     to: ownerEmail,
-    subject: `[AI Sec Tester] New Enterprise Request — ${params.triageVerdict.toUpperCase()} risk — ${params.requesterName}`,
+    subject: `[AI Sec Tester] New Deep Scan Request — ${params.triageVerdict.toUpperCase()} risk — ${params.requesterName}`,
     html,
   });
 }
@@ -231,9 +231,9 @@ export async function sendRejectionEmail(params: {
 }) {
   const html = `<!DOCTYPE html>
 <html><body style="background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;padding:32px;max-width:580px">
-<h2 style="color:#a78bfa;margin-top:0">Enterprise Scan Request — Update</h2>
+<h2 style="color:#a78bfa;margin-top:0">Deep Scan Request — Update</h2>
 <p>Hi ${esc(params.toName)},</p>
-<p>Thank you for submitting an Enterprise scan request for <strong>${esc(params.chatbotUrl)}</strong>.</p>
+<p>Thank you for submitting a deep scan request for <strong>${esc(params.chatbotUrl)}</strong>.</p>
 <p>After review, we are unable to proceed with this request at this time.</p>
 ${params.reason ? `<div style="background:#1e293b;padding:12px 16px;border-radius:8px;border-left:3px solid #ef4444;margin:16px 0"><strong>Reason:</strong> ${esc(params.reason)}</div>` : ""}
 <p>If you believe this decision is incorrect or can provide additional authorization evidence, please reply to this email.</p>
@@ -243,7 +243,7 @@ ${params.reason ? `<div style="background:#1e293b;padding:12px 16px;border-radiu
   await send({
     from: "AI Sec Tester <noreply@thesoulsofai.com>",
     to: params.toEmail,
-    subject: "Your AI Sec Tester Enterprise Request — Update",
+    subject: "Your AI Sec Tester Deep Scan Request — Update",
     html,
   });
 }
@@ -270,7 +270,7 @@ export async function sendReportEmail(params: {
 <html><body style="background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;padding:32px;max-width:580px">
 <h2 style="color:#a78bfa;margin-top:0">Your Security Report is Ready</h2>
 <p>Hi ${esc(params.toName)},</p>
-<p>Your Enterprise scan of <strong>${esc(params.chatbotUrl)}</strong> is complete.</p>
+<p>Your deep scan of <strong>${esc(params.chatbotUrl)}</strong> is complete.</p>
 <div style="background:#1e293b;border-radius:8px;padding:16px;margin:16px 0;display:inline-block">
   <span style="font-size:36px;font-weight:bold;color:${verdictColor}">${params.score}</span>
   <span style="color:#94a3b8;font-size:13px;margin-left:10px">/ 100 &nbsp;·&nbsp;</span>

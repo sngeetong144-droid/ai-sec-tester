@@ -1,7 +1,10 @@
 import { EnterpriseForm } from "@/app/_components/enterprise-form";
 
+// The /enterprise ROUTE name is retained (it is the ownership-verification funnel
+// and is linked externally, e.g. public/llms.txt), but ruling R-15 retired the
+// Enterprise TIER, so no copy on this page may imply a tier you can buy.
 export const metadata = {
-  title: "Enterprise Scan Request — AI Sec Tester",
+  title: "Authorized Deep Scan Request — AI Sec Tester",
 };
 
 export default function EnterprisePage() {
@@ -11,11 +14,11 @@ export default function EnterprisePage() {
         <header className="mb-10 text-center">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/60 px-3 py-1 text-xs text-brand-600">
             <span className="size-1.5 rounded-full bg-brand-500" />
-            Enterprise Deep Scan
+            Authorized Deep Scan
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-800 sm:text-4xl">
             Request an{" "}
-            <span className="text-brand-600">Enterprise Scan</span>
+            <span className="text-brand-600">Authorized Scan</span>
           </h1>
           <p className="mx-auto mt-3 max-w-lg text-slate-500">
             Our team reviews every request before the scan runs. Complete the
