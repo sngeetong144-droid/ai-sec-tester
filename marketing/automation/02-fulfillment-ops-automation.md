@@ -12,7 +12,7 @@
 
 These override the recon grounding where the code disagrees. Cite the code, not the older notes.
 
-1. **Report storage EXISTS** (grounding said "MISSING"). `storeReportArtifact()` in `lib/command-center/run-scan.ts` uploads the report body to Supabase Storage bucket `reports` and returns a **30-day signed URL** (TTL matches the free-rescan window), fail-soft. The stored artifact is currently **plain text** (the composed email body), not a rendered PDF. A PDF *is* rendered on demand at `app/api/scans/[id]/report`, but that PDF is not yet what gets uploaded. The header comment in the cron route ("REPORT UPLOAD IS MISSING") is **stale**.
+1. **Report storage EXISTS** (grounding said "MISSING"). `storeReportArtifact()` in `lib/command-center/run-scan.ts` uploads the report body to Supabase Storage bucket `reports` and returns a **30-day signed URL** (30-day TTL; it is a link-expiry window, not a free-rescan entitlement — no tier includes one), fail-soft. The stored artifact is currently **plain text** (the composed email body), not a rendered PDF. A PDF *is* rendered on demand at `app/api/scans/[id]/report`, but that PDF is not yet what gets uploaded. The header comment in the cron route ("REPORT UPLOAD IS MISSING") is **stale**.
 2. **The live cron is DAILY, not "every 5 min".** `vercel.json` → `"schedule": "0 0 * * *"` = once/day at 00:00 UTC. The route's own doc-comment says "every 5 min" — that comment is **wrong vs. the deployed schedule**. Consequence: dispatch, the 48h reminder, and the 14d auto-close all only *evaluate once per day*. Do **not** market same-hour turnaround; worst-case dispatch latency is ~24h even when everything is wired.
 3. **One-click email approval is RETIRED.** `app/api/enterprise/approve/route.ts` returns **410 Gone**. Approval is now a **manual admin action inside the private Command Center** (`executeScan` + `lib/command-center/admin.ts`). "Approve" is a human step by design, not an automatable HTTP link.
 4. **The whole lifecycle is gated on two things that are NOT confirmed live:** (a) migrations `0004`+`0006` for `public.scan_requests` — route comment says LOCAL / not yet applied; (b) the **T-07 launch-block** on outbound payment send (`lib/payment-links.ts`). Until both clear, everything below is *designed-and-coded* behavior, not *proven-live* behavior. Mark any external claim `[NEEDS: verify live]`.
@@ -37,7 +37,7 @@ These override the recon grounding where the code disagrees. Cite the code, not 
 | Report email | **AUTOMATED** | Resend (`deliverComposedEmail`) | on scan complete | No |
 | 48h payment reminder | **AUTOMATED (coded)** | cron `handleStale` + Resend | daily cron ≥48h | No |
 | 14d auto-close | **AUTOMATED (coded)** | cron `handleStale` | daily cron ≥14d | No |
-| 30-day re-scan reminder | **NOT BUILT** | — | — | — |
+| 30-day PAID re-scan reminder | **NOT BUILT** | — | — | — |
 | Dunning / abandoned-request nudge | **PARTLY (the 48h reminder is the only nudge)** | — | — | — |
 
 \*Turnstile is skipped unless `TURNSTILE_SECRET_KEY` is set — currently a no-op gate.
@@ -112,7 +112,7 @@ These override the recon grounding where the code disagrees. Cite the code, not 
 | M2 | Authorization / licensing / sanctions **decision** | Legal risk acceptance | **No — must stay human (§4)** |
 | M3 | Payment-link **send** | T-07 launch gate on outbound money path | Partial — one-click "approve & send" that still needs a human tap (S2) |
 | M4 | Payment→`paid_scanning` reconciliation | Webhook wiring unconfirmed | Yes — verify/finish the FPD webhook (S3) |
-| M5 | 30-day re-scan invite | Not built | Yes — cron pass (S5) |
+| M5 | 30-day PAID re-scan invite | Not built | Yes — cron pass (S5) |
 | M6 | "Open requests aging" oversight | No backstop if an alert drops | Yes — daily digest (S4) |
 
 ---
@@ -160,12 +160,12 @@ These are authorization/legal decisions. Automating them destroys the "authoriza
 - **Buildable-now:** **NOW.** Cheapest reliability backstop; no gate (internal email only).
 - **Risk:** LOW.
 
-### S5 — 30-day re-scan reminder
-- **Replaces:** nothing today (the free re-scan is promised but never proactively offered).
-- **Owned tool:** daily-cron pass over completed scans at ~day-25/30 → Resend invite to use the free re-scan.
+### S5 — 30-day PAID re-scan reminder
+- **Replaces:** nothing today. Scoped when a free re-scan was believed to be an entitlement; ruling R-15 retired the Enterprise tier and NO tier includes one. A re-scan is a NEW PAID SCAN, so this step must sell one, never gift one.
+- **Owned tool:** daily-cron pass over completed scans at ~day-25/30 → Resend invite to BUY a re-scan (and to upgrade Normal → Advanced).
 - **Effort:** LOW-MEDIUM (needs a `completed_at` timestamp + a "rescan invited" guard flag, mirroring A8's idempotency pattern).
 - **Buildable-now vs gated:** buildable now; internal-value email (not money) so lighter gate — still confirm copy with Creator before enabling.
-- **Risk:** LOW. Converts a promised feature into retention/upsell. Ties directly to the 30-day signed-URL TTL (A6) — expire and re-scan land on the same clock.
+- **Risk:** LOW. Retention/upsell on a paid re-scan. MUST NOT imply a free one — that entitlement never existed after R-15. Ties directly to the 30-day signed-URL TTL (A6) — expire and re-scan land on the same clock.
 
 ### S6 — Dunning beyond one reminder (optional, low priority)
 - **Replaces:** the single 48h nudge before the 14d silent close.
@@ -183,7 +183,7 @@ These are authorization/legal decisions. Automating them destroys the "authoriza
 3. **Verify the gated live path** — apply migrations `0004`/`0006`, set `CRON_SECRET`, run ONE real end-to-end scan → report to satisfy the `[NEEDS: proof]` items. This unlocks A1/A5/A7/A8 from "coded" to "live."
 4. **S2 approve-&-send** (Creator lifts T-07) — highest revenue leverage; also activates A8.
 5. **S3 webhook** — closes pay→scan without a human flip.
-6. **S5 re-scan reminder** — retention, after the core loop is proven.
+6. **S5 paid re-scan reminder** — retention, after the core loop is proven. Sells a new scan; no free re-scan exists.
 7. Defer **S1 auto-approve** and **S6 multi-step dunning** — build only with data + Creator sign-off.
 
 ---

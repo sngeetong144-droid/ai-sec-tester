@@ -2,7 +2,7 @@
 
 **Status:** DRAFT — nothing here is scheduled, sent, or wired to a list. Review before any use.
 **Product:** AI Sec Tester by The Souls of AI · https://scan.thesoulsofai.com
-**Pricing (fixed):** Normal $47 · Advanced $197 (per scan) · Enterprise $497 (per chatbot)
+**Pricing (fixed):** Normal $47 · Advanced $197 — two tiers, one-time, per scan
 **Voice:** calm, plainspoken, evidence-first — a good security engineer explaining a real finding to a founder. State the risk, then show the receipt. No AI-hype, no fear-selling, no fabricated proof.
 
 ---
@@ -29,13 +29,13 @@ Marketing copy sits one notch warmer than transactional, but never crosses into 
 
 **Allowed to say (verified):**
 - Live request-first product; every CTA routes to the request form — no self-serve checkout.
-- $47 / $197 / $497 one-time. Advanced billed per scan, Enterprise per chatbot.
-- Tier scope (`landing.tsx:74/92/111`): Normal $47 = **5 OWASP LLM checks**; Advanced $197 = **full OWASP LLM Top-10 coverage** (the paid differentiator — never imply it at $47); Enterprise $497 = full report + **1 free re-scan after fixes** (**Enterprise-only**).
+- $47 / $197 one-time, billed per scan. Two tiers only — there is no third tier.
+- Tier scope (`landing.tsx`): Normal $47 = **5 checks**, the core OWASP-LLM failure modes; Advanced $197 = **all 10 OWASP LLM categories across 15 checks** — 7 probed live, 3 advisory (the paid differentiator — never imply it at $47).
+- Both tiers get the same authorization spine: automated risk triage plus a human authorization review before anything runs. That is not a premium add-on; it is how the product works.
 - **Admin-operated.** The public page is a request-a-scan intake form. There is no customer login, no self-serve checkout, and no customer-triggered scan or re-scan. Flow: intake → admin triage → approve → customer pays → admin activates → scan → report emailed. Copy may say *request*, *reply*, *activate by paying*. Copy may **never** say *run it*, *launch it*, *log in*, *click here to scan*, or *re-run it yourself*.
 - Real interactive OWASP-LLM probes graded by an LLM judge — not a static payload list, not a simulation.
 - Deliverable = Pass/Fail scorecard + A–F / 0–100 grade + branded PDF with evidence per finding and plain-language remediation.
 - Authorization-first is enforced server-side: no payment taken and no scan launched at request time; consent re-checked, requester + target country resolved, OFAC/sanctioned targets auto-rejected, SG/MY held for manual licensing review.
-- Enterprise adds identity verification, human review before the scan runs, and one free 30-day re-scan.
 
 **Do NOT say (unverified / not yet true — mark `[NEEDS: …]` instead of inventing):**
 - No customer testimonials, logos, case studies, scan counts, or "X bots tested" metrics exist. **Never fabricate social proof.**
@@ -44,7 +44,7 @@ Marketing copy sits one notch warmer than transactional, but never crosses into 
 - Approval → payment-link email is a **Creator-gated live action**, not confirmed auto-send. Nurture copy must not promise instant automated delivery of a pay link.
 - The on-landing scorecard is a static illustrative mock — any visual reusing it must be captioned as an example, not a real scan result.
 
-**Placeholders in copy:** `{first_name}`, `{company}`, `{target_url}`, `{tier}`, `{case_ref}`, `{payment_link}`, `{score}`, `{grade}`, `{verdict}`, `{passed}`, `{total}`, `{rescan_ref}`. Merge-token names mirror `composeEmail()` so eng can wire them 1:1.
+**Placeholders in copy:** `{first_name}`, `{company}`, `{target_url}`, `{tier}`, `{case_ref}`, `{payment_link}`, `{score}`, `{grade}`, `{verdict}`, `{passed}`, `{total}`. Merge-token names mirror `composeEmail()` so eng can wire them 1:1.
 
 `{report_link}` is deliberately **not** in that list. There is no customer-facing page a recipient can click to run or re-run anything. Do not reintroduce it.
 
@@ -118,13 +118,12 @@ Because scanning a system you can't prove you're authorized to test is illegal, 
 3. **We approve and email a payment link** for your tier. No charge until it's approved.
 4. **You pay, the scan runs, and your report is emailed** — Pass/Fail, grade, and a remediation PDF.
 
-Three tiers, one-time:
+Two tiers, one-time, billed per scan:
 
 - **Normal — $47:** five core OWASP-LLM checks, scorecard and PDF, for a single bot.
-- **Advanced — $197 per scan:** the full OWASP LLM Top-10, with deeper probing per category. The Top-10 is the step up from Normal.
-- **Enterprise — $497 per chatbot:** identity verification, human review before the scan runs, and one free 30-day re-scan after you fix findings.
+- **Advanced — $197:** all ten OWASP LLM categories across fifteen checks — seven probed live against your bot, three assessed as advisory findings. That breadth is the step up from Normal.
 
-The review step isn't friction we tolerate. It's the reason the result holds up.
+Both include the same authorization spine: automated risk triage plus a human review of your authorization before anything runs. The review step isn't friction we tolerate. It's the reason the result holds up.
 
 **Request a scan → https://scan.thesoulsofai.com**
 
@@ -264,23 +263,23 @@ Either way, thanks for taking your bot's security seriously enough to ask.
 # SEQUENCE C — Post-Report Upsell (re-scan / higher tier)
 
 **Audience:** received a report. One email, sent a few days after delivery — enough time to have started fixing, not so long they've forgotten.
-**Goal:** two paths, pick per **tier + verdict** — (1) Enterprise with findings → the free re-scan (C1); (2) everyone else, or a clean pass → a deeper tier (C2). Never manufacture urgency.
+**Goal:** two paths, pick per **verdict** — (1) findings present → verify the fix with a re-scan (C1); (2) a clean pass → depth on the next scan, i.e. Advanced for Normal customers (C2). Never manufacture urgency.
 **Guardrails:**
-- The free 30-day re-scan is **Enterprise-only** (`landing.tsx:111` — "Full report + 1 free re-scan after fixes"). It is **not** included at Normal ($47) or Advanced ($197). C1 goes to Enterprise customers only.
-- **The re-scan invite flow is not built** (`marketing/automation/02-fulfillment-ops-automation.md`). No automated invite, no re-scan link, no customer-triggered re-scan. The only mechanism that exists: the customer **replies with `{rescan_ref}`** and an operator queues it. Copy must say that and nothing more.
-- Reference `{rescan_ref}` exactly as the report email does.
+- **There is no free re-scan.** It was an Enterprise-tier entitlement and Enterprise is retired. Never promise a re-scan at no charge, and never imply one is "included" at $47 or $197. `[NEEDS: confirm re-scan pricing now that the free-re-scan entitlement is gone]`
+- **The re-scan invite flow is not built** (`marketing/automation/02-fulfillment-ops-automation.md`). No automated invite, no re-scan link, no customer-triggered re-scan. The only mechanism that exists: the customer **replies to the report email** and an operator queues it. Copy must say that and nothing more.
+- Reference the case as `{case_ref}`, exactly as the report email does, so an operator can find it on reply.
 **Sender:** `AI Sec Tester <reports@thesoulsofai.com>` (match the report email).
 
 ---
 
-## C1 — variant for a FAIL / findings present, **ENTERPRISE customers only** (lead with the free re-scan)
+## C1 — variant for a FAIL / findings present (lead with verifying the fix)
 
-> **Eligibility lock:** the free 30-day re-scan is **Enterprise-only** (`landing.tsx:111`). Do NOT send C1 to a Normal ($47) or Advanced ($197) customer — for those tiers, send the C2 shape and offer a paid re-scan or a tier-up instead. There is also **no re-scan invite flow built** (`marketing/automation/02-fulfillment-ops-automation.md`): this email is the only invite, and the only mechanism is reply-with-reference → operator queues it manually.
+> **Eligibility:** goes to any customer whose report came back with findings, at either tier. There is **no free re-scan** — that was an Enterprise entitlement and Enterprise is retired, so this email invites a re-scan, it does not gift one. There is also **no re-scan invite flow built** (`marketing/automation/02-fulfillment-ops-automation.md`): this email is the only invite, and the only mechanism is reply → operator queues it manually. `[NEEDS: confirm re-scan pricing before this is sent]`
 
 **Subject line options**
-1. Fixed the findings? Verify with your free re-scan ({rescan_ref})
+1. Fixed the findings? Verify them ({case_ref})
 2. Close the loop on {target_url}
-3. Your free re-scan is waiting
+3. A fix you haven't re-tested is still an assumption
 
 **Preview text:** Naming the problem is half of it. Prove the fix.
 
@@ -294,14 +293,12 @@ Here's the part people skip: fixing a finding and *verifying* the fix are two di
 
 That's what the re-scan is for. Once you've worked through the findings, we run it again — same battery, same grading, so you can see the checks flip to PASS.
 
-Your Enterprise plan includes one free re-scan, available for 30 days:
-
-Re-scan reference: {rescan_ref}
-To claim it: reply to this email with that reference and tell us you're ready. We'll queue the re-scan and email the new report.
+Reference: {case_ref}
+To line one up: reply to this email with that reference and tell us you're ready. We'll confirm the details and queue it, then email the new report.
 
 There's nothing for you to run or log into — we operate the scan on our side, same as the first one.
 
-If you want a deeper look at a different bot while you're at it, Advanced ($197 per scan) covers the full OWASP LLM Top-10 rather than the five core checks. Reply and I'll point you to the right tier.
+If you'd like the wider net on the re-scan, Advanced ($197) covers all ten OWASP LLM categories across fifteen checks rather than the five core ones. Reply and I'll point you to the right tier.
 
 — AI Sec Tester
 
@@ -325,7 +322,7 @@ Good result — your report for {target_url} came back {verdict}, {passed} of {t
 Two honest notes on what a pass does and doesn't mean:
 
 - It's a snapshot. Every prompt change, new tool, or model swap is a fresh chance to reopen a finding. Bots that pass in March fail in June because the bot changed, not the test.
-- The core battery is a fast first pass. If this bot is high-stakes — handling customer data, wired to backend tools, or about to scale — **Advanced ($197 per scan)** probes harder, and **Enterprise ($497 per chatbot)** adds identity verification, human review before the scan runs, and a free 30-day re-scan after fixes.
+- The core battery is a fast first pass. If this bot is high-stakes — handling customer data, wired to backend tools, or about to scale — **Advanced ($197)** widens it to all ten OWASP LLM categories across fifteen checks: seven probed live, three assessed as advisory findings.
 
 No urgency here. When your bot changes meaningfully, or when you want the deeper pass, request it and reference this one:
 
@@ -342,7 +339,7 @@ Request the next scan: https://scan.thesoulsofai.com
 - `[NEEDS: verified marketing from-address]` on a Resend-verified domain for Sequence A (transactional uses no-reply@ / reports@ / alerts@).
 - `[NEEDS: confirm review SLA]` before printing "within one business day" (A2).
 - `[NEEDS: confirm 48h reminder / 14d auto-close cron in prod]` before hardcoding nurture timing (Sequence B currently uses soft language to stay true regardless).
-- **RESOLVED (was `[NEEDS: confirm re-scan tier eligibility]`):** the free re-scan is **Enterprise-only** (`landing.tsx:111`). C1 is now Enterprise-gated. Do not offer it at $47/$197.
-- **RESOLVED / BLOCKER:** there is **no built re-scan invite flow** — C1's reply-with-reference instruction is the flow. If an operator does not watch that inbox, the entitlement is unfulfillable. `[NEEDS: an operator owner for re-scan replies before C1 is ever sent]`
+- **RESOLVED (2026-08-02, ruling R-15):** the Enterprise $497 tier is **retired**. The product sells two tiers, Normal $47 and Advanced $197. The free 30-day re-scan went with it — C1 now invites a re-scan rather than gifting one. `[NEEDS: set re-scan pricing before C1 is sent]`
+- **BLOCKER:** there is **no built re-scan invite flow** — C1's reply-with-reference instruction is the flow. If an operator does not watch that inbox, the invite goes nowhere. `[NEEDS: an operator owner for re-scan replies before C1 is ever sent]`
 - `[NEEDS: real social proof]` — every sequence deliberately ships with zero testimonials/metrics. Add only when real ones exist.
 - **Suppression:** Sequence A must respect unsubscribe; B and C are transactional-adjacent (open case / delivered report) — keep them operational, not marketing blasts, and stop on reply or completion.

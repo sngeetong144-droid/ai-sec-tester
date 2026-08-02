@@ -16,7 +16,7 @@ Aligned with the [OWASP Top-10 for LLM Applications](https://owasp.org/www-proje
    - **Sensitive Data Exposure** (LLM02)
    - **Unsafe Content Generation** (LLM05)
 3. Get a Pass/Fail scorecard, severity, evidence, and remediation per check.
-4. Download a PDF audit report, or upgrade to an Enterprise deep scan.
+4. Download a branded PDF audit report.
 
 The engine performs **live** transport, secret-exposure, and chatbot-widget
 checks against the target, and **deterministic, clearly-labelled simulations**
@@ -24,6 +24,19 @@ for the interactive jailbreak probes (no AI dependency; same URL → same score)
 It ships **no working exploit payloads** — it's a defensive tool.
 
 > Only scan chatbots you own or are authorized to test.
+
+## Tiers
+
+Two tiers are sold. Both include automated risk triage (score + flags) and a
+human authorization review of the request before the scan runs.
+
+| Tier | Price | Coverage |
+|---|---|---|
+| **Normal** | $47 | The 5 core OWASP LLM checks above |
+| **Advanced** | $197 | 15 checks across all 10 OWASP LLM categories — 7 probed live, 3 advisory |
+
+Prices and checkout links live in `lib/payment-links.ts`; the per-tier feature
+bullets shown on the site live in `lib/tier-features.ts`.
 
 ## Stack
 
@@ -34,7 +47,7 @@ It ships **no working exploit payloads** — it's a defensive tool.
 | Styles | Tailwind CSS v4 |
 | DB | Supabase (Postgres + RLS) |
 | PDF | pdf-lib |
-| Payments | Stripe (optional — Enterprise upsell) |
+| Payments | Stripe payment links (Normal $47 / Advanced $197) |
 | Deploy | Vercel (git auto-deploy) |
 
 ## Local development
@@ -58,11 +71,13 @@ sprint before onboarding real accounts.
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/publishable key |
-| `STRIPE_SECRET_KEY` | Enables the Enterprise deep-scan checkout (optional) |
-| `DEEP_SCAN_PRICE_CENTS` | Deep-scan price in cents (default `49900` = $499) |
+| `STRIPE_SECRET_KEY` | Stripe API key — used to confirm settled checkouts (optional) |
+| `STRIPE_WEBHOOK_SECRET` | Verifies the `checkout.session.completed` webhook that triggers dispatch |
 
-Without a Stripe key the upsell button stays visible and reports that payments
-aren't configured yet — it goes live the moment `STRIPE_SECRET_KEY` is set.
+Tier prices and checkout URLs are **not** environment variables: the Normal and
+Advanced Stripe payment links live in `lib/payment-links.ts`, which is the single
+source of truth for what a tier costs. Each link carries `metadata.tier` on the
+Stripe side, so the purchased tier is a property of the payment.
 
 ## Deploy
 

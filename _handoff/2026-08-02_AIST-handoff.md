@@ -65,20 +65,34 @@ link now strands nothing. Creator is doing that themselves; Nova did not touch S
 `PAYMENT_LINKS.enterprise` still stays (see §3) — the justification is now defence in
 depth, not historical rows.
 
-## 5. Proof status
+## 5. Proof status — R-15 COMPLETE
 
-- `npm run gates` → **exit 0, 272 pass / 0 fail** (was 264) [VERIFIED: exit code
-  captured directly, not through a pipe]
-- Surfaces clean [VERIFIED: post-edit repo-wide re-grep; only the two intentionally
-  retained `/enterprise` route-path hits remain]
-- **NOT pushed / NOT deployed** [VERIFIED: `git status -sb` → `ahead 1`]
-- **NOT re-read in an unauthenticated browser** — outstanding, requires deploy first
+| Proof | Result |
+|---|---|
+| Gates | `npm run gates` **exit 0, 272 pass / 0 fail** (was 264) [exit code captured directly, not through a pipe] |
+| Adversarial sweep | 5 lenses x 15 agents; **1 real blocker** found and fixed (lib/chat-assistant.ts, below) |
+| Deployed | pushed `d59b39c..dd49f32`; `/api/health` commit == local HEAD `dd49f32` [polled] |
+| Public page, UNAUTHENTICATED | tiers `["Normal","Advanced"]`, amounts `$47`/`$197`, plan selector 2 options, JSON-LD offers 2, `enterprise` absent from body, `497` absent from **entire HTML**, `redirectedToAdmin: false` |
+| Pricing layout | `grid-template-columns: 369px 369px`, both cards same row, block centred at 760px @1280w |
+| Live sales bot | POST /api/chat "list every tier" -> "We offer two scan tiers: Normal $47 ... Advanced $197 ... There are no other tiers." No `enterprise`, no `497` |
+| DB | 0 Enterprise rows remain |
 
-## 6. Next actions
+**The sweep earned its keep.** `lib/chat-assistant.ts:63` hardcoded
+`"TIERS: Normal $47 ... Advanced $197. Enterprise $497"` into CHAT_SYSTEM, the system
+prompt behind the PUBLIC landing chat bubble. The prompt scopes the bot to answer
+pricing and forbids it inventing prices, so that string WAS its authoritative price
+list — every visitor asking about cost got quoted a retired tier. It is a price-quote
+surface that does not look like one, it was in the 88-file enumeration, and the
+file-by-file pass never opened it. Now DERIVED from SELLABLE_TIERS and added to the
+sweep test's SURFACES.
 
-1. Push `4f13c6d` → Vercel auto-deploys.
-2. `npm run assert:deployed` — proves the push actually reached prod. Vercel has
-   twice refused a deploy silently; a green push is not proof.
-3. Re-read the public page in an UNAUTHENTICATED browser (an admin session redirects
-   `/` to `/command-center` and shows the wrong page).
-4. Resolve `739486ac` before the Stripe link is decommissioned.
+LESSON: enumerating files is not the same as inspecting them. A grep hit count of 1
+on a lib/ file hid a customer-facing price quote.
+
+## 6. Remaining
+
+- Creator is decommissioning the Enterprise Stripe payment link themselves. Nova did
+  NOT touch Stripe. Nothing now depends on that link (the stranded row was purged).
+- Marketing collateral under `marketing/**` still names the Enterprise tier. It is
+  internal launch copy, not a shipped surface, so it was left alone. Sweep it before
+  any launch that reuses those files.

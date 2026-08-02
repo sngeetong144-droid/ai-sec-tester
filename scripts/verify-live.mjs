@@ -168,7 +168,11 @@ async function checkChat() {
   else if (a.json?.ok !== true) fail("chat: answers in-scope question", `assistant did not answer (HTTP ${a.status}: ${oneLine(a.json?.error || a.text, 70)}) - the site chat bubble is not working for visitors`);
   else {
     const reply = String(a.json.reply || "");
-    const priced = /\b(47|197|497)\b/.test(reply);
+    // Only the two SELLABLE tier prices count as a real product fact. 497 was
+    // removed here on 2026-08-02 (ruling R-15 retired the Enterprise tier): the
+    // bot's own brief now ends "There is no higher tier", so a reply quoting
+    // $497 is a regression to catch, not evidence the answer was grounded.
+    const priced = /\b(47|197)\b/.test(reply);
     const owasp = /prompt[- ]injection|system[- ]prompt leak|instruction override|jailbreak|data exfiltration|unsafe content|OWASP/i.test(reply);
     if (priced || owasp) pass("chat: answers in-scope question", `real answer citing ${priced ? "tier pricing" : "OWASP categories"}: "${oneLine(reply, 60)}"`);
     else fail("chat: answers in-scope question", `replied with no real product fact - no tier price, no OWASP category: "${oneLine(reply, 60)}" - the bot is answering from thin air, not from the product brief`);

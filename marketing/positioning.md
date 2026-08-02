@@ -25,24 +25,23 @@ One sentence: AI Sec Tester runs automated OWASP LLM Top-10 checks against a liv
 
 - **Generic DAST/web scanners** (Burp, ZAP, Nessus-class) test HTTP/app-layer vulnerabilities — SQLi, XSS, headers. They have no concept of a system prompt, a jailbreak, or "did the model leak its instructions." They will pass a chatbot that leaks your entire prompt to anyone who asks nicely.
 - **Manual LLM red-team engagements** are accurate but slow and priced for enterprise budgets (five figures, weeks of lead time). A founder shipping this quarter can't wait on that.
-- **AI Sec Tester's angle:** OWASP LLM Top-10-aligned checks specifically built for the failure modes unique to LLM apps (prompt injection, system prompt leakage, excessive agency, jailbreak bypass) — automated, non-invasive, results in seconds, no security background required to read the report. It is a first-pass filter, explicitly positioned as narrower and faster than a full red-team, not a replacement for one at the Enterprise tier (which adds human review).
+- **AI Sec Tester's angle:** OWASP LLM Top-10-aligned checks specifically built for the failure modes unique to LLM apps (prompt injection, system prompt leakage, excessive agency, jailbreak bypass) — automated, non-invasive, no security background required to read the report, and gated by a human authorization review on every scan. It is a first-pass filter, explicitly positioned as narrower and faster than a full red-team, and not a replacement for one.
 
-## 5. Pricing Narrative (live pricing: $47 / $197 / $497 one-time — request-first, no self-serve checkout)
+## 5. Pricing Narrative (live pricing: two tiers, $47 / $197 one-time — request-first, no self-serve checkout)
 
-All tiers route through a scan-request form; the team reviews and confirms authorization to test the target before issuing payment link and running anything. No charge until approved.
+Both tiers route through the same scan-request form; every request gets automated risk triage and a human authorization review confirming the requester can test the target, before any payment link is issued or any probe fires. No charge until approved.
 
-- **Normal — $47/scan:** "Get a real answer today." 5 OWASP LLM checks, Pass/Fail scorecard, branded PDF report, evidence + remediation per finding, priority processing. Positioned as the entry point for anyone who just wants to know where they stand — cheaper than one hour of a security consultant's time.
-- **Advanced — $197/scan (most popular):** "Full OWASP LLM Top-10 coverage, not a sample." Everything in Normal plus full Top-10 coverage and deeper probes per category. The natural default for a team that's actually shipping this bot to real customers and wants the complete picture, not a partial one.
-- **Enterprise — $497/chatbot:** "Bring in a human before you ship." Everything in Advanced plus identity verification, automated risk triage, human review before the scan runs, a full report, and one free re-scan after fixes are made — closing the loop from finding to verified fix. Priced for teams where a chatbot incident is a real business/compliance risk, not just an inconvenience.
+- **Normal — $47/scan:** "Get a real answer today." 5 OWASP LLM checks, Pass/Fail scorecard, branded PDF report, evidence + remediation per finding. The entry point for anyone who just wants to know where they stand — cheaper than one hour of a security consultant's time.
+- **Advanced — $197/scan (most popular):** "The full Top-10, not a sample." Everything in Normal plus all 10 OWASP LLM categories — 7 probed live against the bot, 3 assessed as advisory — across 15 checks, with deeper probing per category. The default for a team actually shipping this bot to real customers and wanting the complete picture rather than a partial one.
 
-Narrative arc across tiers: Normal answers "is there a problem," Advanced answers "where exactly and how deep," Enterprise answers "did we actually fix it" — each tier maps to how much the team has riding on the answer being right.
+Narrative arc across the two tiers: Normal answers "is there a problem," Advanced answers "where exactly, across the whole Top-10, and how deep." The choice maps to how much the team has riding on the answer being right. There is no third tier and nothing to upsell to — the human authorization review is standard on both, not a premium add-on.
 
 ## 6. Top 8 Objections + Rebuttals
 
 1. **"We already have a pentest firm / security vendor."** — Ask if that vendor's last report mentioned prompt injection, system prompt leakage, or jailbreak resistance by name. Most generic AppSec vendors don't test for LLM-specific failure modes; this is a narrow, fast complement, not a replacement.
 2. **"Our chatbot is just customer support, not high-risk."** — Support bots are the most common target because they're customer-facing, unmonitored, and often connected to backend tools or knowledge bases — the OWASP LLM02/LLM06 checks exist because "just support" bots are exactly where secrets and excessive tool access leak.
 3. **"How do I know this won't break our production bot?"** — Checks are explicitly non-invasive, aligned to OWASP LLM Top-10 probing methodology, and every scan requires authorization confirmation before it runs against the target.
-4. **"$497 for Enterprise seems steep for a one-time scan."** — It includes identity verification, human review before the scan runs, a full report, and one free re-scan after fixes — the re-scan alone closes the loop other one-shot scanners don't offer.
+4. **"$197 for Advanced seems steep for a one-time scan."** — Advanced covers all 10 OWASP LLM categories (7 probed live, 3 advisory) across 15 checks versus 5 at $47, plus automated risk triage and a human authorization review before anything runs against the target. That is still a fraction of a day of a consultant's time, and orders of magnitude under a manual LLM red-team engagement.
 5. **"Why do I have to request a scan instead of just paying and running it?"** — Scanning a system without proof of ownership/authorization is illegal; the review step (usually within one business day) protects the customer from liability and protects third parties from unauthorized testing.
 6. **"We don't have security expertise to act on the results."** — The report is a plain-language Pass/Fail scorecard with evidence per finding and remediation guidance meant to be handed directly to a developer — no security background required to read or act on it.
 7. **"Can't I just ask ChatGPT/an LLM to jailbreak-test my own bot for free?"** — Ad hoc manual prompts are unstructured and undocumented; this runs OWASP LLM Top-10-aligned checks with evidence captured per finding, in a report you can show a customer, investor, or auditor.
@@ -64,6 +63,7 @@ AI Sec Tester runs automated, OWASP LLM Top-10-aligned checks — prompt injecti
 - "Test it before they do."
 
 ## Notes / open questions for review
-- llms.txt currently states stale pricing ($10/$10 monthly/$499) — should be updated to match lib/payment-links.ts ($47/$197/$497) as a follow-up fix, flagged here not actioned.
+- Pricing is two tiers only — Normal $47 and Advanced $197. The $497 Enterprise tier was retired on 2026-08-02 (ruling R-15) and removed from the product; do not reintroduce it, a three-tier table, or an Enterprise upsell in any downstream copy. The `/enterprise` URL is an ownership-verification funnel, not a price tier — keep the link, never call it a tier.
+- Any pricing surface (llms.txt, payment links, decks) must be checked against lib/payment-links.ts and show the two live tiers only.
 - No real customer testimonials/case studies exist yet — social-proof section for any funnel copy needs a placeholder structure, not fabricated quotes or stats (hard ban on hollow social proof applies).
 - "Results in seconds" and "usually within one business day" (for request review) are two different clocks in the actual flow (scan runtime vs. authorization review) — keep these separated in downstream copy to avoid an implied bait-and-switch on speed.

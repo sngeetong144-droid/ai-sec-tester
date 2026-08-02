@@ -2,9 +2,9 @@
 
 > **Status:** DRAFT / planning. Nothing here posts, sends, charges, or changes a live account. Every posting/payment/spend/legal step is a Creator gate.
 > **Product:** AI Sec Tester — OWASP-LLM Top-10 scanner for chatbots / AI agents. Live at https://scan.thesoulsofai.com. Parent brand: The Souls of AI.
-> **Pricing (fixed, FastPayDirect):** $47 Normal · $197 Advanced (per scan) · $497 Enterprise (per chatbot).
+> **Pricing (fixed, FastPayDirect):** two tiers — $47 Normal · $197 Advanced. Both priced per scan.
 > **Model:** request-a-scan (no self-serve checkout, no customer login) → admin due-diligence (geo/sanctions/licensing) → approve → emailed payment link → customer pays → admin activates → scan → report emailed. Admin-operated throughout; the customer never triggers a scan.
-> **Tier scope (`landing.tsx:74/92/111`):** Normal $47 = **5 OWASP LLM checks**. Advanced $197 = **full OWASP LLM Top-10 coverage** (the paid differentiator — never imply it at $47). Enterprise $497 = full report + **1 free re-scan after fixes** (**Enterprise-only**; the 30-day re-scan *invite* flow is **not built** — see `automation/02`).
+> **Tier scope:** Normal $47 = **5 checks**. Advanced $197 = **all 10 OWASP LLM categories** (7 probed live, 3 advisory) across **15 checks** — the paid differentiator; never imply it at $47. Both tiers include automated risk triage and a human authorization review before the scan runs. There is **no free re-scan entitlement** — a re-scan is a new paid scan.
 > **Sources synthesized:** launch/01–06 + automation/01–02. Copy banks live in the numbered files; this is the sequenced go-live checklist on top of them.
 
 **Tag key:**
@@ -42,10 +42,10 @@ Until this single run is green, treat the whole launch as a verification sprint,
 ### 1B. Copy assets (drafted — need approval, not building)
 - [ ] `[NOVA-CAN-DO]` Positioning / message hierarchy locked → `launch/01-positioning-messaging.md` (this is the messaging source of truth; supersedes old `positioning.md`).
 - [ ] `[NOVA-CAN-DO]` Launch blog post drafted → `launch/02-launch-announcement.md` §1 (slug `/blog/ai-sec-tester-launch`). `[NEEDS: confirm a blog surface exists / is buildable]`.
-- [ ] `[NOVA-CAN-DO]` Product-Hunt tagline + maker's first comment drafted → `02` §2. Advanced-vs-Normal delta is **RESOLVED** (`landing.tsx:74/92`): Normal = 5 OWASP LLM checks; Advanced = full OWASP LLM Top-10 coverage.
+- [ ] `[NOVA-CAN-DO]` Product-Hunt tagline + maker's first comment drafted → `02` §2. Advanced-vs-Normal delta is **RESOLVED**: Normal = 5 checks; Advanced = all 10 OWASP LLM categories (7 probed live, 3 advisory) across 15 checks.
 - [ ] `[NOVA-CAN-DO]` Press blurb (50/90-word) drafted → `02` §3. `[NEEDS: named spokesperson/founder quote if it goes to any outlet — do not fabricate]`.
-- [ ] `[NOVA-CAN-DO]` Landing copy consistency check — pricing/tiers on the live landing match $47/$197/$497.
-- [ ] `[NOVA-CAN-DO]` 3-email warm-launch + nurture + upsell sequences drafted → `launch/03-email-sequences.md`. `[NEEDS: verified Resend marketing from-address]`; `[NEEDS: confirm review SLA]` before printing "within one business day".
+- [ ] `[NOVA-CAN-DO]` Landing copy consistency check — the live landing shows exactly two tiers, $47 and $197, with no retired tier anywhere.
+- [ ] `[NOVA-CAN-DO]` 3-email warm-launch + nurture sequences drafted → `launch/03-email-sequences.md`. The only in-product step-up is Normal → Advanced; there is no higher tier to pitch. `[NEEDS: verified Resend marketing from-address]`; `[NEEDS: confirm review SLA]` before printing "within one business day".
 - [ ] `[NOVA-CAN-DO]` 10 social posts + 5 short-form scripts + 2-week calendar drafted → `launch/06-social-shortform.md`.
 
 ### 1C. Visual + demo assets
@@ -59,7 +59,7 @@ Until this single run is green, treat the whole launch as a verification sprint,
 - [ ] `[NOVA-CAN-DO]` Add `Organization` + `Service` + `FAQPage` JSON-LD (8 Q&A in `04` §5). **No `aggregateRating`/`review` schema — zero real reviews exist; fabricating is a manual-action risk.**
 - [ ] `[NOVA-CAN-DO]` Verify `sitemap.xml` / `robots.txt` (Next.js may auto-emit); ensure `/command-center`, `/login`, API routes are `noindex`/disallowed.
 - [ ] `[NOVA-CAN-DO]` Write Pillar 1 (prompt-injection how-to) + Pillar 5 (checklist / doubles as lead magnet) — drafts only. Pillars 2/3/4 + comparison pages later.
-- [ ] **SHIPPED:** `public/llms.txt` is live and current ($47/$197/$497 + compliance block) — the only live GEO asset. **Drop the old "stale $10 pricing" action item; it is done.**
+- [ ] `public/llms.txt` is live with a compliance block — the only live GEO asset. The old "stale $10 pricing" action item is **done**. `[NEEDS: re-verify llms.txt lists only the two live tiers ($47 Normal / $197 Advanced) after the retired-tier cleanup]`.
 - [ ] `[NEEDS: Semrush validation]` — all keyword difficulty is estimated. `[CREATOR-GATE]` on Semrush credit spend; ship on low-competition buyer-intent long-tails without it.
 
 ### 1E. Outreach + tracking infra (build before scaling channels)
@@ -118,7 +118,7 @@ Channel priority: cold outbound + LinkedIn (P0) > communities + X (P1) > directo
 
 ### Week 4 — Convert, close the loop, decide on scaling
 - [ ] `[NOVA-CAN-DO]` Review approved-but-unpaid; confirm the 48h reminder works (or send manual, gated follow-ups).
-- [ ] `[NOVA-CAN-DO]` Activate the re-scan/upsell expectation on any delivered report (free 30-day re-scan; re-scan after each material bot change).
+- [ ] `[NOVA-CAN-DO]` Set the repeat-scan expectation on any delivered report: re-scan after each material bot change, and Normal → Advanced when they want the full 10-category picture. A re-scan is a new paid scan — never imply a free one.
 - [ ] `[CREATOR-GATE]` Second POV/teardown; begin next comparison/FAQ asset.
 - [ ] `[NOVA-CAN-DO]` Compile the 30-day scorecard (requests / approved / paid / delivered / re-scans, by channel) — `[NEEDS: real data; do not fabricate targets]`.
 - [ ] `[CREATOR-GATE]` Decide: which channel earns more effort days 31–60; whether conversion is proven enough to *consider* paid ads (money gate); whether Product Hunt is now warranted.
@@ -128,8 +128,9 @@ Channel priority: cold outbound + LinkedIn (P0) > communities + X (P1) > directo
 
 ## STANDING RULES (carry into every phase)
 - Authorization-first is the lead message, not the disclaimer. Never imply scanning bots you don't own.
-- Promise the deliverable (score + PDF + evidence), never "in seconds." `[NEEDS: real runtime]`. The free re-scan is **Enterprise-only** — it belongs in Enterprise-tier copy and nowhere else.
-- Never sell full OWASP LLM Top-10 coverage at $47. Normal = 5 core checks; the Top-10 starts at Advanced ($197).
+- Promise the deliverable (score + PDF + evidence), never "in seconds." `[NEEDS: real runtime]`. Never promise a free re-scan — no tier includes one; a re-scan is a new paid scan.
+- Two tiers only — $47 Normal and $197 Advanced. Never advertise a third tier or quote a retired price.
+- Never sell the full OWASP LLM Top-10 at $47. Normal = 5 checks; all 10 categories (7 probed live, 3 advisory) across 15 checks start at Advanced ($197). Both tiers include automated risk triage and a human authorization review.
 - Never use verbs that imply the customer operates the product (*run it*, *log in*, *click to scan*). It is admin-operated: they request, reply, and pay; we run.
 - Zero fabricated proof — no testimonials, logos, scan counts, ratings. Use `[NEEDS: ...]` placeholders only.
 - Voice = calm security engineer: state the failure mode, then show the receipt. No AI-hype, no fear-selling, no countdown urgency.

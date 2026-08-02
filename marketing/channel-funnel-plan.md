@@ -41,9 +41,10 @@ approved requests to payment inside the 48h→14d window.
 
 | Tier | Price | Unit | What it is |
 |---|---|---|---|
-| Normal | $47 | one-time · per scan | 5 OWASP LLM checks, Pass/Fail scorecard, branded PDF, evidence + remediation |
-| Advanced | $197 | one-time · per scan | Full OWASP LLM Top-10 coverage, deeper probes per category, auto-emailed PDF |
-| Enterprise | $497 | one-time · per chatbot | Authorization + identity verification, human review before scan, full report + 1 free re-scan |
+| Normal | $47 | one-time · per scan | 5 OWASP LLM checks, automated risk triage, human authorization review, Pass/Fail scorecard, branded PDF, evidence + remediation |
+| Advanced | $197 | one-time · per scan | Full OWASP LLM Top-10 — all 10 categories (7 probed live, 3 advisory) across 15 checks, automated risk triage, human authorization review, auto-emailed PDF |
+
+Two tiers, both request-first. There is no third tier and no per-chatbot SKU.
 
 **ICP:** small-to-mid teams shipping customer-facing chatbots/assistants with **no dedicated
 AppSec function**. They ship an AI support bot, a sales concierge, or an in-product
@@ -92,8 +93,9 @@ week 1; not counted on for launch revenue.
 
 **B2. Consultant / agency partnerships (referral).**
 Fractional-CISO shops, AI dev agencies, MSPs have the ICP as clients but don't run
-LLM-specific testing. Enterprise ($497/chatbot, human review) is the natural referral SKU.
-Warm, high-AOV, relationship-dependent — a week-4+ play.
+LLM-specific testing. Advanced ($197/scan, all 10 OWASP LLM categories, human authorization
+review) is the natural referral SKU — one scan per client bot adds up.
+Warm, relationship-dependent — a week-4+ play.
 
 **B3. Product Hunt / launch-aggregator moment.**
 One-time spike, good for backlinks/social proof, weak for sustained qualified requests in
@@ -146,12 +148,12 @@ approval** (hard gate). "Ship" = *prepare + queue for approval*, not auto-send.
 - **Fri:** funnel metrics review (§5); kill/boost email vs LinkedIn vs community. First CAC
   read if any paid conversions landed. Chase any approved-unpaid before the 48h reminder.
 
-### Week 3 — "Push Advanced, seed Enterprise"
+### Week 3 — "Push Advanced, open partner referrals"
 
 - **Mon:** cold-email batch 2 follow-up + batch 3 (Segment 3 — agencies, ~50).
-- **Tue:** LinkedIn post #4 — "Normal vs Advanced vs Enterprise: which scan do you need?"
-  Frame by coverage depth (5 checks vs full Top-10 vs human-reviewed).
-- **Wed:** direct outreach to 5–10 AI agencies / fractional-CISO shops (Enterprise referral).
+- **Tue:** LinkedIn post #4 — "Normal or Advanced: which scan do you need?"
+  Frame by coverage depth (5 checks vs all 10 OWASP LLM categories across 15 checks).
+- **Wed:** direct outreach to 5–10 AI agencies / fractional-CISO shops (Advanced referral).
 - **Thu:** community post #2 (different community, different jailbreak class).
 - **Fri:** metrics review; adjust copy on the lowest-converting step.
 
@@ -207,8 +209,8 @@ STAGE 3 — PAY  ($47 Normal)
         │  in-report + follow-up upsell
         ▼
 STAGE 4 — UPSELL
-   Advanced $197 (full OWASP LLM Top-10, deeper probes)
-   Enterprise $497/chatbot (human review, identity verification, +1 free re-scan)
+   Advanced $197 (all 10 OWASP LLM categories, 15 checks)
+   Per-bot expansion (one scan per customer-facing bot in the fleet)
    Repeat scans ("scan after every prompt change")
 ```
 
@@ -216,11 +218,11 @@ STAGE 4 — UPSELL
 
 - **Normal → Advanced:** trigger when the Normal scorecard shows any REVIEW/FAIL, or when the
   bot has tools/actions (excessive-agency surface). Line: "Normal runs 5 checks; Advanced runs
-  the full OWASP LLM Top-10 with deeper probes per category." Put it **inside the emailed Normal
-  report**, not just in follow-up.
-- **Advanced → Enterprise:** trigger for regulated/enterprise buyers or multi-bot fleets.
-  Pitch: authorization + identity verification, **human review before the scan runs**, and a
-  free re-scan after fixes ship.
+  the full OWASP LLM Top-10 — all 10 categories across 15 checks, 7 probed live, 3 advisory."
+  Put it **inside the emailed Normal report**, not just in follow-up.
+- **Advanced → fleet coverage:** trigger for multi-bot orgs and regulated buyers. Pitch one
+  Advanced scan per customer-facing surface — the support bot, the sales concierge, and the
+  in-product assistant each carry their own attack surface and each get their own scorecard.
 - **Repeat revenue:** every prompt/system change re-opens the attack surface. Position a scan as
   a per-release check — turns a one-time $47 into recurring behavior despite no subscription SKU.
 
@@ -259,10 +261,10 @@ STAGE 4 — UPSELL
 - Titles: S1 + Head of Product, PM (AI)
 - Angle: most anxious and least covered right after launch
 
-**Segment 3 — "Referral partners" (Enterprise channel).**
+**Segment 3 — "Referral partners" (Advanced channel).**
 - AI dev agencies, fractional-CISO / vCISO shops, MSPs, dev consultancies · headcount 2–50
 - Titles: Founder, Principal, Practice Lead, Head of Delivery
-- Angle: white-label / refer the Enterprise ($497/chatbot) scan for their clients
+- Angle: white-label / refer the Advanced ($197/scan) tier for their clients, one scan per bot
 
 ### 4.2 Cold email template (Segment 1) — DRAFT
 
@@ -333,9 +335,10 @@ Subject: LLM security testing for your clients (white-label)
 
 Hi {{first_name}} — {{company}} builds AI for clients who now all ship chatbots. Most of them
 have no LLM-specific security testing. We run OWASP-LLM-Top-10 scans (prompt injection,
-jailbreaks, data leak, excessive agency) and return a branded Pass/Fail report. Our Enterprise
-scan ($497/chatbot) includes human review before it runs — a clean add-on you can resell or
-refer. Open to a quick chat about referral terms?
+jailbreaks, data leak, excessive agency) and return a branded Pass/Fail report. Our Advanced
+scan ($197/scan) covers all 10 OWASP LLM categories and includes a human authorization review
+before anything runs — a clean per-bot add-on you can resell or refer. Open to a quick chat
+about referral terms?
 ```
 
 ---
@@ -355,18 +358,18 @@ and **approval→pay**. Track every stage; don't average across tiers.
 | Approval | Approval rate | approved / requests | 60–80% (rest fail authz / jurisdiction) |
 | **Pay** | **Approval→pay conversion** | paid / approved | ≥ 40–55% |
 | Overall | Visitor→paid | paid / visitors | ≥ 0.8–1.5% |
-| Expansion | Upsell rate | Advanced+Enterprise / total paid | ≥ 15% |
+| Expansion | Upsell rate | Advanced / total paid | ≥ 15% |
 | Lifecycle | Unpaid decay | % approved that hit 48h reminder / 14d auto-close | watch; high = pricing or trust gap |
 
 ### 5.2 Revenue metrics (per tier — never blended)
 
-- Paid scans by tier (Normal $47 / Advanced $197 / Enterprise $497)
-- Revenue by tier and **blended AOV** (watch mix — one Enterprise ≈ 10 Normals)
+- Paid scans by tier (Normal $47 / Advanced $197)
+- Revenue by tier and **blended AOV** (watch mix — one Advanced ≈ 4 Normals)
 - Repeat-scan rate (same customer, 2nd+ scan) — proxy for recurring behavior absent a sub SKU
 
 **Month-1 illustrative target** (adjust after week-1 real data):
 - 40–60 requests → ~30–45 approved → ~15–22 paid.
-- Mix guess: ~15 Normal ($705) + 3 Advanced ($591) + 1 Enterprise ($497) ≈ **$1,750–$2,000**.
+- Mix guess: ~16 Normal ($752) + 5 Advanced ($985) ≈ **$1,700–$1,750**.
 - This is a *proof-of-funnel* target. The month-1 win condition is a known, repeatable
   approval→pay rate — not raw revenue.
 
@@ -379,7 +382,7 @@ Per channel: requests, paid, revenue, **CAC**.
 - Organic channels have ~$0 hard cost — CAC is **time cost**. Value founder time at a nominal
   rate so channels are comparable and the later paid-ads decision has a baseline to beat.
 - **CAC targets:** Normal ($47) must stay near-zero CAC — it's a tripwire/lead product,
-  effectively break-even, justified by upsell. Margin lives in Advanced/Enterprise; tolerate
+  effectively break-even, justified by upsell. Margin lives in Advanced; tolerate
   higher CAC there. Graduate a channel to paid spend only at blended **LTV:CAC ≥ 3:1**, where LTV
   includes expected upsell + repeat scans, not just the first $47.
 

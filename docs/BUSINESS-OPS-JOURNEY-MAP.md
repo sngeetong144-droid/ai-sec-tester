@@ -68,7 +68,7 @@ The product's differentiator — *authorization-first, a human approves before a
 | | |
 |---|---|
 | **Trigger** | An approved case. |
-| **Operator action** | Get the FastPayDirect link (`lib/payment-links.ts` — $47 / $197 / $497) to the customer. |
+| **Operator action** | Get the FastPayDirect link (`lib/payment-links.ts` — the two live tiers, $47 Normal / $197 Advanced) to the customer. |
 | **Where** | `/command-center/emails`, `/command-center/products`. |
 | **Fires automatically** | The URL is *composed* automatically (`resolvePaymentLink` + `buildPaymentUrl`). |
 | **MANUAL / GATED today** | **The send.** Outbound money-adjacent send is blocked by **T-07** (Creator gate). Even with T-07 lifted, delivery requires **both** `RESEND_API_KEY` **and** `CC_EMAIL_SEND_ENABLED === "true"` (`lib/email-templates.ts`) — otherwise `deliverComposedEmail` logs and no-ops. |
@@ -85,7 +85,7 @@ The product's differentiator — *authorization-first, a human approves before a
 | **Trigger** | Money settles at FastPayDirect. |
 | **Operator action** | **Unknown — and that is the problem.** |
 | **Where** | `app/api/stripe/webhooks/route.ts` (if it fires) or `/command-center/scan` manual override (if it does not). |
-| **Fires automatically** | *Designed:* `checkout.session.completed` → read `client_reference_id` → `markRequestPaid()` → `approved_awaiting_payment → paid_scanning`. **Idempotent** (conditional `WHERE status=approved_awaiting_payment`; a duplicate delivery updates zero rows). **Underpayment-guarded** (a $47 settlement carrying a $497 request's ref is rejected before the flip). |
+| **Fires automatically** | *Designed:* `checkout.session.completed` → read `client_reference_id` → `markRequestPaid()` → `approved_awaiting_payment → paid_scanning`. **Idempotent** (conditional `WHERE status=approved_awaiting_payment`; a duplicate delivery updates zero rows). **Underpayment-guarded** (a $47 settlement carrying a $197 request's ref is rejected before the flip; the retired $497 entry stays in the price map precisely so a stale plan string cannot make that guard fail open). |
 | **MANUAL today** | **Effectively all of it.** |
 | **Time cost** | Unbounded — the operator must *notice the money* in a separate system. |
 | **Automation status** | **GATED / UNPROVEN — G8 / S3.** |
@@ -115,7 +115,9 @@ The product's differentiator — *authorization-first, a human approves before a
 | **Automation status** | **BUILT** (A5–A7), **GATED on G1** — needs `CRON_SECRET` set, migrations live, and a real `paid_scanning` transition upstream (OPS-5). `[NEEDS: proof one real end-to-end intake→approve→pay→scan→report has completed in prod. It has not.]` |
 | **Failure modes** | (a) **The cron is DAILY** — `vercel.json` = `"0 0 * * *"`. The route's own doc-comment saying "every 5 min" is **stale and wrong**. Worst-case dispatch latency is **~24h**. **Do not market same-hour turnaround.** (b) Scans run **synchronously inside the request** (`maxDuration = 60`); a slow target or slow judge blows the 60s ceiling → the item fails into the retry path. (c) After 3 failed attempts the case falls to **manual review with no alert** — it just stops. |
 
-> ### 🔴 CRITICAL — the paid tier never reaches the engine
+> ### ✅ CLOSED — historical record: the paid tier once never reached the engine
+> **Current state (2026-08-02):** two tiers are sold — **Normal $47 (5 checks)** and **Advanced $197 (15 checks: all 10 OWASP LLM categories, 7 probed live and 3 advisory)**. The Enterprise $497 tier was retired and removed from the app; it is not sellable and must not be quoted. Everything below is the running record of a defect that was fixed, not current state.
+>
 > `executeScan` → `runEngineAndPersist` → **`runScanEngine`** (`lib/scan-engine.ts`, **5 checks, fixed**). `runEngineAndPersist` accepts **no tier parameter**. The tiered engine (`runTieredScanEngine`: basic 5 / pro 10 / enterprise 15) is only reachable from `app/api/local-scan/route.ts` — **never from the paid path.**
 
 > **[CORRECTED 2026-08-01]** The claim below is STALE and no longer true.
@@ -126,8 +128,8 @@ The product's differentiator — *authorization-first, a human approves before a
 > Enterprise scan `c498084a` persisted 15 result rows, not 5. Kept below as
 > the running record of a real defect that was fixed, NOT as current state.
 
-> **An Advanced ($197) or Enterprise ($497) customer receives the same 5-check scan as a $47 customer.** The landing's "Full OWASP LLM Top-10 coverage" (landing.tsx L92) is not delivered by the live code.
-> **This is a fulfilment-integrity defect on the money path. Wire tier → engine before selling Advanced/Enterprise, or stop selling them.**
+> *(Historical, pre-2026-08-01: an Advanced customer received the same 5-check scan as a $47 customer, and the landing's "Full OWASP LLM Top-10 coverage" claim was not delivered by the live code.)*
+> **Standing rule: Advanced must run the 15 checks it is sold on. If tier → engine ever regresses, stop selling Advanced.** This is a fulfilment-integrity defect class on the money path.
 
 ---
 
@@ -142,7 +144,7 @@ The product's differentiator — *authorization-first, a human approves before a
 | **MANUAL today** | All of it — the reminder **re-sends a live payment link**, which is the same gate class as the first send. |
 | **Time cost** | ~5 min per chase, if done by hand at all. |
 | **Automation status** | **BUILT but GATED — G3 / A8.** `[NEEDS: confirm T-07's scope covers the *reminder* path, not just first send.]` |
-| **Failure mode** | Unpaid approvals rot silently. Recovering one is a near-pure-margin $47–$497 from someone who already asked, passed due diligence, and got a price. |
+| **Failure mode** | Unpaid approvals rot silently. Recovering one is a near-pure-margin $47–$197 from someone who already asked, passed due diligence, and got a price. |
 
 ---
 
@@ -154,7 +156,7 @@ The product's differentiator — *authorization-first, a human approves before a
 | **Operator action** | None exists. |
 | **Fires automatically** | Nothing. |
 | **NOT BUILT** | 30-day re-scan invite (**G7 / S5**) · testimonial/feedback ask (**G6**) · any nurture at all. |
-| **Failure mode** | The Enterprise free re-scan — a paid-for benefit — **silently lapses** on the same 30-day clock as the signed report URL, and nothing marks it. |
+| **Failure mode** | The customer's signed report URL **silently expires** at 30 days with no warning and no re-issue path, and the buyer is never invited back for a post-fix re-scan — the cheapest repeat sale in the business goes unasked on both live tiers. |
 
 ---
 
@@ -184,7 +186,7 @@ sequenceDiagram
         Note over O: 🔴 Operator must notice the money manually.<br/>No alarm. Customer stranded.
     end
     S->>S: Daily cron (0 0 * * *) — up to 24h latency
-    S->>S: executeScan → 5-check engine (tier IGNORED 🔴)
+    S->>S: executeScan → tier-selected engine (Normal 5 / Advanced 15)
     S->>S: storeReportArtifact (rendered PDF) → 30d signed URL
     S-->>C: Report email + signed URL / HMAC token page
     Note over C,O: ❌ Nothing after this. No re-scan invite. No ask.
@@ -201,7 +203,7 @@ sequenceDiagram
 | Approve | **Waits, blind** | State machine enforces transition | **Approves / rejects** (~2 min) |
 | Pay link | Receives link | Composes URL (`buildPaymentUrl`) | **Sends it — GATED (T-07)** (~5 min) |
 | Payment | Pays at FastPayDirect | Webhook → `markRequestPaid` **❓unconfirmed** | **May have to flip status by hand** |
-| Dispatch | **Waits, blind, up to ~24h** | Daily cron → activate → `executeScan` (**5 checks, any tier**) | — |
+| Dispatch | **Waits, blind, up to ~24h** | Daily cron → activate → `executeScan` (**Normal 5 checks / Advanced 15**) | — |
 | Report | Receives email + 30d signed URL | Store artifact (**rendered PDF**), queue + deliver email | — |
 | Chase | Reminder at 48h / closed at 14d | `handleStale` — **coded, GATED** | Chases by hand today |
 | Re-scan | Benefit lapses silently | **NOT BUILT** | — |
@@ -214,7 +216,7 @@ sequenceDiagram
 | # | Risk | Severity | Evidence | Action |
 |---|---|---|---|---|
 | 1 | **FastPayDirect → Stripe webhook unconfirmed** — money may never trigger a scan, with no alarm | 🔴 CRITICAL | `app/api/stripe/webhooks/route.ts` comments; roadmap G8 | **Verify FPD signing + `client_reference_id` forwarding (10 min).** If unsignable, do not build it — use a manual "mark paid" tap. |
-| 2 | **Paid tier never reaches the engine** — $497 buys the $47 scan | 🔴 CRITICAL | `scan-persistence.ts` calls `runScanEngine`, not `runTieredScanEngine`; no tier param | Wire tier → engine, or stop selling Advanced/Enterprise. |
+| 2 | ~~Paid tier never reaches the engine — $197 buys the $47 scan~~ | ✅ CLOSED 2026-08-01 | `runEngineAndPersist` now takes a required `tier` and forwards it; `testsForTier` returns 5 for basic, 15 for advanced — 15 rows persisted on a real production scan | Done. Standing rule: re-verify tier → engine before any Advanced sale; if it regresses, stop selling Advanced. |
 | 3 | **No customer ack email** — the form promises one on every submission | 🔴 HIGH | `scan-request/route.ts` sends only `sendNewRequestAlert` (to operator) | Send a requester ack. Cheapest fix in the file. |
 | 4 | **Operator alert failure is swallowed** — a dropped email = a request that rots forever | 🟠 HIGH | `catch { console.error }` in the intake route | Build **S4** daily aging digest. BUILDABLE-NOW, ~1h, no gate. |
 | 5 | **Daily cron, not 5-min** — up to 24h latency while the site says "in seconds" | 🟠 HIGH | `vercel.json` `"0 0 * * *"` vs. the route's stale comment | Fix the comment; fix the copy; or raise the cron frequency. |

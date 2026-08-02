@@ -56,13 +56,20 @@ const ALLOWLIST = {
   //
   // This script was written after a missing payload field cost months of revenue,
   // so exempting a live revenue blocker to obtain a green run would defeat its
-  // whole purpose. The $497 "Upgrade to Enterprise Deep Scan" CTA posts only
-  // { scanId, email }; the handler requires ownership_proof_id and returns 403
-  // otherwise; and NO user interface anywhere calls /api/ownership/challenge or
-  // /api/ownership/verify, so the proof id cannot be obtained by any customer.
-  // The upsell is therefore unreachable, not "gated". This check MUST stay red
-  // until either the ownership-verification UI is built or the gate is removed.
-  // Re-adding an entry here without fixing that is how the original bug shipped.
+  // whole purpose. This entry once had to stay red: the deep-scan CTA posted only
+  // { scanId, email } while the handler required ownership_proof_id and returned
+  // 403 otherwise, and no user interface called /api/ownership/challenge or
+  // /api/ownership/verify at all, so no customer could ever obtain the proof id.
+  // The path was unreachable, not "gated".
+  //
+  // It is now reachable: app/_components/deep-scan-cta.tsx drives the challenge
+  // and verify steps and posts the resulting proof id, so the pair passes on its
+  // own merits rather than on an exemption. Leave it unallowlisted - that is what
+  // keeps the check honest if the caller ever regresses. Re-adding an entry here
+  // instead of fixing the caller is how the original bug shipped.
+  //
+  // NOTE: /enterprise is the ownership-verification funnel, not a price tier.
+  // Ruling R-15 (2026-08-02) retired the Enterprise TIER; the route is unaffected.
   "app/api/local-scan/route.ts": {
     ownership_proof_id:
       "REASON: gate input, not a form field. Same typeof-guarded pattern as deep-scan; " +

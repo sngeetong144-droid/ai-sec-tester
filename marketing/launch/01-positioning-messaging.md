@@ -7,12 +7,13 @@
 **Upgrades:** the prior `marketing/positioning.md`. Do not run both — this is the launch source of truth for messaging.
 
 > **Changelog vs. prior draft**
-> - Removed the "llms.txt shows stale $10 pricing — fix as P0" note. Live llms.txt already carries $47/$197/$497 + the compliance block. No longer an action item.
+> - Removed the "llms.txt shows stale $10 pricing — fix as P0" note. Live llms.txt already carries current pricing + the compliance block. No longer an action item.
 > - Killed "results in seconds" / "report in seconds" as a settled claim everywhere. Scan runtime is unverified live. Copy now promises the *deliverable*, not a measured speed. See Do/Don't §8.
 > - Added value props **by buyer segment** (prior draft had personas but no segment-specific benefit ladder).
 > - Added an explicit **message hierarchy** (§5) so downstream copy inherits one spine instead of re-deriving it.
 > - Promoted the three differentiators into a single named **narrative** (§6): authorization-first → real probes → human-reviewed.
 > - Added a **messaging Do/Don't** (§8) tied to the brand voice.
+> - **2026-08-02 (ruling R-15):** the $497 Enterprise tier is retired and removed from the product. This document now describes two buyable tiers — Normal $47 and Advanced $197 — and the Enterprise-only free re-scan entitlement is gone with it. Human authorization review is not a tier perk; it applies to both tiers.
 
 ---
 
@@ -90,17 +91,16 @@ Downstream copy (landing, emails, ads, social, SEO) inherits this spine. Level 1
 **Level 2 — The three reasons to trust it** (this is the §6 narrative, compressed):
 1. **Authorization-first** — it won't run until you've proven you can test the target.
 2. **Real probes, judged** — it actually converses with the bot; an LLM judge grades each response. Not a simulation.
-3. **Human-reviewed** — at Enterprise, a person reviews before the scan runs, and you get a free re-scan to verify the fix.
+3. **Human-reviewed** — every request goes through automated risk triage and a human authorization review before any probe fires. Both tiers, no exceptions.
 
 **Level 3 — The deliverable:**
 > A–F / 0–100 grade + PDF report: evidence per finding, plain-language remediation. Hand it to a developer, a customer, or an auditor.
-> *(The free 30-day re-scan is an Enterprise-tier entitlement. Do not carry it into Level 3 — it is not part of the base deliverable.)*
 
 **Level 4 — The coverage (name the checks):**
 > LLM01 prompt injection · LLM02 sensitive-info disclosure · LLM07 system-prompt leakage · LLM06 excessive agency · insecure output handling · common jailbreak / guardrail-bypass patterns.
 
 **Level 5 — The mechanics:**
-> Request a scan (no checkout, no login). We check ownership/authorization + geo, sanctions, and licensing. Approved requests get an emailed payment link. Pay → scan runs → report emailed. From $47 / $197 / $497.
+> Request a scan (no checkout, no login). We check ownership/authorization + geo, sanctions, and licensing. Approved requests get an emailed payment link. Pay → scan runs → report emailed. Two tiers: $47 Normal or $197 Advanced.
 
 **Rule:** never let Level 4 or 5 outrank Level 1 on a page. Coverage lists and pricing tables are proof, not the pitch.
 
@@ -117,7 +117,7 @@ Most "point it at any URL" scanners are a liability engine — for you and for w
 A generic DAST scanner (Burp/ZAP/Nessus-class) tests SQLi and headers and has no concept of a system prompt — it will pass a chatbot that hands over its entire instruction set to anyone polite about it. AI Sec Tester actually converses with the target across the OWASP LLM Top-10 failure modes, and an LLM judge grades each response, with the probe and the bot's reply captured per finding. Not a static payload list. Not "we asked an LLM to try." A structured battery with the evidence attached.
 
 **3. A human closes the loop.**
-At Enterprise, identity is verified and a person reviews before the scan runs — and after you fix what it found, one free 30-day re-scan verifies the fix instead of just naming the problem. Finding → fix → confirmed.
+No scan is machine-approved. Every request is risk-triaged automatically and then reviewed by a person before it runs — on both tiers, at $47 and at $197. The gate that decides whether a probe fires is a human decision, and the report you get is the one that decision authorized.
 
 **The payoff line:** *the same discipline that makes it legal is what makes the result credible.* A scorecard you can hand to a customer or an auditor, precisely because of how carefully it was allowed to run.
 
@@ -138,7 +138,7 @@ Ask whether that firm's last report named prompt injection, system-prompt leakag
 
 **Additional objections (secondary):**
 - **"How do I know it won't break production?"** — Probes are non-invasive by design, and nothing runs until authorization clears. `[NEEDS: confirm non-invasive probe methodology is documented for the report/FAQ]`
-- **"$497 for one scan is steep."** — Enterprise includes identity verification, human review before the scan, the full report, and one free 30-day re-scan. The re-scan alone closes the finding-to-fix loop one-shot scanners don't.
+- **"$197 for one scan is steep."** — Advanced covers all ten OWASP LLM categories (seven probed live, three advisory) across 15 checks, versus five checks at $47, plus automated risk triage and a human authorization review before anything runs. It's still an order of magnitude under a manual LLM red-team engagement.
 - **"We can't act on security findings."** — The report is plain-language, evidence per finding, remediation written for a developer, not a security specialist.
 - **"What if it finds nothing — wasted money?"** — A clean, OWASP-LLM-aligned Pass/Fail scorecard *is* the deliverable: documented due diligence you can point to, instead of a private "we didn't check."
 
@@ -153,7 +153,8 @@ Ask whether that firm's last report named prompt injection, system-prompt leakag
 - Treat the authorization gate as a feature you're proud of — put it forward, never bury it.
 - Show evidence-per-finding, not adjectives. "Here's the probe and the bot's reply" beats "comprehensive."
 - Write short declarative sentences to a developer who is not a security specialist.
-- Promise the *deliverable* (scorecard + PDF), not a speed. The re-scan is Enterprise-only — it belongs in Enterprise-tier copy, nowhere else.
+- Promise the *deliverable* (scorecard + PDF), not a speed.
+- Present exactly two tiers — Normal $47 and Advanced $197. There is no third tier to upsell to.
 - Mark any proof point that doesn't exist yet as `[NEEDS: ...]`. Never fabricate.
 
 ### Don't
@@ -172,18 +173,18 @@ Ask whether that firm's last report named prompt injection, system-prompt leakag
 
 **Safe to state as fact:**
 - Live product at scan.thesoulsofai.com; request-first, no self-serve checkout, no customer login (public site).
-- Pricing: $47 Normal / $197 Advanced / $497 Enterprise, one-time (Advanced billed per scan, Enterprise per chatbot).
-- Tier scope, per the live landing (landing.tsx:74/92/111): Normal $47 = **5 OWASP LLM checks** + scorecard + PDF. Advanced $197 = **full OWASP LLM Top-10 coverage** — the paid differentiator. Enterprise $497 = full report + **1 free re-scan after fixes**.
+- Pricing: two tiers, one-time, billed per scan — $47 Normal and $197 Advanced.
+- Tier scope: Normal $47 = **5 OWASP LLM checks** + scorecard + PDF. Advanced $197 = **all 10 OWASP LLM categories** (7 probed live, 3 advisory) across **15 checks** — the paid differentiator.
+- Both tiers include automated risk triage and a human authorization review before the scan runs.
 - Coverage named on the live landing: LLM01, LLM06, LLM07, LLM08, insecure output handling, jailbreak/guardrail-bypass patterns.
 - Deliverable: Pass/Fail scorecard + grade + branded PDF with evidence per finding and plain-language remediation.
 - Authorization gate is enforced server-side (records request, no payment/scan, re-checks consent, resolves countries, auto-rejects sanctioned targets, holds SG/MY for manual review).
-- Enterprise: identity verification, human review before the scan, one free 30-day re-scan.
 - llms.txt is live and current (correct pricing + compliance block).
 
 **Do NOT claim (false as written — these are corrections, not gaps):**
-- **Never promise the free 30-day re-scan outside Enterprise-tier copy.** It is **Enterprise-only** per `app/_components/landing.tsx:111` ("Full report + 1 free re-scan after fixes"). It is not included at $47 or $197. It was previously promised unconditionally in the elevator pitch and the message hierarchy — that is corrected; do not reintroduce it.
-- **Never describe the re-scan as something the customer triggers, books, or runs.** The **30-day re-scan invite flow is NOT BUILT** (see `marketing/automation/02-fulfillment-ops-automation.md`). There is no invite email, no re-scan link, no self-serve re-scan. The only true mechanism: the customer replies with their re-scan reference and an operator queues it.
-- **Never sell full OWASP LLM Top-10 coverage at $47.** Normal ($47) = **five core OWASP-LLM checks** (`landing.tsx:74`). Full Top-10 coverage **starts at Advanced ($197)** (`landing.tsx:92`) — it is the paid differentiator, not a freebie.
+- **Never sell, price, or upsell an Enterprise tier.** The $497 Enterprise tier is **retired** (ruling R-15, 2026-08-02) and has been removed from the product. There are exactly **two** buyable tiers: Normal $47 and Advanced $197. Do not write "three tiers," a three-column pricing table, a $47/$197/$497 ladder, or an email sequence that pitches an upgrade to Enterprise. *(The `/enterprise` URL is unrelated — it is an ownership-verification funnel, not a price tier. Keep the link; never call it a tier.)*
+- **Never promise a free re-scan.** It was an Enterprise-tier entitlement and retired with the tier. There is no re-scan entitlement at $47 or $197, and no invite email, re-scan link, or self-serve re-scan exists.
+- **Never sell full OWASP LLM Top-10 coverage at $47.** Normal ($47) = **five core OWASP-LLM checks**. Full Top-10 coverage — all ten categories, seven probed live and three advisory, across 15 checks — is **Advanced ($197)** only. It is the paid differentiator, not a freebie.
 - **Never use verbs that imply the customer operates the product.** It is **admin-operated**: the public page is a request-a-scan intake form. No customer login, no self-serve checkout, no customer-triggered scan. Flow: intake → admin triage → approve → customer pays → admin activates → scan → report emailed. Copy says *request*, *reply*, *activate by paying* — never *run it*, *launch it*, *log in*, or *click here to scan*.
 
 **Do NOT claim until verified (`[NEEDS]`):**

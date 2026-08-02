@@ -32,7 +32,7 @@ This file does not re-derive personas or re-write copy. It decides **which chann
 2. **No fabricated proof.** No invented metrics, logos, testimonials, or scan counts. Placeholders are marked `[NEEDS: ...]`.
 3. **Voice = calm security engineer.** State the failure mode, then show the receipt. No AI-hype, no fear-selling, no countdown urgency. (See voice section in positioning.md.)
 4. **Runtime claims are soft until proven.** Do not promise "results in seconds." Promise the deliverable (score + PDF + remediation), not a measured speed. `[NEEDS: proof of a real end-to-end scan→graded PDF→email]`.
-5. **Tier scope is fixed** (`landing.tsx:74/92/111`). Normal $47 = **5 OWASP LLM checks**. Advanced $197 = **full OWASP LLM Top-10 coverage** — the paid differentiator; never imply it at $47. Enterprise $497 = full report + **1 free re-scan after fixes** — **Enterprise-only**, and it must not appear in any non-Enterprise copy in any channel.
+5. **Tier scope is fixed, and there are exactly two tiers.** Normal $47 = **5 OWASP LLM checks**. Advanced $197 = **all 10 OWASP LLM Top-10 categories across 15 checks** (7 probed live, 3 advisory) — the paid differentiator; never imply that coverage at $47. Both tiers include automated risk triage and a **human authorization review before the scan runs**. There is no higher tier and no per-chatbot SKU; no channel copy may present one. (Separately, `/enterprise` is the **authorized deep-scan request funnel** — an ownership-verification route, not a price tier. Link it; never call it a tier.)
 6. **Admin-operated product.** The public page is a request-a-scan intake form: no customer login, no self-serve checkout, no customer-triggered scan. Never write channel copy whose verbs imply the reader operates the product.
 
 ---
@@ -93,7 +93,7 @@ Submit once, then leave: AI-tool directories, security-tooling lists, OWASP reso
 
 ### 1.6 SEO / GEO — P2 but start now
 
-Compounding, not fast. `llms.txt` is already live and correct ($47/$197/$497 + compliance block) — it is currently the **only** shipped GEO asset. The 6 blogs, 2 comparison pages, and pillar guide in `seo-geo-content.md` are outlines only. Start publishing the highest-intent comparison page ("LLM chatbot security scan vs. generic DAST" / "vs. red-team") early because it maps directly to the buyer's mental model.
+Compounding, not fast. `llms.txt` is already live and correct ($47/$197 + compliance block) — it is currently the **only** shipped GEO asset. The 6 blogs, 2 comparison pages, and pillar guide in `seo-geo-content.md` are outlines only. Start publishing the highest-intent comparison page ("LLM chatbot security scan vs. generic DAST" / "vs. red-team") early because it maps directly to the buyer's mental model.
 
 > Correction for the team: the old action item "fix stale $10 llms.txt pricing" is **DONE**. Drop it.
 
@@ -135,7 +135,7 @@ The request-first model changes the standard SaaS funnel in one important way: *
         ▼
 [ PAID ]
   Approved → emailed FastPayDirect payment link
-  Normal $47 · Advanced $197 (per scan) · Enterprise $497 (per chatbot)
+  Normal $47 · Advanced $197 — both per scan, no other tier
   [NEEDS: confirm approval→payment-link is human/MFA-gated, not auto-send (T-07 launch-block)]
         │
         ▼
@@ -146,13 +146,13 @@ The request-first model changes the standard SaaS funnel in one important way: *
         │
         ▼
 [ RE-SCAN / UPSELL ]
-  • One free 30-day re-scan — ENTERPRISE ONLY (landing.tsx:111). Not at $47 or $197.
+  • No tier includes a free re-scan. A re-scan is a new paid scan at the tier they choose.
     [NEEDS: the re-scan INVITE flow is NOT BUILT (automation/02). Today the only
      mechanism is: customer replies with the re-scan reference, operator queues it.
      Do not design this funnel stage around an invite email or a link that exists.]
-  • Fixed the findings? A re-scan proves it. Natural re-engagement, no new sell.
-  • Tier-up: Normal (5 core checks) → Advanced (full OWASP LLM Top-10) → Enterprise (identity verify + human review + free re-scan)
-  • Per-bot expansion: multi-bot orgs scan each customer-facing surface
+  • Fixed the findings? A re-scan proves it. Natural re-engagement, priced as a scan.
+  • Tier-up: Normal (5 core checks) → Advanced (all 10 OWASP LLM categories, 15 checks). That is the whole ladder.
+  • Per-bot expansion: multi-bot orgs scan each customer-facing surface (one scan per bot)
   • Cadence: re-scan after each material bot/prompt change (bots drift; so does risk)
 ```
 
@@ -249,7 +249,7 @@ Each week: a theme, concrete actions, and the gate that must clear before the ne
 **Theme:** turn approvals into paid scans, activate the re-scan loop, decide what earns more spend.
 
 - **Conversion focus:** review approved-but-unpaid; confirm the 48h reminder is doing its job. `[CREATOR-GATE]` any manual follow-up send. Fix any approved→paid friction found.
-- **Re-scan/upsell motion:** for **Enterprise** reports only, set the free 30-day re-scan expectation and the "re-scan after you fix, then after every material change" cadence. Normal/Advanced customers get **no** free re-scan — offer a tier-up or a paid re-scan instead. `[NEEDS: the re-scan invite flow is NOT BUILT — the only mechanism is customer replies with the re-scan reference and an operator queues it. Do not promise an invite or a link.]` `[CREATOR-GATE]` on any re-scan/upsell email actually being sent.
+- **Re-scan/upsell motion:** set the "re-scan after you fix, then after every material change" cadence with every delivered report. No tier carries a free re-scan — the offer is a tier-up (Normal → Advanced) or a paid re-scan. `[NEEDS: the re-scan invite flow is NOT BUILT — the only mechanism is customer replies with the re-scan reference and an operator queues it. Do not promise an invite or a link.]` `[CREATOR-GATE]` on any re-scan/upsell email actually being sent.
 - **Content:** `[CREATOR-GATE]` publish second POV/teardown; `[NOVA-CAN-DO]` begin drafting the next comparison/FAQ asset.
 - **Review & decide:** compile the 30-day scorecard (requests, approved, paid, delivered, by channel). Decide: (a) which channel gets more effort in days 31–60; (b) whether organic conversion is proven enough to *consider* paid ads — this is a Creator money gate, not an auto-decision; (c) whether Product Hunt is warranted (only if a real, showable scan result and at least one genuine proof point exist).
 - **Gate to Month 2:** a documented winning channel + a proven request→pay→deliver→re-scan loop, or a clear, specific blocker list.
@@ -275,7 +275,7 @@ All target numbers are illustrative placeholders; do not present them as forecas
 - `[NEEDS]` Apollo segment/list · sample-report lead magnet · UTM + stage tracking · comparison/FAQ pages (llms.txt is the only live GEO asset today).
 
 **Verify before promising externally:**
-- `[NEEDS]` `scan_requests` migrations 0004/0006 live in prod · one real end-to-end scan→PDF→email · approval→payment-link human/MFA gating (T-07) · 48h reminder / 14d auto-close cron · Enterprise token-gated report page.
+- `[NEEDS]` `scan_requests` migrations 0004/0006 live in prod · one real end-to-end scan→PDF→email · approval→payment-link human/MFA gating (T-07) · 48h reminder / 14d auto-close cron · the token-gated report page on the authorized deep-scan (`/enterprise`) route.
 
 **Hard gates (Creator approval required — do not self-authorize):**
 - Any paid ad spend or new paid tool.

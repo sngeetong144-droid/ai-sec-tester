@@ -4,7 +4,7 @@
 > Every "publish" / "send" step below stays behind a human gate until Creator approves.
 > **Product:** AI Sec Tester — OWASP-LLM Top-10 scanner for chatbots/agents. Live at scan.thesoulsofai.com.
 > **Model:** request-a-scan → admin due-diligence (geo/sanctions/licensing) → approve → emailed payment link → pay → scan → report. NOT self-serve SaaS.
-> **Pricing (fixed, FastPayDirect):** $47 Normal / $197 Advanced (per scan) / $497 Enterprise (per chatbot).
+> **Pricing (fixed, FastPayDirect):** two tiers, per scan — $47 Normal (5 checks) / $197 Advanced (15 checks, all 10 OWASP LLM categories: 7 probed live, 3 advisory). Both include automated risk triage and a human authorization review.
 > **Owned stack (MTCOOM — use before any paid tool):** n8n (automation.thesoulsofai.com), Supabase (DB + Storage), Resend (email, domain verified), Vercel (hosting + cron), Claude Code, existing test chatbots.
 
 ---
@@ -58,7 +58,7 @@ Each automation lists:
 - **Gated:** the whole approve → payment-link → pay path is a **hard gate**. `payment-links.ts` warns outbound send + payment is a GATED live action behind launch-block **T-07**, not auto-send. So both the *initial* payment-link email and any *reminder* stay human/MFA-gated. `[NEEDS: confirm approval→payment-link email is human/MFA-gated]` — treat "approved requests get an emailed payment link" as by-design, not a confirmed automated live flow.
 - `[NEEDS: confirm 48h reminder / 14d auto-close lifecycle + cron are live]` — cited in funnel plan but depends on the unapplied migrations + cron wiring. Cite as *designed behavior*, verify before promising.
 
-**Revenue / time link:** Highest-leverage of all six. These are people who already asked, passed due diligence, and got a price. A recovered unpaid request is a near-pure-margin sale at $47–$497. Even at manual-approve, auto-*drafting* the reminder removes the "did I forget to chase X?" tax.
+**Revenue / time link:** Highest-leverage of all six. These are people who already asked, passed due diligence, and got a price. A recovered unpaid request is a near-pure-margin sale at $47–$197. Even at manual-approve, auto-*drafting* the reminder removes the "did I forget to chase X?" tax.
 
 **Ponytail note:** one cron, one status filter, one drafted email. The reminder is the same Resend template with a merge field. Auto-close at 14d is a status update, not a new system.
 
@@ -187,4 +187,4 @@ Each automation lists:
 - `[NEEDS: GSC property verified + OAuth token]` — gates #5.
 - `[NEEDS: verify on-landing scorecard is a static mock]` — affects #3 visual captions (recon: yes, hardcoded).
 
-*All copy and flows here are DRAFT. No sends, posts, charges, or live account changes were made. Correction carried from recon: the "stale $10 llms.txt pricing" item is resolved — live llms.txt already carries $47/$197/$497; not an action item.*
+*All copy and flows here are DRAFT. No sends, posts, charges, or live account changes were made. Correction carried from recon: the "stale $10 llms.txt pricing" item is resolved. llms.txt now needs to carry the two live tiers, $47 Normal / $197 Advanced — `[NEEDS: confirm llms.txt no longer lists the retired $497 Enterprise tier]`.*

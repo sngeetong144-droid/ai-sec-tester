@@ -22,6 +22,13 @@
  * them once" is not a repeatable test. The server route it calls drives the same
  * core the console drives, so a green matrix is evidence about the product.
  *
+ * TIER VALUES ARE GRADING INPUTS, NOT A PRICE LIST. The three tiers below are the
+ * three values the scan engine still ACCEPTS, which is what this matrix has to
+ * cover. Only two tiers are sellable - Normal ($47) and Advanced ($197). Ruling
+ * R-15 (2026-08-02) retired Enterprise from every buying surface, but the engine
+ * and the underpayment guard still handle the value (see lib/payment-links.ts),
+ * so dropping the cell here would stop testing a branch that is still live.
+ *
  * THIS IS A TEST, NOT A PRINTOUT. Every cell carries expectations and the exit
  * code is 0 only when all of them hold. In particular a passive scan that somehow
  * ran interactive probes FAILS, and endpoint/basic against the deliberately-weak

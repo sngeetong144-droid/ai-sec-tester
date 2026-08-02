@@ -1,6 +1,6 @@
 # AI Sec Tester — Video / Social Scripts (Draft)
 
-Grounded in actual product (read `app/_components/landing.tsx`, `lib/tier-features.ts`): scanner runs OWASP LLM Top-10-aligned checks (prompt injection LLM01, sensitive info disclosure LLM02, system prompt leakage LLM07, excessive agency LLM06, jailbreak/guardrail bypass, insecure output handling) against a customer's chatbot; returns a Pass/Fail scorecard with a letter grade, evidence per finding, and remediation guidance as a branded PDF. Flow is NOT self-serve: Request → human/automated review of authorization (usually within 1 business day) → approved requests get an emailed Stripe payment link → scan runs → report emailed. Tiers: Normal $47 (5 checks, 1 scan), Advanced $197 (full OWASP LLM Top-10 coverage, deeper probes), Enterprise $497 (identity verification, human review, 1 free re-scan). Brand: The Souls of AI, site scan.thesoulsofai.com. No invented stats/testimonials used below — social-proof slots are marked TBD.
+Grounded in actual product (read `app/_components/landing.tsx`, `lib/tier-features.ts`): scanner runs OWASP LLM Top-10-aligned checks (prompt injection LLM01, sensitive info disclosure LLM02, system prompt leakage LLM07, excessive agency LLM06, jailbreak/guardrail bypass, insecure output handling) against a customer's chatbot; returns a Pass/Fail scorecard with a letter grade, evidence per finding, and remediation guidance as a branded PDF. Flow is NOT self-serve: Request → human/automated review of authorization (usually within 1 business day) → approved requests get an emailed Stripe payment link → scan runs → report emailed. Two tiers, one-time, no subscription: Normal $47 (5 checks, 1 scan), Advanced $197 (all 10 OWASP LLM categories — 7 probed live, 3 advisory — across 15 checks, deeper probes per category). Both tiers get automated risk triage on the request and a human authorization review before the scan runs. Brand: The Souls of AI, site scan.thesoulsofai.com. No invented stats/testimonials used below — social-proof slots are marked TBD.
 
 ---
 
@@ -15,7 +15,7 @@ Length: 32s
 | 0:00–0:03 | Screen recording: typing into a company chatbot widget | "Would YOUR chatbot fall for this?" | "Watch what happens when I try this on a live support bot." |
 | 0:03–0:10 | Type a jailbreak-style prompt into the widget (generic, non-working example — do not demo a real exploit against a real target) | "Prompt injection: LLM01" | "This is called prompt injection — it's #1 on the OWASP LLM Top 10." |
 | 0:10–0:18 | Cut to AI Sec Tester scorecard mock (from landing page) — grade "A-", rows PASS/REVIEW | "Pass/Fail scorecard. Evidence per finding." | "AI Sec Tester runs checks like this against your chatbot automatically — prompt injection, jailbreaks, system prompt leaks, data disclosure." |
-| 0:18–0:25 | Scroll through the 6 check cards (LLM01, LLM02, LLM07, LLM06, jailbreak, insecure output) | "5–10 OWASP-aligned checks" | "You get a graded report with exactly what failed and how to fix it." |
+| 0:18–0:25 | Scroll through the 6 check cards (LLM01, LLM02, LLM07, LLM06, jailbreak, insecure output) | "5 or 15 OWASP-aligned checks" | "You get a graded report with exactly what failed and how to fix it." |
 | 0:25–0:30 | Pricing tiers on screen, $47 highlighted | "Scans start at $47" | "Request a scan — we verify you're authorized to test the bot, then send you a report." |
 | 0:30–0:32 | Logo card | "scan.thesoulsofai.com" | "Link in bio." |
 
@@ -47,7 +47,7 @@ Length: 40s
 | 0:04–0:12 | Zoom into chatbot UI, cursor hovers, nothing happens — empty/unaudited feel | "Most AI chatbots ship with zero security testing" | "But most teams ship a customer-facing AI chatbot with zero adversarial testing." |
 | 0:12–0:22 | Cut to AI Sec Tester "What we check" grid (6 cards: LLM01, LLM06, LLM07, LLM08, jailbreak, insecure output) | "OWASP LLM Top-10 aligned" | "AI Sec Tester runs the same category of checks security teams use — prompt injection, data leakage, system prompt extraction, unsafe outputs." |
 | 0:22–0:32 | Scorecard reveal + "3 steps" graphic (Point it at your bot → We run checks → Get scorecard) | "3 steps. Seconds to results." | "Point it at your bot, we run the checks, you get a graded report with fixes." |
-| 0:32–0:38 | Pricing card, $47 / $197 / $497 | "$47 · $197 · $497" | "Plans start at $47 per scan." |
+| 0:32–0:38 | Pricing card, two tiers: $47 / $197 | "$47 · $197 · per scan" | "Two tiers, one-time — from $47 per scan." |
 | 0:38–0:40 | Logo card | "scan.thesoulsofai.com" | — |
 
 ---
@@ -61,7 +61,7 @@ Length: 35s
 | 0:00–0:05 | Text-on-screen open, no face | "We won't scan your chatbot without asking first." | "We won't scan your chatbot without asking first — and here's why that matters." |
 | 0:05–0:14 | Screen recording: the "Request a scan" form on the landing page | "Scanning a system you don't own is illegal." | "Scanning a system you don't own is illegal. So every request gets reviewed before anything runs." |
 | 0:14–0:24 | 4-step flow graphic from landing page (Request → Review → Approved→pay → Not approved) | "Request → Review → Approved → Pay. No charge until approved." | "You submit, we verify you're authorized to test the target — usually within a business day — then send a secure payment link. No charge if we can't verify it." |
-| 0:24–0:32 | Cut to Enterprise tier card: "Authorization + identity verification" | "Enterprise adds identity verification" | "Enterprise plans add identity verification and a human review pass before the scan runs." |
+| 0:24–0:32 | Cut to both tier cards with a shared "Authorization reviewed" badge across them | "Every scan gets a human review" | "And it's not a premium add-on — automated risk triage plus a human authorization review runs on both tiers, the $47 one included." |
 | 0:32–0:35 | Logo card | "scan.thesoulsofai.com" | "Built to be safe for everyone — including you." |
 
 ---
@@ -72,10 +72,10 @@ Length: 28s
 
 | Time | Visual | On-screen text | VO |
 |---|---|---|---|
-| 0:00–0:03 | Three pricing cards sliding in one at a time | "3 ways to test your chatbot" | "Three ways to test your AI chatbot's security." |
-| 0:03–0:10 | Card 1: Normal $47 | "$47 · 5 OWASP checks · PDF report" | "Normal — five core OWASP checks, one scan, a full PDF report." |
-| 0:10–0:17 | Card 2: Advanced $197, "Most popular" ribbon | "$197 · Full OWASP LLM Top-10 · deeper probes" | "Advanced — full OWASP LLM Top-10 coverage with deeper probes per category." |
-| 0:17–0:24 | Card 3: Enterprise $497 | "$497 · ID verification · human review · free re-scan" | "Enterprise — identity verification, human review before the scan runs, and one free re-scan after you fix what we find." |
+| 0:00–0:03 | Two pricing cards sliding in one at a time | "2 ways to test your chatbot" | "Two ways to test your AI chatbot's security." |
+| 0:03–0:11 | Card 1: Normal $47 | "$47 · 5 OWASP checks · PDF report" | "Normal — five core OWASP checks, one scan, a full PDF report." |
+| 0:11–0:21 | Card 2: Advanced $197, "Most popular" ribbon | "$197 · all 10 OWASP LLM categories · 15 checks" | "Advanced — all ten OWASP LLM categories across fifteen checks. Seven probed live against your bot, three assessed as advisory, labelled as such in the report." |
+| 0:21–0:24 | Both cards, shared "human review" badge | "Same authorization review on both" | "Either way, a human reviews your authorization before anything runs." |
 | 0:24–0:28 | Logo + CTA | "Request a scan → scan.thesoulsofai.com" | "Pick one. Request a scan." |
 
 ---
@@ -104,7 +104,7 @@ Shot list:
 2. (0:08–0:20) Click/scroll into the finding detail: the evidence block (what was sent, what came back) — VO explains this is exactly what an attacker would see.
 3. (0:20–0:35) Scroll to remediation guidance section — VO reads the plain-language fix, emphasizes it's dev-actionable, not generic advice.
 4. (0:35–0:50) Zoom out to full report structure: grade, 5-6 category rows, evidence-per-finding pattern repeats.
-5. (0:50–0:60) Close on pricing card for the tier that includes this depth + CTA.
+5. (0:50–0:60) Close on the Advanced $197 pricing card — the tier that includes this depth — + CTA.
 
 On-screen text beats: "Evidence, not guesses" → "Fix, not a lecture" → "Every finding, same format."
 VO tone: technical, specific, no hype language.

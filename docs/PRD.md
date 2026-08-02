@@ -31,18 +31,21 @@ No personas, demographics, or segment sizes are asserted. **There are zero custo
 
 ## 4. Scope — tiers and exact per-tier deliverable
 
-Source of truth: `app/_components/landing.tsx` (tier features) + `lib/payment-links.ts` (prices, FastPayDirect links). The two are wired — the landing imports the prices — so they cannot drift.
+**Two tiers are sold: Normal $47 and Advanced $197.** A third tier, Enterprise $497, was **retired on 2026-08-02** and removed from the app — it is no longer purchasable and must not be quoted anywhere.
 
-| Tier | Price | Advertised deliverable (landing.tsx) |
+Source of truth: `lib/payment-links.ts` (prices, FastPayDirect links) + `lib/tier-features.ts` (the shared bullet copy, imported by both the landing and the admin products console). The landing imports the prices, so price and copy cannot drift.
+
+| Tier | Price | Advertised deliverable (`lib/tier-features.ts`) |
 |---|---|---|
-| **Normal** | **$47** one-time / scan | **5 OWASP LLM checks** · Pass/Fail scorecard · priority processing · branded PDF audit report · evidence per finding + remediation (L74) |
-| **Advanced** | **$197** one-time | Everything in Normal · **Full OWASP LLM Top-10 coverage** · deeper probes per category · PDF reports emailed automatically (L92) |
-| **Enterprise** | **$497** one-time / chatbot | Everything in Advanced · authorization + identity verification · automated risk triage · human review before scan · **Full report + 1 free re-scan after fixes** · secure token-gated report page (L111) |
+| **Normal** | **$47** one-time / scan | **5 OWASP LLM checks** · Pass/Fail scorecard · scan starts automatically after payment · branded PDF audit report · evidence per finding + remediation |
+| **Advanced** | **$197** one-time / scan | Everything in Normal · **all 10 OWASP LLM categories — 7 probed live, 3 advisory** (15 checks) · extended checks the $47 tier never runs · PDF reports emailed automatically |
 
-> ### 🔴 CRITICAL — the advertised tier is NOT what the code delivers
-> **NOT BUILT.** The paid path is `executeScan` (`app/actions/scans.ts`) → `runEngineAndPersist` (`lib/scan-persistence.ts`) → **`runScanEngine`** (`lib/scan-engine.ts`) — a **fixed 5-check** engine. **`runEngineAndPersist` takes no tier argument.** The tiered engine `runTieredScanEngine` (basic 5 / pro 10 / enterprise 15 checks, `lib/tiered-scan-engine.ts`) is called **only** from `app/api/local-scan/route.ts`, which the paid pipeline never touches.
-> **An Advanced or Enterprise customer today receives the identical 5-check scan as a $47 Normal customer.** "Full OWASP LLM Top-10 coverage" is not delivered.
-> **Requirement: wire tier → engine before any Advanced/Enterprise sale, or withdraw those tiers.** This is a mis-selling and chargeback exposure on the money path.
+**Both** tiers also get automated risk triage (score + flags) and a **human authorization review before any scan runs** — that review is the product's signature, not a tier upsell.
+
+> ### 🔴 CRITICAL — verify the advertised tier is what the code delivers
+> The paid path is `executeScan` (`app/actions/scans.ts`) → `runEngineAndPersist` (`lib/scan-persistence.ts`) → **`runScanEngine`** (`lib/scan-engine.ts`), whose test set is chosen by `testsForTier` (core 5 for basic; core 5 + 10 extended for advanced).
+> This PRD previously recorded **NOT BUILT** here: `runEngineAndPersist` took no tier argument, so an Advanced customer received the identical 5-check scan as a $47 Normal customer. `docs/BUSINESS-OPS-JOURNEY-MAP.md` records that defect as **corrected 2026-08-01** (15 result rows persisted on a real scan). `[NEEDS: re-verify tier → engine on the live path from this repo before the next Advanced sale.]`
+> **Requirement: Advanced must run the 15 checks it is sold on, or the tier is withdrawn.** Anything less is mis-selling and chargeback exposure on the money path.
 
 Checks surfaced on the landing (`CHECKS`): LLM01 prompt injection · LLM02 sensitive info disclosure · LLM07 system-prompt leakage · LLM06 excessive agency · JAILBREAK guardrail bypass · OUTPUT insecure output handling.
 
@@ -94,11 +97,11 @@ Resend. Operator alert on intake (`sendNewRequestAlert`) is **BUILT** but best-e
 **NOT BUILT: any customer acknowledgement email on intake** — while the intake form's success state explicitly tells the user *"Check your email."* The site makes a promise the code breaks on every submission.
 
 ### 5.5 Payment — **PARTIAL / UNPROVEN**
-Three static FastPayDirect payment links ($47/$197/$497) in `lib/payment-links.ts` — the single source of pricing. `approveScanRequestPayment` stamps `approved_awaiting_payment` + `payment_link_sent_at` and returns a URL carrying `client_reference_id` = the scan-request id. `markRequestPaid` flips `→ paid_scanning`, **idempotently** (conditional WHERE) and with an **underpayment guard** (a $47 settlement carrying a $497 request's ref is rejected).
+Two live static FastPayDirect payment links ($47 / $197) in `lib/payment-links.ts` — the single source of pricing. The retired Enterprise entry is deliberately **retained in that map, unsellable**: deleting it would make `resolvePaymentLink` return `null` for any stale "$497" plan string and the underpayment guard would **fail open**. `approveScanRequestPayment` stamps `approved_awaiting_payment` + `payment_link_sent_at` and returns a URL carrying `client_reference_id` = the scan-request id. `markRequestPaid` flips `→ paid_scanning`, **idempotently** (conditional WHERE) and with an **underpayment guard** (a $47 settlement carrying a $197 request's ref is rejected).
 **The webhook that calls it is UNCONFIRMED** — see §8 Risk 1.
 
 ### 5.6 Report delivery — **BUILT**
-On completion: `storeReportArtifact` uploads to Supabase Storage bucket `reports` and returns a **30-day signed URL** (fail-soft → `null`), the report email is queued to `cc_email_log` and delivered, and the request is closed. Enterprise gets an **HMAC-token-gated** report page (`/enterprise/report/[token]`, `makeReportToken`) and a token-gated PDF (`/api/scans/[id]/report?token=`) — **no session needed; the token is the credential.**
+On completion: `storeReportArtifact` uploads to Supabase Storage bucket `reports` and returns a **30-day signed URL** (fail-soft → `null`), the report email is queued to `cc_email_log` and delivered, and the request is closed. An **HMAC-token-gated** report page also exists on the ownership-verification funnel (`/enterprise/report/[token]`, `makeReportToken` — that route is the verification funnel, **not** a price tier), alongside a token-gated PDF (`/api/scans/[id]/report?token=`) — **no session needed; the token is the credential.**
 **RESOLVED 2026-08-01:** the stored artifact IS the rendered PDF. `storeReportArtifact` calls `buildScanReportPdf` (the same renderer behind `GET /api/scans/[id]/report`) and uploads it as `application/pdf`, matching the "branded PDF audit report" every tier advertises. It used to upload the five-line composed email body as text. Delivery remains fail-soft: any failure (PDF build, missing bucket, storage disabled) logs and returns `null` so a completed scan is never destroyed by a failed artifact — the email still sends with the inline verdict summary.
 
 ## 6. Security posture
@@ -152,7 +155,7 @@ On completion: `storeReportArtifact` uploads to Supabase Storage bucket `reports
 ## 8. Open risks
 
 1. 🔴 **The FastPayDirect webhook is unconfirmed.** Everything downstream of payment is keyed on `status='paid_scanning'`, and only the webhook sets it. It is unverified that FPD forwards `client_reference_id` and emits a signed Stripe event. **If it does not fire, a paying customer is silently stranded and nothing alarms.** Verify first (10 min). **If FPD cannot sign webhooks, do not build it** — never auto-launch a scan on an unauthenticated "paid" callback; fall back to a manual "mark paid" tap.
-2. 🔴 **Tier is never passed to the engine.** $497 buys the $47 scan. Mis-selling + chargeback exposure.
+2. 🔴 **Tier → engine must stay verified.** If tier is not passed to the engine, $197 buys the $47 scan. Mis-selling + chargeback exposure. Recorded fixed 2026-08-01; re-verify before the next Advanced sale.
 3. 🔴 **The promised intake email does not exist.** The site breaks a promise on every single submission.
 4. 🔴 **The pipe has never run end-to-end in production.** Every external claim ("we received your request", "you'll get a report") is unproven until **G1** is green.
 5. 🟠 **RLS 0007 is authored, not applied**, and the live DB still carries an anon `using(true)` policy. Applying it out of order breaks live scans mid-run — follow the migration's mandatory apply order.
@@ -161,7 +164,7 @@ On completion: `storeReportArtifact` uploads to Supabase Storage bucket `reports
 8. 🟡 Scans run **synchronously** (`maxDuration=60`); a slow target/judge blows the ceiling. Fine at zero volume.
 9. 🟡 After 3 failed scan attempts the case falls to manual review **with no alert** — it just stops.
 10. 🟡 `not_run` findings are persisted as **`pending`** (the DB CHECK allows only `pending|running|pass|fail`). A customer reads "pending" as *"still running"*, not *"we could not test this."*
-11. 🟡 Enterprise's paid-for free re-scan **lapses silently** on the same 30-day clock as the signed URL, with nothing to mark it.
+11. 🟡 The delivered report's **signed URL expires after 30 days** with nothing to warn the customer or re-issue it; after that the buyer has no way to retrieve what they paid for.
 
 ## 9. Non-goals
 
@@ -175,7 +178,7 @@ On completion: `storeReportArtifact` uploads to Supabase Storage bucket `reports
 
 **Gate 0 — Honesty (must clear before any traffic is sent to the site):**
 - [ ] Requester acknowledgement email is sent on intake, or the "check your email" copy is removed.
-- [ ] Tier → engine is wired, or Advanced/Enterprise are withdrawn from the landing.
+- [ ] Tier → engine is wired and re-verified, or Advanced is withdrawn from the landing.
 - [ ] "Results in seconds" reconciled with a daily cron.
 - [ ] The stored artifact is the PDF, or "branded PDF" copy is corrected.
 

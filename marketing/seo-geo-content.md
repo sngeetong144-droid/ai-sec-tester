@@ -9,8 +9,8 @@
 > **Funnel:** request-first — request a scan → we verify authorization (~1 business day) →
 > approved customers get a payment link → scan runs → branded PDF report emailed. No
 > self-serve checkout.
-> **Canonical pricing (source of truth = `lib/payment-links.ts`):** Normal **$47/scan**,
-> Advanced **$197/scan**, Enterprise **$497/chatbot**.
+> **Canonical pricing (source of truth = `lib/payment-links.ts`):** two tiers — Normal
+> **$47/scan** and Advanced **$197/scan**.
 > **ICP:** small-to-mid teams shipping customer-facing chatbots/assistants with no dedicated
 > AppSec function.
 > **Voice (from `landing.tsx` + `llms.txt`):** plain-language, straight-answers, no jargon
@@ -31,10 +31,12 @@ allowed claim set:
 - Returns a **Pass/Fail scorecard**, a **branded PDF audit report**, **evidence per
   finding**, and **plain-language remediation guidance**.
 - **Non-invasive, defensive use only.** Scan only bots you own or are authorized to test.
-- **Authorization-first / request-first:** a short review step confirms authorization before
-  any payment link is issued or any scan runs. Enterprise adds identity verification + human
-  review before the scan runs, and includes 1 free re-scan after fixes.
-- Results are fast ("in seconds" for automated tiers).
+- **Authorization-first / request-first:** on both tiers, automated risk triage plus a human
+  authorization review confirm the requester owns or is authorized to test the target before
+  any payment link is issued or any scan runs.
+- **Depth by tier:** Normal runs 5 checks across the core OWASP LLM risks; Advanced runs all
+  10 OWASP LLM categories (7 probed live, 3 advisory) across 15 checks.
+- Results are fast once the scan itself starts.
 
 Do NOT claim: continuous monitoring/24-7 watch, a customer login/dashboard as the core
 product (public site is request-first, no self-serve login), integrations/CI plugins,
@@ -188,9 +190,9 @@ internal links, and the CTA. Written to be drafted straight from, not re-briefed
   - H2: Real-feeling example: coaxing a bot to print its own instructions
   - H2: System prompt leakage in the OWASP LLM Top 10 (LLM07)
   - H2: How to test for system prompt leakage
-  - H2: If it leaks, what to fix (and what a re-scan proves)
+  - H2: If it leaks, what to fix (and what re-running the scan proves)
   - **CTA:** "Run a system-prompt-leak check as part of an OWASP LLM scan — request a scan." →
-    homepage. Mention Enterprise's free re-scan after fixes.
+    homepage. Note that LLM07 is covered on both tiers, and Advanced probes it more deeply.
   - **Internal links:** pillar, Blog 4 (data leaks), Blog 1.
 
 ### Blog 4 — "Can Your Chatbot Be Tricked Into Leaking Customer Data? (LLM02)"
@@ -259,8 +261,8 @@ internal links, and the CTA. Written to be drafted straight from, not re-briefed
     - H3: A re-scan path to prove the fix worked
   - H2: Red flags — vague severity, no evidence, no remediation, no standard, no re-test
   - H2: How AI Sec Tester's report maps to this checklist
-  - **CTA:** "Get a report that ticks every box — request a scan." → homepage; mention Enterprise
-    human review + free re-scan.
+  - **CTA:** "Get a report that ticks every box — request a scan." → homepage; mention that every
+    request gets automated risk triage plus a human authorization review before anything runs.
   - **Internal links:** pillar, comparison A + B, Blog 5.
 
 ---
@@ -320,10 +322,10 @@ cite the page.
 
     | | Manual red-team | AI Sec Tester (automated) |
     |---|---|---|
-    | Turnaround | Weeks | Fast (automated tiers in seconds; Enterprise adds human review) |
-    | Cost | Typically thousands+ | $47 / $197 / $497 |
-    | Coverage | Deep, creative, novel attacks | Broad OWASP LLM Top 10 baseline |
-    | Repeatable | Re-quote each time | Re-run any time; Enterprise includes a free re-scan |
+    | Turnaround | Weeks | Authorization review usually within one business day, then the scan runs fast |
+    | Cost | Typically thousands+ | $47 (Normal) / $197 (Advanced) |
+    | Coverage | Deep, creative, novel attacks | Broad OWASP LLM Top 10 baseline (Advanced: all 10 categories, 15 checks) |
+    | Repeatable | Re-quote each time | Re-run any time at the same flat price |
     | Needs AppSec staff | Usually yes | No — plain-language report |
     | Best for | High-stakes, regulated, novel systems | Baseline assurance, fast checks, small teams |
   - H2: What manual red-teaming does that automation can't (yet)
@@ -331,7 +333,7 @@ cite the page.
   - H2: The authorization-first bit both share (and why it protects you)
   - H2: A sane sequence: scan first, fix, re-scan, escalate to manual if the stakes demand it
   - **CTA:** "Start with a fast, affordable OWASP LLM baseline — request a scan." → homepage;
-    note Enterprise = human review + identity verification + free re-scan for higher-stakes bots.
+    note Advanced = all 10 OWASP LLM categories across 15 checks for higher-stakes bots.
 - **Tone guard:** respect manual red-teamers; position as the sensible *first* and *ongoing* step,
   not a replacement for genuine deep engagements.
 
@@ -366,29 +368,29 @@ answers out of context). Emit as `FAQPage` JSON-LD (the site already emits FAQ J
 
 5. **Can I scan any chatbot?**
    Only chatbots you own or are explicitly authorized to test. The request form captures that
-   authorization, and the Enterprise tier adds identity verification before anything runs.
+   authorization, and every request — on either tier — goes through automated risk triage and a
+   human authorization review before anything runs.
 
 6. **What do I actually get?**
    A branded PDF scorecard with a grade, each check's Pass/Fail status, evidence for every
    finding, and plain-language remediation guidance you can hand straight to a developer.
 
 7. **How much does it cost?**
-   Three one-time tiers: **Normal $47 per scan**, **Advanced $197** (full OWASP LLM Top 10
-   coverage with deeper probes per category), and **Enterprise $497 per chatbot** (authorization
-   + identity verification, human review before the scan runs, and one free re-scan after you fix
-   issues). You only pay after your scan request is approved.
+   Two one-time tiers: **Normal $47 per scan** (5 checks across the core OWASP LLM risks) and
+   **Advanced $197 per scan** (all 10 OWASP LLM categories — 7 probed live, 3 advisory — across
+   15 checks). You only pay after your scan request is approved.
 
-8. **What's the difference between the Normal, Advanced, and Enterprise tiers?**
-   Normal is a full one-off scan across the core OWASP LLM checks with a shareable report.
-   Advanced adds full OWASP LLM Top 10 coverage and deeper probes per category, with reports
-   emailed automatically. Enterprise adds authorization + identity verification, automated risk
-   triage, human review before the scan runs, a secure token-gated report page, and one free
-   re-scan after fixes.
+8. **What's the difference between the Normal and Advanced tiers?**
+   Normal is a one-off scan running 5 checks across the core OWASP LLM risks, returning a
+   shareable graded report. Advanced covers all 10 OWASP LLM categories — 7 probed live against
+   your bot, 3 delivered as advisory findings — across 15 checks, with deeper probing per
+   category. Both tiers include automated risk triage and a human authorization review before
+   the scan runs.
 
 9. **How long does a scan take?**
-   The automated tiers return results fast — typically within seconds of the scan running. The
-   gating step is the up-front authorization review (usually within one business day), not the
-   scan itself. Enterprise adds a human review pass before the scan runs.
+   Both tiers return results fast once the scan itself starts. The gating step is the up-front
+   authorization review — automated risk triage plus a human pass, usually within one business
+   day — not the scan.
 
 10. **Which chatbots and models can you test — GPT, Claude, custom, RAG agents?**
     Any chatbot reachable at an endpoint or widget that you own or are authorized to test —
@@ -402,8 +404,8 @@ answers out of context). Emit as `FAQPage` JSON-LD (the site already emits FAQ J
 
 12. **What if my bot fails a check — do you help me fix it?**
     Yes. Every finding comes with evidence and plain-language remediation guidance a developer
-    can act on. The Enterprise tier includes one free re-scan so you can prove the fix worked
-    after you ship it.
+    can act on. Once you've shipped the fix you can request another scan at the same flat price
+    to prove it worked.
 
 > **JSON-LD note:** publish these as a single `FAQPage` block. Keep questions verbatim to how
 > people ask them (matches "how much does chatbot security testing cost", "will scanning break my
@@ -419,18 +421,16 @@ understand and recommend the product. Current file is solid but has issues and g
 
 ### 5.1 FIX — stale pricing (correctness, do this first)
 
-The live `llms.txt` "Pricing at a glance" block is **wrong** vs the canonical source of truth
-(`lib/payment-links.ts`) and the landing page. It currently reads Basic $10 one-time, Pro
-$10/month, Enterprise $499. The shipped tiers are:
+The `llms.txt` "Pricing at a glance" block must mirror the canonical source of truth
+(`lib/payment-links.ts`) and the landing page exactly. The shipped tiers are:
 
-- **Normal — $47 one-time per scan**
-- **Advanced — $197 one-time**
-- **Enterprise — $497 one-time per chatbot**
+- **Normal — $47 one-time per scan** (5 checks across the core OWASP LLM risks)
+- **Advanced — $197 one-time per scan** (all 10 OWASP LLM categories, 15 checks)
 
-There is no monthly/"Pro" tier in the live funnel. An assistant reading the stale block will
-quote wrong prices and invent a subscription that doesn't exist. Replace the pricing block with
-the three real tiers, mirroring `payment-links.ts`. **This is a data-accuracy fix, not a
-preference — priority P0.**
+That is the whole ladder: two tiers, both one-time, no monthly/subscription option and no
+higher tier above Advanced. Any stale block listing a subscription plan or a third tier will
+make an assistant quote prices a customer cannot buy — delete it and mirror `payment-links.ts`.
+**This is a data-accuracy fix, not a preference — priority P0.**
 
 ### 5.2 ADD — a one-line, quotable positioning statement near the top
 
@@ -497,7 +497,7 @@ recommending security tooling — do not weaken it.
 ### 5.8 General GEO hygiene (site-wide, supports `llms.txt`)
 
 - Keep the on-page `FAQPage` JSON-LD in sync with §4 (assistants read structured data).
-- Add `Organization` + `Product`/`Service` schema on the homepage with the three real prices from
+- Add `Organization` + `Product`/`Service` schema on the homepage with the two real prices from
   `payment-links.ts` (offers), so price citations are machine-readable and correct.
 - Use consistent product naming everywhere ("AI Sec Tester", parent "The Souls of AI") — mixed
   naming fragments how assistants attribute the recommendation.

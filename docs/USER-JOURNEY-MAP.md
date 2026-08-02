@@ -31,7 +31,7 @@ flowchart TD
     J --> K[Scan runs: 5 checks]
     K --> L[Report email + 30-day signed URL]
     L --> M[Act on findings]
-    M --> N[Re-scan — Enterprise only]
+    M --> N[Re-scan — not included on either live tier]
     N --> O[Advocate]
 
     style G fill:#7f1d1d,color:#fff
@@ -81,11 +81,11 @@ flowchart TD
 
 | | |
 |---|---|
-| **Do** | Compare the three tiers. Then ask the real question: *is it safe / legal to point this thing at my production bot?* |
-| **See** | Pricing from `lib/payment-links.ts` (single source of truth): **Normal $47** — "5 OWASP LLM checks"; **Advanced $197** — "Full OWASP LLM Top-10 coverage"; **Enterprise $497** — "Full report + 1 free re-scan after fixes". Plus the "no charge until approved" assurances and the FAQ answer *"Scanning a system you don't own is illegal."* |
+| **Do** | Compare the two tiers. Then ask the real question: *is it safe / legal to point this thing at my production bot?* |
+| **See** | Pricing from `lib/payment-links.ts` (single source of truth) with bullet copy from `lib/tier-features.ts`: **Normal $47** — 5 OWASP LLM checks, Pass/Fail scorecard, branded PDF, evidence + remediation per finding; **Advanced $197** — everything in Normal plus all 10 OWASP LLM categories (7 probed live, 3 advisory) across 15 checks. Both tiers get automated risk triage and a human authorization review before anything runs. Plus the "no charge until approved" assurances and the FAQ answer *"Scanning a system you don't own is illegal."* |
 | **Feel** | The authorization-first framing is the trust unlock — it reads as a grown-up firm, not a script kiddie tool. Price anchoring works ($47 feels like a no-brainer). |
 | **Friction** | **Tier differentiation is not verifiable by the buyer** — and, per the code, it is not real. See the CRITICAL flag below. Also: "Results in seconds" (hero) and "Reviewed within 1 business day" (form) are two contradictory speed promises on the same page. |
-| **Today** | Tiers + pricing BUILT and consistent between landing and payment links. |
+| **Today** | Tiers + pricing BUILT and consistent between landing and payment links. **Two sellable tiers only** — Enterprise ($497) was retired 2026-08-02 by ruling R-15 and removed from every buying surface (`SELLABLE_TIERS` in `lib/payment-links.ts` is the gate). Its map entry deliberately survives so the underpayment guard cannot fail open; it is not offered to anyone. Historical blocks below that still name it are the running record, not current pricing. |
 
 > ### CRITICAL — the paid tier does not change the scan
 > `executeScan` (`app/actions/scans.ts`) → `runEngineAndPersist` (`lib/scan-persistence.ts`) → **`runScanEngine`** (`lib/scan-engine.ts`, **5 checks, fixed**). `runEngineAndPersist` takes **no tier argument**. The multi-tier engine `runTieredScanEngine` (basic 5 / pro 10 / enterprise 15 checks, `lib/tiered-scan-engine.ts`) is called **only** from `app/api/local-scan/route.ts` — a route the paid pipeline never touches.
@@ -98,8 +98,8 @@ flowchart TD
 > Enterprise scan `c498084a` persisted 15 result rows, not 5. Kept below as
 > the running record of a real defect that was fixed, NOT as current state.
 
-> **Therefore:** an Advanced ($197) or Enterprise ($497) customer today receives the **same 5-check scan** as a Normal ($47) customer. The landing's "Full OWASP LLM Top-10 coverage" claim is **not delivered by the live code path.**
-> **[GAP: wire tier → engine before any Advanced/Enterprise sale, or stop selling those tiers.]** This is a refund/chargeback and a false-advertising exposure, not a nice-to-have.
+> **Therefore, as of the 2026-07-13 audit:** an Advanced ($197) customer received the **same 5-check scan** as a Normal ($47) customer, and the landing's "Full OWASP LLM Top-10 coverage" claim was **not delivered by the live code path.** (The then-current Enterprise tier, retired 2026-08-02, was in the same bucket.)
+> That gap — wire tier → engine, or stop selling the paid tier — was closed on 2026-08-01; see the correction above. It was a refund/chargeback and false-advertising exposure, not a nice-to-have.
 
 ---
 
@@ -140,11 +140,11 @@ flowchart TD
 
 | | |
 |---|---|
-| **Do** | Open the approval email, click the FastPayDirect link, pay $47 / $197 / $497. |
+| **Do** | Open the approval email, click the FastPayDirect link, pay $47 or $197. |
 | **See** | An approval email carrying a payment link built by `buildPaymentUrl()` (appends `client_reference_id` = the scan-request id, and `prefilled_email`). Then FastPayDirect's own hosted checkout — **a different brand, on a different domain.** |
 | **Feel** | Mild brand whiplash at the handoff. Otherwise fine — they already decided. |
 | **Friction** | Trust dips at the domain switch. If they hesitate: a **48h reminder** and a **14d auto-close** are coded (`handleStale` in the cron) but both are **GATED** on the T-07 outbound-money-send block. |
-| **Today** | `approveScanRequestPayment()` stamps `status=approved_awaiting_payment` + `payment_link_sent_at`. Outbound send is **GATED (T-07)** and delivery additionally requires `RESEND_API_KEY` **and** `CC_EMAIL_SEND_ENABLED === "true"` (`lib/email-templates.ts`). Underpayment guard is BUILT (`markRequestPaid` rejects a $47 settlement against a $497 request). |
+| **Today** | `approveScanRequestPayment()` stamps `status=approved_awaiting_payment` + `payment_link_sent_at`. Outbound send is **GATED (T-07)** and delivery additionally requires `RESEND_API_KEY` **and** `CC_EMAIL_SEND_ENABLED === "true"` (`lib/email-templates.ts`). Underpayment guard is BUILT (`markRequestPaid` rejects a $47 settlement against a $197 request). |
 
 ---
 
@@ -170,7 +170,7 @@ flowchart TD
 | | |
 |---|---|
 | **Do** | Open the report email. Click through. |
-| **See** | A report email (`composeEmail("report", view)` → `deliverComposedEmail`) with an inline verdict summary and, when Storage is wired, a **30-day signed URL** (`storeReportArtifact`, bucket `reports`). Enterprise additionally gets a token-gated report page: `/enterprise/report/[token]`, HMAC-verified (`makeReportToken`), plus a PDF at `/api/scans/[id]/report?token=…`. **No login required** — the token *is* the credential. |
+| **See** | A report email (`composeEmail("report", view)` → `deliverComposedEmail`) with an inline verdict summary and, when Storage is wired, a **30-day signed URL** (`storeReportArtifact`, bucket `reports`). There is also a token-gated report page at `/enterprise/report/[token]`, HMAC-verified (`makeReportToken`), plus a PDF at `/api/scans/[id]/report?token=…`. **No login required** — the token *is* the credential. The `/enterprise` path is the ownership-verification funnel, **not** a price tier, and is not tied to what the customer paid. |
 | **Feel** | Relief, then either vindication ("all pass") or alarm ("we leak our system prompt"). |
 | **Friction** | RESOLVED 2026-08-01. The stored artifact is now the **rendered PDF** — `storeReportArtifact` calls `buildScanReportPdf` (the same renderer behind `/api/scans/[id]/report`) and uploads `application/pdf`, matching the **"Branded PDF audit report"** the landing promises on every tier. It previously uploaded the composed email body as text. |
 | **Today** | Report email BUILT. Signed URL BUILT (fail-soft → null if bucket missing). HMAC token page BUILT. PDF artifact BUILT (A6 closed 2026-08-01). `[NEEDS: verify the `reports` bucket is private / signed-URL-only]` |
@@ -189,15 +189,15 @@ flowchart TD
 
 ---
 
-## Stage 11 — Re-scan (Enterprise only)
+## Stage 11 — Re-scan
 
 | | |
 |---|---|
-| **Do** | After fixing, use the free re-scan they paid for. |
-| **See** | `/enterprise/rescan?token=<re_scan_token>`. |
-| **Feel** | If they remember it exists. |
-| **Friction** | **Nothing ever reminds them.** The 30-day signed report URL and the free re-scan expire on the same clock, and no message marks it. A promised, paid-for benefit silently lapses. |
-| **Today** | Re-scan route BUILT. `[GAP: the 30-day re-scan invite (G7 / S5) is NOT BUILT.]` `[NEEDS: confirm which tiers include the free re-scan — landing.tsx L111 puts it on Enterprise only; roadmap G7 says the copy "assumes Enterprise".]` |
+| **Do** | After fixing, come back for a second look — and find that **neither live tier includes one.** |
+| **See** | The route exists at `/enterprise/rescan?token=<re_scan_token>` (the ownership-verification path, not a tier), but nothing in the Normal or Advanced bullets promises a free re-scan, and no email ever hands them a token. |
+| **Feel** | Nothing, because nothing invites them back. A fixed bot is a customer with no reason to return. |
+| **Friction** | **There is no re-scan offer to lapse and no reminder to send.** The 30-day signed report URL simply expires. The one tier that used to advertise "1 free re-scan after fixes" was Enterprise, retired 2026-08-02 (R-15) — and that promise was never delivered while it was on sale either (`app/actions/scans.ts:90` says the rescan path is not live). |
+| **Today** | Re-scan route BUILT but unwired to any purchase. `[GAP: the 30-day re-scan invite (G7 / S5) is NOT BUILT.]` `[CREATOR-GATE: decide whether a re-scan becomes an Advanced benefit or a paid add-on before any copy promises it again.]` |
 | **Caution** | `executeScan`'s scan-row reuse "assumes no prior results" — a re-run needs `scan_results` cleared first. The bounded-retry path in `run-scan.ts` does this; **the customer-initiated rescan path must be verified to do the same** or a re-scan could merge into stale results. `[NEEDS: verify /enterprise/rescan clears prior scan_results]` |
 
 ---
@@ -223,7 +223,7 @@ flowchart TD
 | 3 | Operator alert silently fails | Nobody — the request rots forever | Nothing | S4 daily digest is the only backstop. |
 | 4 | After paying | A webhook that may not exist | Nothing | Verify FPD webhook (G8); until then, staff a manual "mark paid" check. |
 | 5 | Waiting for the scan | A **daily** cron | Nothing | Send a "payment received — report within 24h" email at `paid_scanning`, and stop saying "in seconds". |
-| 6 | Enterprise re-scan window | Nobody — it lapses | Nothing | Build G7 (30-day invite). |
+| 6 | After the report lands | Nobody — the 30-day URL just expires | Nothing | Decide whether a re-scan is an Advanced benefit or a paid add-on, then build G7 (30-day invite). |
 
 **There is no customer-facing status surface anywhere in this product.** By architecture (`project-ai-sec-tester-architecture`: public site = request-a-scan landing, **NO customer login**) that is intentional. The consequence is that **email is the only channel** — which makes the missing acknowledgement email (#1) not a polish item but a structural hole in the funnel.
 
@@ -236,7 +236,7 @@ flowchart TD
 3. If approved, gets a pay link (gated — T-07 must be lifted by Creator first).
 4. Pays. **Possibly nothing happens**, because the webhook is unverified.
 5. ~~If it does fire, waits up to **24h** for a daily cron.~~ FIXED 2026-08-01 — the cron can only run daily on this plan, so the dispatcher self-chains while work remains; the queue drains back-to-back at ~1 scan per 100–170s instead of waiting for midnight. `[UNVERIFIED: never exercised under real burst load]`
-6. ~~Receives a **5-check** scan — regardless of whether they paid $47 or $497.~~ FIXED 2026-08-01 — the tier resolves to its real check-set and the report states the commitment honestly ("4 of 15 checks passed, 11 NOT RUN") instead of dividing by what happened to run. Checks that do not run are still capped by the `/api/chat` rate limit — see the open blocker in §Risks.
+6. ~~Receives a **5-check** scan — regardless of whether they paid $47 or $197.~~ FIXED 2026-08-01 — the tier resolves to its real check-set and the report states the commitment honestly ("4 of 15 checks passed, 11 NOT RUN") instead of dividing by what happened to run. Checks that do not run are still capped by the `/api/chat` rate limit — see the open blocker in §Risks.
 7. ~~Gets a **plain-text** artifact where a "branded PDF" was promised.~~ FIXED 2026-08-01 — the uploaded artifact is the rendered PDF.
 8. Never hears from us again.
 

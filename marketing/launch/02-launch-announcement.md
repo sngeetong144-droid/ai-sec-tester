@@ -43,7 +43,7 @@ The scan runs real interactive probes against the target chatbot — it converse
 
 This is not a static payload list matched against a regex. The probes are interactive and the grading is done by a judge model reading the actual exchange.
 
-One thing to be precise about, because tier copy elsewhere gets this wrong: the **$47 Normal** tier runs five core OWASP-LLM checks. **Full OWASP LLM Top-10 coverage starts at Advanced ($197).** Don't sell the Top-10 at $47.
+One thing to be precise about, because tier copy elsewhere gets this wrong: the **$47 Normal** tier runs five checks. **All ten OWASP LLM categories start at Advanced ($197)** — fifteen checks, seven probed live and three covered as advisory findings. Don't sell the full Top-10 at $47.
 
 ### What you get back
 
@@ -63,11 +63,12 @@ We treat that gate as a feature, not fine print. The same discipline that keeps 
 
 ### What it costs
 
-One-time, per scan:
+Two tiers, one-time, per scan. Both include automated risk triage and a human authorization review before anything runs.
 
-- **Normal — $47.** Five core OWASP-LLM checks, the Pass/Fail scorecard, and the PDF report. The "did we do the obvious things right?" pass — not the full Top-10.
-- **Advanced — $197 per scan.** Full OWASP LLM Top-10 coverage, with deeper probing per category. The Top-10 is the paid step up from Normal — that is the whole delta.
-- **Enterprise — $497 per chatbot.** Identity verification, a human review before the scan runs, and one free 30-day re-scan after you've fixed the findings — so the fix gets verified, not just named. The re-scan is Enterprise-only; it is not included at $47 or $197.
+- **Normal — $47.** Five checks, the Pass/Fail scorecard, and the PDF report. The "did we do the obvious things right?" pass — not the full Top-10.
+- **Advanced — $197.** All ten OWASP LLM categories across fifteen checks — seven probed live against your bot, three delivered as advisory findings — with deeper probing per category. Full coverage is the paid step up from Normal; that is the whole delta.
+
+That's the entire menu. No third tier, no seat pricing, no subscription.
 
 ### Where this fits
 
@@ -107,7 +108,7 @@ So AI Sec Tester does three things:
 2. **An authorization gate before any scan runs.** You request a scan; we check ownership/authorization plus jurisdiction and sanctions before anything fires. You can only scan bots you own or are authorized to test. This is enforced server-side, not a checkbox you tick and forget.
 3. **A hand-off-able result.** An A–F / 0–100 scorecard and a PDF with the evidence behind each finding and plain-language remediation.
 
-It's live now: **scan.thesoulsofai.com**. One-time pricing — $47 / $197 / $497. Enterprise includes a human review before the scan and one free 30-day re-scan after you fix things.
+It's live now: **scan.thesoulsofai.com**. One-time pricing, two tiers — $47 Normal (five checks) and $197 Advanced (all ten OWASP LLM categories, fifteen checks). Both include automated risk triage and a human review before the scan runs.
 
 It's a fast first pass, not a replacement for a full red-team. Honest about that.
 
@@ -127,7 +128,7 @@ Happy to answer anything — especially skeptical questions about the authorizat
 
 > **The Souls of AI launches AI Sec Tester, an authorization-first security scanner for AI chatbots.**
 >
-> AI Sec Tester probes customer-facing chatbots and AI agents for the failure modes unique to large language models — prompt injection, jailbreak bypass, system-prompt leakage, sensitive-data exposure, and excessive tool agency — using real interactive probes graded by an LLM judge rather than a static payload list. Findings are delivered as an A–F / 0–100 scorecard and a PDF report with evidence and plain-language remediation. No scan runs until a due-diligence gate confirms the requester is authorized to test the target. One-time pricing from $47. Available now at scan.thesoulsofai.com.
+> AI Sec Tester probes customer-facing chatbots and AI agents for the failure modes unique to large language models — prompt injection, jailbreak bypass, system-prompt leakage, sensitive-data exposure, and excessive tool agency — using real interactive probes graded by an LLM judge rather than a static payload list. Findings are delivered as an A–F / 0–100 scorecard and a PDF report with evidence and plain-language remediation. No scan runs until a due-diligence gate confirms the requester is authorized to test the target. One-time pricing, two tiers, from $47. Available now at scan.thesoulsofai.com.
 
 **Boilerplate (for "About"):**
 
@@ -154,7 +155,7 @@ Ordered by dependency. Nothing here is scheduled or sent — this is a readiness
 - [ ] Blog post — approved and published to `/blog/ai-sec-tester-launch` `[NEEDS: confirm blog surface exists / is buildable]`
 - [ ] PH tagline + maker's first comment — approved, PH launch date decided or shelved
 - [ ] Press blurb — approved; recipient list decided (or held)
-- [ ] Landing copy consistency check — pricing/tiers on the live landing match this announcement ($47/$197/$497)
+- [ ] Landing copy consistency check — pricing/tiers on the live landing match this announcement (two tiers: $47 Normal / $197 Advanced, nothing else)
 
 ### C. Visual assets
 
@@ -186,9 +187,9 @@ Ordered by dependency. Nothing here is scheduled or sent — this is a readiness
 
 ## Grounding Notes (for the team, not for publication)
 
-- **Pricing is fixed and verified:** $47 / $197 / $497, one-time. Advanced billed per scan, Enterprise per chatbot.
-- **Tier scope is fixed and verified** (landing.tsx:74/92/111): Normal $47 = **5 OWASP LLM checks**; Advanced $197 = **full OWASP LLM Top-10 coverage** (this is the paid differentiator — never give it away at $47); Enterprise $497 = full report + **1 free re-scan after fixes** (re-scan is **Enterprise-only**).
-- **The 30-day re-scan invite flow is NOT BUILT** (see `marketing/automation/02-fulfillment-ops-automation.md`). There is no customer-triggered re-scan and no automated invite. Describe it as an Enterprise entitlement fulfilled on request, never as a link the customer clicks.
+- **Pricing is fixed and verified:** two tiers, one-time, both billed per scan — $47 Normal, $197 Advanced. There is no third tier; anything quoting a higher price is retired copy.
+- **Tier scope is fixed and verified:** Normal $47 = **5 checks**; Advanced $197 = **all 10 OWASP LLM categories** (7 probed live, 3 advisory) across **15 checks** — this is the paid differentiator, never give it away at $47. Both tiers include automated risk triage and a human authorization review before the scan runs.
+- **No free re-scan exists in any tier.** There is no customer-triggered re-scan and no automated re-scan invite (see `marketing/automation/02-fulfillment-ops-automation.md`). A re-scan is simply a new paid scan; never promise one as an entitlement.
 - **Admin-operated product.** Public page is a request-a-scan intake form. No customer login, no self-serve checkout, no customer-triggered scan. Never write a verb that implies the customer runs the product.
 - **Authorization gate is real code,** not marketing: server-side consent re-check, jurisdiction resolution, OFAC auto-reject, SG/MY manual hold. Lead with it.
 - **Do NOT claim speed** ("results in seconds", "report in seconds"). Runtime is unproven live. Promise the deliverable, not a measured time.

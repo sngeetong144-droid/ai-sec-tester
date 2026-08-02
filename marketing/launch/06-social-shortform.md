@@ -10,13 +10,13 @@
 
 **Safe to say (verified against live product / code):**
 - Live at **scan.thesoulsofai.com** — a request-first landing, **no self-serve checkout**. Every CTA routes to the request form.
-- Pricing: **$47 Normal / $197 Advanced (per scan) / $497 Enterprise (per chatbot)**, one-time.
+- Pricing: **two tiers — $47 Normal / $197 Advanced (per scan)**, one-time. No subscription, no third tier.
 - Coverage aligned to **OWASP LLM Top-10**: LLM01 prompt injection, LLM05 insecure output handling, LLM05 sensitive info disclosure, LLM07 system-prompt leakage, LLM06 excessive agency, plus common jailbreak / guardrail-bypass patterns.
 - **Real interactive probes graded by an LLM judge** — the scanner converses with the target bot and grades each response. Not a static payload list, not a simulation.
 - **Authorization-first is enforced in code**, not just copy: request → server re-checks both consent boxes → resolves requester + target country → auto-rejects OFAC / comprehensively sanctioned targets → **holds Singapore / Malaysia targets for manual licensing review**. No payment taken and no scan launched at request time.
 - Deliverable: **A–F / 0–100 score + Pass/Fail scorecard + branded PDF** with evidence per finding and plain-language remediation.
-- Enterprise adds identity verification, human review before the scan runs, and **one free 30-day re-scan** after fixes.
-- **Tier scope (landing.tsx:74/92/111):** Normal $47 = **5 OWASP LLM checks**. Advanced $197 = **full OWASP LLM Top-10 coverage** — this is the paid differentiator, never imply it at $47. Enterprise $497 = full report + **1 free re-scan** (Enterprise-only).
+- **Both tiers** get automated risk triage on the request and a **human authorization review** before the scan runs. Neither tier is the "safe" one — the gate is universal.
+- **Tier scope:** Normal $47 = **5 OWASP LLM checks**. Advanced $197 = **all 10 OWASP LLM categories — 7 probed live, 3 advisory — across 15 checks**. Depth is the only paid differentiator; never imply Top-10 coverage at $47.
 
 **Do NOT say (unverified or false — mark `[NEEDS: …]` instead):**
 - ❌ "results in seconds" / "report in seconds" — runtime is unproven. Describe the *deliverable*, never a measured speed.
@@ -231,7 +231,7 @@ Each post has a LinkedIn (long) and an X (≤280 char) variant carrying the same
 > 3. Approved requests get an emailed payment link. No charge until then.
 > 4. Scan runs. Report emailed.
 >
-> $47 Normal · $197 Advanced · $497 Enterprise (adds identity verification, human review, and one free 30-day re-scan). Find out before an attacker does.
+> Two tiers, one-time: $47 Normal (5 core OWASP-LLM checks) · $197 Advanced (all 10 OWASP LLM categories, 15 checks). Find out before an attacker does.
 
 **X:**
 > AI Sec Tester is live → scan.thesoulsofai.com
@@ -247,48 +247,49 @@ Each post has a LinkedIn (long) and an X (≤280 char) variant carrying the same
 ### Post 9 — "Pick your depth" (tiers, plainly)
 
 **LinkedIn:**
-> Three ways to test your chatbot's security. No subscription, one-time.
+> Two ways to test your chatbot's security. No subscription, one-time.
 >
-> **Normal — $47.** Five core OWASP-LLM checks, one scan, full PDF report. The "did we do the obvious things right?" pass — not the full Top-10.
+> **Normal — $47 per scan.** Five core OWASP-LLM checks, one scan, full PDF report. The "did we do the obvious things right?" pass — not the full Top-10.
 >
-> **Advanced — $197 per scan.** Full OWASP LLM Top-10 coverage, with deeper probes per category. The Top-10 is the step up from Normal. For a bot that's already in production and handling real users.
+> **Advanced — $197 per scan.** All ten OWASP LLM categories — seven probed live against your bot, three assessed as advisory — across fifteen checks, with deeper probes per category. For a bot that's already in production and handling real users.
 >
-> **Enterprise — $497 per chatbot.** Adds identity verification, a human review pass before the scan runs, and one free 30-day re-scan after you fix what we find — so you're verifying the fix, not just naming the problem.
->
-> Every tier is request-first: we confirm authorization before anything runs, and you're not charged until it's approved. → scan.thesoulsofai.com
+> Same gate on both: automated risk triage on your request, then a human authorization review before a single probe fires. You're not charged until it's approved. The only thing $197 buys you is depth. → scan.thesoulsofai.com
 
 **X:**
-> Three ways to test your chatbot:
-> • Normal $47 — 5 core OWASP-LLM checks + PDF
-> • Advanced $197/scan — full OWASP LLM Top-10, deeper probes
-> • Enterprise $497/bot — ID verify, human review, 1 free re-scan
+> Two ways to test your chatbot:
+> • Normal $47/scan — 5 core OWASP-LLM checks + PDF
+> • Advanced $197/scan — all 10 OWASP LLM categories, 15 checks
 >
-> Request-first. No charge until approved.
+> Same authorization review on both. No charge until approved.
 > scan.thesoulsofai.com
 
-**Media:** three pricing cards.
+**Media:** two pricing cards.
 
 ---
 
-### Post 10 — "The re-scan closes the loop" (Enterprise value, education)
+### Post 10 — "Five checks or fifteen" (Advanced value, education)
 
 **LinkedIn:**
-> Most security reports stop at "here's what's wrong." Then you fix it, and… you're guessing whether the fix actually worked.
+> The honest difference between our two tiers is coverage. Nothing else.
 >
-> A jailbreak fix is easy to get subtly wrong. You patch the obvious phrasing, an attacker rephrases, and you're back where you started — except now you *think* you're covered.
+> **Normal ($47)** runs five core OWASP-LLM checks. It catches the failure modes that show up most often — the polite system-prompt leak, the obvious injection, the guardrail you can argue away in one sentence. If your bot has never been tested, this is the pass that tells you whether the obvious things are wrong.
 >
-> That's why the Enterprise tier includes one free 30-day re-scan. Fix what the first report found, and we run it again to verify the fix holds — against the same category of probes, not just the exact string you patched.
+> **Advanced ($197)** runs all ten OWASP LLM categories across fifteen checks. Seven of those categories we probe live against your bot; three we assess as advisory, because they're architectural — they live in your supply chain and your deployment, not in something a conversation can trigger. We say which is which in the report rather than pretending a checklist item is a live probe.
 >
-> Naming the problem is table stakes. Confirming the fix is the part that actually reduces your risk. → scan.thesoulsofai.com
+> Five checks tell you if the door is unlocked. Fifteen tell you what else is on the floor plan.
+>
+> Both tiers go through the same authorization review before anything runs, and neither charges you until it's approved. → scan.thesoulsofai.com
 
 **X:**
-> Most security reports stop at "here's what's wrong." Then you fix it and… guess whether it worked.
+> The only difference between our tiers is coverage.
 >
-> Enterprise includes 1 free 30-day re-scan: fix it, we verify the fix holds against the same probes. Naming the bug is table stakes.
+> $47 — 5 core OWASP-LLM checks. Is the obvious stuff wrong?
+> $197 — all 10 OWASP LLM categories, 15 checks. 7 probed live, 3 advisory, labelled honestly.
 >
+> Same authorization gate on both.
 > scan.thesoulsofai.com
 
-**Media:** simple "find → fix → verify" loop graphic.
+**Media:** simple "5 checks vs. 15 checks" coverage-map graphic.
 
 ---
 
@@ -346,7 +347,7 @@ Format per script: **Hook → Beats → CTA**, with shot/on-screen-text/VO.
 | 0:00–0:05 | Text card, no face | "We won't scan your chatbot without asking first." | "We won't scan your chatbot without asking first — and that's the whole point." |
 | 0:05–0:14 | Screen-record the request form on the landing page | "Scanning a system you don't own is illegal." | "Scanning a system you can't prove you own is illegal. So every request gets reviewed before anything runs." |
 | 0:14–0:24 | The review flow graphic; highlight "geo · sanctions · licensing" | "Authorization + jurisdiction check before any probe" | "We check authorization and jurisdiction — geography, sanctions, licensing. Sanctioned targets are rejected. Some are held for manual review." |
-| 0:24–0:31 | Enterprise card: identity verification + human review | "No charge until approved" | "No charge until it's approved. Enterprise adds identity verification and a human pass before the scan runs." |
+| 0:24–0:31 | Both pricing cards side by side, "human review" badge across both | "No charge until approved" | "No charge until it's approved. Automated risk triage, then a human pass before the scan runs — on both tiers, not just the expensive one." |
 | 0:31–0:35 | Logo + URL | "scan.thesoulsofai.com" | "The gate is what makes the result something you can stand behind." |
 
 **CTA:** "scan.thesoulsofai.com"
@@ -365,7 +366,7 @@ Format per script: **Hook → Beats → CTA**, with shot/on-screen-text/VO.
 | 0:05–0:16 | Scroll into the finding: the probe sent, then the bot's verbatim response | "The probe. The response. Verbatim." (caption: "illustrative example") | "The exact probe we sent. The exact response the bot gave back. That's the receipt — what an attacker would see." |
 | 0:16–0:28 | Scroll to remediation section | "The fix — plain language" | "Then a plain-language fix your developer can act on without a security background. Not 'harden your prompts.' The actual change." |
 | 0:28–0:38 | Zoom out: full report structure, rows repeat in the same format | "Every finding. Same shape." | "Every finding follows the same shape — probe, response, verdict, fix — so a dev reads it once and knows what to do." |
-| 0:38–0:45 | Pricing card (Advanced/Enterprise) + logo | "scan.thesoulsofai.com" | "That's an AI Sec Tester report. Request one." |
+| 0:38–0:45 | Pricing card (Advanced $197) + logo | "scan.thesoulsofai.com" | "That's an AI Sec Tester report. Request one." |
 
 **CTA:** "scan.thesoulsofai.com"
 **VO tone:** technical, specific, zero hype.
@@ -374,16 +375,16 @@ Format per script: **Hook → Beats → CTA**, with shot/on-screen-text/VO.
 
 ### Video 5 — "Pick your depth" (~30s, direct offer)
 
-**Hook (0:00–0:03):** "Three ways to test your chatbot."
+**Hook (0:00–0:03):** "Two ways to test your chatbot."
 **Beats:**
 
 | Time | Shot | On-screen text | VO |
 |---|---|---|---|
-| 0:00–0:03 | Three pricing cards slide in | "3 ways to test your chatbot" | "Three ways to test your AI chatbot's security." |
-| 0:03–0:10 | Card 1: Normal $47 | "$47 · 5 core OWASP-LLM checks · PDF" | "Normal — five core OWASP-LLM checks, one scan, full PDF report." |
-| 0:10–0:17 | Card 2: Advanced $197 | "$197/scan · full OWASP LLM Top-10" | "Advanced — the full OWASP LLM Top-10, with deeper probes per category. The Top-10 is the step up from Normal." |
-| 0:17–0:25 | Card 3: Enterprise $497 | "$497/bot · ID verify · human review · free re-scan" | "Enterprise — identity verification, human review before the scan, and one free re-scan after you fix what we find." |
-| 0:25–0:30 | Logo + URL | "Request-first → scan.thesoulsofai.com" | "Pick one. Request a scan. No charge until it's approved." |
+| 0:00–0:03 | Two pricing cards slide in | "2 ways to test your chatbot" | "Two ways to test your AI chatbot's security." |
+| 0:03–0:11 | Card 1: Normal $47 | "$47/scan · 5 core OWASP-LLM checks · PDF" | "Normal — five core OWASP-LLM checks, one scan, full PDF report." |
+| 0:11–0:21 | Card 2: Advanced $197 | "$197/scan · all 10 OWASP LLM categories · 15 checks" | "Advanced — all ten OWASP LLM categories across fifteen checks. Seven probed live against your bot, three assessed as advisory, and the report says which is which." |
+| 0:21–0:26 | Both cards, shared "human review" badge animates across them | "Same authorization review on both" | "Same gate either way — automated risk triage, then a human authorization review before anything runs." |
+| 0:26–0:30 | Logo + URL | "Request-first → scan.thesoulsofai.com" | "Pick one. Request a scan. No charge until it's approved." |
 
 **CTA:** "scan.thesoulsofai.com"
 
@@ -417,7 +418,7 @@ Cadence: 1 primary post/day, Mon–Fri, both weeks (10 posting days). Weekends l
 | **W2 Tue** | LinkedIn + X | **Post 7** ("Excessive agency", LLM06) | Educational (deeper) | Keep teaching; don't go all-sell. |
 | **W2 Wed** | LinkedIn + X | **Post 5** ("Anecdote ≠ evidence") + **Video 4** ("Inside one finding") | Objection / proof | DIY objection + technical proof for eng leads. |
 | **W2 Thu** | LinkedIn + X | **Post 9** ("Pick your depth") + **Video 5** ("Pick your depth") | Offer / tiers | Present pricing plainly. |
-| **W2 Fri** | LinkedIn + X | **Post 10** ("Re-scan closes the loop") | Offer / Enterprise value | Close on the highest-value differentiator. |
+| **W2 Fri** | LinkedIn + X | **Post 10** ("Five checks or fifteen") | Offer / Advanced value | Close on the coverage differentiator that justifies $197. |
 | W2 Sat/Sun | — | (optional) recut best-performing video for Shorts | Reach | Reuse. |
 
 **Ratio check:** 7 educational/trust posts : 3 offer posts (Posts 8, 9, 10). Educational-first, as required.

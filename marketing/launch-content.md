@@ -2,9 +2,9 @@
 
 > **Status:** DRAFTS ONLY. Nothing here posts, sends, or publishes. Every claim is grounded in what the product actually does: OWASP LLM Top-10 aligned prompt-injection, jailbreak, system-prompt-leak, sensitive-data and unsafe-output probes against a chatbot you own or are authorized to test, returning a Pass/Fail scorecard + branded PDF with evidence and remediation.
 > **Funnel (source of truth = `lib/payment-links.ts`):** request-first. Submit → we verify authorization → approved gets an emailed payment link → scan runs → report emailed. No self-serve checkout.
-> **Pricing:** Normal **$47**/scan · Advanced **$197**/scan · Enterprise **$497**/chatbot.
+> **Pricing:** two tiers — Normal **$47**/scan · Advanced **$197**/scan. Nothing above Advanced; do not quote a third tier.
 > **Voice reference:** `app/_components/landing.tsx`, `public/llms.txt` — plain-language, security-serious, "find out before an attacker does," no fear-mongering, no invented stats.
-> **Note:** `public/llms.txt` shows stale $10 pricing — the live source of truth is `payment-links.ts` ($47/$197/$497), used throughout this file.
+> **Note:** the live source of truth for pricing is `payment-links.ts` ($47 / $197), used throughout this file. `[NEEDS: re-verify `public/llms.txt` carries the two live tiers and no retired tier]`
 
 ---
 
@@ -198,11 +198,12 @@ Hi {{first_name}},
 
 If you've been meaning to check your chatbot, here's the whole menu:
 
-- **Normal — $47/scan.** A full one-off scan: 5 OWASP LLM checks, Pass/Fail scorecard, branded PDF, evidence + remediation per finding.
-- **Advanced — $197/scan.** Everything in Normal, plus full OWASP LLM Top-10 coverage and deeper probes per category.
-- **Enterprise — $497/chatbot.** Everything in Advanced, plus authorization + identity verification, automated risk triage, human review before the scan runs, a token-gated report page, and one free re-scan after you ship fixes.
+- **Normal — $47/scan.** A full one-off scan: 5 checks, Pass/Fail scorecard, branded PDF, evidence + remediation per finding.
+- **Advanced — $197/scan.** Everything in Normal, plus all 10 OWASP LLM categories — 7 probed live, 3 advisory — across 15 checks, with deeper probing per category.
 
-Every plan starts the same way: request → we verify authorization → approved gets a payment link → report lands in your inbox. No charge until approved.
+Two plans, that's the whole menu. Both include automated risk triage and a human authorization review before the scan runs.
+
+Both plans start the same way: request → we verify authorization → approved gets a payment link → report lands in your inbox. No charge until approved.
 
 Find out before an attacker does.
 
@@ -364,10 +365,11 @@ Scanning a system you don't own is illegal, so every scan starts with a short au
 **Who it's for:**
 Small-to-mid teams shipping customer-facing chatbots without a dedicated AppSec function — founders, product engineers, and consultants who need proof their bot is resilient before someone probes it.
 
-**Pricing:**
-- Normal — $47/scan (5 OWASP LLM checks, scorecard, branded PDF)
-- Advanced — $197/scan (full OWASP LLM Top-10 coverage, deeper probes)
-- Enterprise — $497/chatbot (identity verification, human review, token-gated report, 1 free re-scan after fixes)
+**Pricing (two tiers, one-time, per scan):**
+- Normal — $47/scan (5 checks, scorecard, branded PDF)
+- Advanced — $197/scan (all 10 OWASP LLM categories — 7 probed live, 3 advisory — across 15 checks, deeper probing per category)
+
+Both tiers include automated risk triage and a human authorization review before the scan runs.
 
 We'd genuinely love feedback from anyone who's shipped an LLM chatbot — especially the failure modes you've seen in the wild. What did we miss?
 

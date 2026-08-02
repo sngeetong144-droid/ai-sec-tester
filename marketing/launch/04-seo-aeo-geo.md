@@ -20,9 +20,9 @@ For a request-first product with no self-serve funnel, the job of all three is t
 
 | Asset | Status | Note |
 |---|---|---|
-| `public/llms.txt` — GEO source of truth | **SHIPPED — current** | Correct $47/$197/$497, capability list mapped to LLM codes, defensive-use/compliance block. This is the ONLY live GEO/SEO content asset. |
-| Landing page live at scan.thesoulsofai.com | **SHIPPED** | Request-first, tier copy, mock scorecard. Meta tags need audit (see §4). |
-| Correct pricing across site | **SHIPPED** | The old "fix stale $10 llms.txt" action item is **DONE — drop it.** |
+| `public/llms.txt` — GEO source of truth | **SHIPPED — needs a pricing pass** | Capability list mapped to LLM codes and the defensive-use/compliance block are current. Pricing must read the two live tiers only — **$47 Normal / $197 Advanced**. [NEEDS: confirm no third tier remains in the file.] This is the ONLY live GEO/SEO content asset. |
+| Landing page live at scan.thesoulsofai.com | **SHIPPED** | Request-first, two-tier copy, mock scorecard. Meta tags need audit (see §4). |
+| Correct pricing across site | **SHIPPED (app)** | The app now sells two tiers — $47 Normal, $197 Advanced. The old "fix stale $10 llms.txt" action item is **DONE — drop it.** Non-app assets must quote two tiers, never a third. |
 | Landing on-page meta (title/description/OG/canonical) | **TO-DO — verify then set** | See §4. May already be partially set in `layout.tsx` — audit before editing. |
 | JSON-LD structured data (Organization, Product/Service, FAQPage) | **TO-DO** | See §5. None confirmed live. |
 | `sitemap.xml` + `robots.txt` | **TO-DO — verify** | Next.js may auto-emit; confirm before assuming. |
@@ -165,19 +165,19 @@ Add an FAQ section to the landing (or a `/faq`) with **FAQPage JSON-LD** — thi
 
 1. What does AI Sec Tester check for? → OWASP LLM Top-10 failure modes: prompt injection (LLM01), insecure output handling (LLM05), sensitive info disclosure (LLM02), system-prompt leakage (LLM07), excessive agency (LLM06), plus jailbreak/guardrail-bypass patterns.
 2. Is this a real scan or a simulation? → Real interactive probes against your live chatbot, each response graded by an LLM judge. Not a static payload list.
-3. Can I test any chatbot? → No. Only bots you own or are explicitly authorized to test. We run an authorization + geo/sanctions/licensing check before any scan.
-4. How much does it cost? → One-time: $47 Normal, $197 Advanced (per scan), $497 Enterprise (per chatbot).
+3. Can I test any chatbot? → No. Only bots you own or are explicitly authorized to test. Every request gets automated risk triage plus a human authorization review — including a geo/sanctions/licensing check — before any scan.
+4. How much does it cost? → Two one-time tiers, both priced per scan: $47 Normal and $197 Advanced.
 5. Why do I request a scan instead of paying upfront? → We review authorization first; you're only sent a payment link after approval.
 6. What do I get? → A Pass/Fail A–F (0–100) scorecard and a branded PDF report with evidence per finding and plain-language remediation.
 7. Does this replace a full penetration test / red-team? → No — it's a fast, structured first-pass filter, not a replacement for a deep engagement.
-8. What's included at Enterprise? → Identity verification, human review before the scan runs, and one free 30-day re-scan after you fix issues.
+8. What's the difference between Normal and Advanced? → Normal runs 5 checks across the core OWASP LLM risks. Advanced covers all 10 OWASP LLM categories — 7 probed live against your bot, 3 delivered as advisory findings — across 15 checks. Both include automated risk triage and a human authorization review before the scan runs.
 
 **Schema to ship (JSON-LD in `<head>` / Next metadata):**
 
 | Schema type | Where | Purpose |
 |---|---|---|
 | `Organization` | site-wide | The Souls of AI entity, `sameAs` → thesoulsofai.com. Feeds knowledge graph / GEO. |
-| `Service` (or `Product`) | landing | Name, description, `offers` with the three price points (USD, one-time). Only real prices. |
+| `Service` (or `Product`) | landing | Name, description, `offers` with the two price points — $47 Normal, $197 Advanced (USD, one-time). Only real prices. |
 | `FAQPage` | landing/faq | The 8 Q&A above. Biggest AEO win. |
 | `BreadcrumbList` | pillar pages | Once blog structure exists. |
 
@@ -228,8 +228,9 @@ Ordered. Check the box only on verified proof, not intent.
 - Real interactive probes graded by an LLM judge (not a simulation/static list).
 - Authorization-first is real and server-enforced (consent re-check, country resolution, OFAC auto-reject, SG/MY manual hold).
 - Deliverable: Pass/Fail A–F (0–100) scorecard + branded PDF with evidence per finding + plain-language remediation.
-- Pricing: $47 / $197 / $497 one-time (Advanced per scan, Enterprise per chatbot).
-- Enterprise: identity verification, human review before scan, one free 30-day re-scan.
+- Pricing: two one-time tiers, both per scan — $47 Normal, $197 Advanced. No third tier, no subscription.
+- Tier depth: Normal = 5 checks across the core OWASP LLM risks; Advanced = all 10 OWASP LLM categories (7 probed live, 3 advisory) across 15 checks.
+- Both tiers: automated risk triage + human authorization review before the scan runs.
 - Request-first flow: no self-serve checkout; approval → emailed payment link → pay → scan → report.
 
 **BANNED / SOFTEN:**
@@ -238,7 +239,7 @@ Ordered. Check the box only on verified proof, not intent.
 - ❌ 100% coverage / "unhackable" / "replaces a red-team." It's a first-pass filter.
 - ❌ AI-hype words: revolutionary, next-gen, AI-powered, military-grade.
 - ❌ Any copy implying you can scan bots you don't own — the authorization framing is central, never buried as a disclaimer.
-- ⚠️ Don't promise request-form persistence reliability — **[NEEDS: confirm scan_requests migrations 0004/0006 applied in prod].** Don't promise the 48h reminder / 14d auto-close cron or the Enterprise "token-gated report page" as live — **[NEEDS: verify]**; frame as designed behavior.
+- ⚠️ Don't promise request-form persistence reliability — **[NEEDS: confirm scan_requests migrations 0004/0006 applied in prod].** Don't promise the 48h reminder / 14d auto-close cron or the token-gated report page as live — **[NEEDS: verify]**; frame as designed behavior.
 
 ---
 
