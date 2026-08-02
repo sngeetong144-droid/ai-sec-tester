@@ -39,7 +39,12 @@ export const TIER_FEATURES: Record<ScanTier, readonly string[]> = {
     // are advisory-only - scan-engine.ts ADVISORY_KEYS, and its own evidence text
     // says an external black-box scan "cannot" verify them. A buyer reads
     // "coverage" as "tested", so the honest claim states the split.
-    "All 10 OWASP LLM categories — 7 probed live, 3 advisory",
+    // 7 are PROBED. The other 3 (LLM03 supply chain, LLM04 poisoning, LLM08 vector
+    // store) cannot be reached by a black-box scan, so they are assessed from a
+    // control review the CUSTOMER completes - lib/advisory-review.ts. The wording
+    // says "you complete" because skipping it leaves them unassessed; claiming a
+    // flat "3 reviewed" would promise work that only happens if they fill it in.
+    "All 10 OWASP LLM categories — 7 tested live, 3 by a control review you complete",
     // Was "Deeper probes per category" - false. real-scan-engine.ts iterates ONE
     // flat PROBES array (:1083) and contains no tier comparison at all; the only
     // tier switch in the product is testsForTier, which selects CATEGORIES. A

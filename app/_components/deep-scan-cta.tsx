@@ -163,7 +163,7 @@ export function DeepScanCta({
             Our{" "}
             <span className="font-semibold text-brand-600">Advanced</span>{" "}
             deep scan runs the full 15-check suite against your live chatbot — all 10
-            OWASP LLM categories, 7 probed live and 3 advisory, with a branded PDF
+            OWASP LLM categories, 7 tested live and 3 by a control review you complete, with a branded PDF
             report, evidence per finding and a remediation plan.
           </p>
         </div>
