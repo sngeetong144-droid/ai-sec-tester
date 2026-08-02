@@ -1,6 +1,6 @@
 # AI Sec Tester — handoff 2026-08-02
 
-**Project:** P-AIST · **Lane:** AI Apps / Revenue · **Status:** `WIP`
+**Project:** P-AIST · **Lane:** AI Apps / Revenue · **Status:** `DONE_VERIFIED` - R-15 complete AND the advisory assessment shipped
 **Engine/agent:** [Claude][main]
 
 ---
@@ -96,3 +96,76 @@ on a lib/ file hid a customer-facing price quote.
 - Marketing collateral under `marketing/**` still names the Enterprise tier. It is
   internal launch copy, not a shipped surface, so it was left alone. Sweep it before
   any launch that reuses those files.
+
+## 7. Change log
+
+| Date | Who | What | Where | Why |
+|---|---|---|---|---|
+| 2026-08-02 | Claude/main | Retired Enterprise from app buying surfaces; grid 3->2 cols | landing/faq/landing-client/llms.txt/products/deep-scan-cta/api-deep-scan/scans[id]/email/enterprise page | Ruling R-15 |
+| 2026-08-02 | Claude/main | Kept PAYMENT_LINKS.enterprise as `retired: true` | lib/payment-links.ts | Deleting it makes the underpayment guard fail OPEN (expectedCents 0) |
+| 2026-08-02 | Claude/main | Added surface-sweep guard test | __tests__/retired-tier.test.ts | Enumeration gap cost 4 prior rounds |
+| 2026-08-02 | Claude/main | PURGED 3 Enterprise scan_requests rows | Supabase xgpywicrgcqnmkvahoke | Creator: test traffic. Backup written first |
+| 2026-08-02 | Claude/main | Fixed public chat bubble quoting $497 | lib/chat-assistant.ts | Adversarial sweep; prompt was the bot's authoritative price list |
+| 2026-08-02 | Claude/main | Retired tier across 26 collateral/doc/script files | marketing/, docs/, scripts/, README, .env.example | Finish R-15 outside the app |
+| 2026-08-02 | Claude/main | Killed dangling Enterprise-only "free re-scan" entitlement | marketing/automation/ | Would have shipped a cron promising a benefit that never existed |
+| 2026-08-02 | Claude/main | Fixed public test-target bot quoting $497 | lib/test-targets/secure-live-bot.ts | Served by public /api/test-target route |
+| 2026-08-02 | **Creator** | ARCHIVED the Enterprise Stripe payment link - DONE | Stripe dashboard (external) | R-15. Nova never touched Stripe. [VERIFIED: Creator attestation 2026-08-02 - external system Nova cannot inspect] |
+
+## 8. Next session — FIRST ACTIONS
+
+1. **BUILD (Creator-approved 2026-08-02):** deliver a real assessment for the 3 advisory
+   OWASP categories (LLM03 supply chain, LLM04 data/model poisoning, LLM08 vector store).
+   They cannot be probed black-box, so the evidence must come FROM the customer: a
+   structured control questionnaire/attestation, scored against the same criteria and
+   written into the same report. Makes "all 10 categories" literally true and gives
+   Advanced a real differentiator over Normal. Creator's constraint: "I need working
+   stuffs to sell, dont make me lose credibility" - so it SHALL NOT claim to have tested
+   anything it did not; it reports a REVIEWED verdict, distinct from a PROBED one.
+2. ~~Confirm the Stripe link~~ DONE - Creator archived it 2026-08-02.
+3. `/scans/<id>` web report page 404s for a non-owner - gated by session. If the report
+   page is to be used in a pitch or shared with a buyer, it needs a shareable view.
+
+## 9. Advisory assessment (LLM03/04/08) - SHIPPED
+
+**The problem it solves.** Three OWASP categories cannot be probed by a black-box scan;
+the evidence lives in the customer's build pipeline, training data and vector store. They
+shipped as verdict-less ADVISORY rows. A buyer who paid for "all 10 OWASP LLM categories"
+reasonably reads that as work not done - the refund argument.
+
+**The fix.** Evidence the scanner cannot reach is evidence the CUSTOMER can hand over. A
+12-control disclosure (4 per category) is assessed and written into the same report.
+
+| Piece | Where |
+|---|---|
+| Controls + scoring | `lib/advisory-review.ts` |
+| Labels | `lib/report-labels.ts` (REVIEWED / REVIEWED - GAPS / NOT ASSESSED) |
+| Storage | migration `0022_advisory_disclosure.sql`, `scan_requests.advisory_disclosure` jsonb |
+| Intake | optional collapsed section on the request form (`landing-client.tsx`) |
+| Rendering | `report-pdf.ts` - reviewed rows + a separate self-reported summary line |
+
+**THE CREDIBILITY RULE - test-enforced, do not weaken it.** This is the whole reason the
+feature is defensible rather than a self-certification mill:
+- A reviewed row is NEVER rendered PASS or FAIL.
+- Reviewed controls NEVER enter the probe score - separate line, marked self-reported.
+- Every reviewed row opens "REVIEWED, NOT PROBED - assessed from your own control
+  disclosure and not independently verified by this scan."
+- Silence is not a control: omitted/unsure = UNKNOWN, never a pass.
+- An explicit NO outranks an UNKNOWN, so a real gap cannot hide behind uncertainty.
+- All-yes reads as "a documented baseline, not an independent test".
+- Evidence prefix is "Reviewed:", not "Observed:" - nothing was observed.
+
+**Deliberate design calls (overrule if you disagree):**
+- The disclosure is OPTIONAL, not a checkout gate. Skipping it renders ADVISORY exactly as
+  before. Mandatory disclosure buys coverage at the cost of conversions.
+- Tier bullet reads "3 by a control review you complete", not a flat "3 reviewed" - the
+  review only happens if they fill it in.
+
+**Live proof (2026-08-02, prod e4b4c08):** form renders 12 controls with all 3 disclaimers;
+a live POST stored 4 valid answers and DROPPED an unknown control id and a bad value; the
+verification row was purged. Gates exit 0, 293 pass / 0 fail (session started at 264).
+
+## 10. Known limitation
+
+`/scans/<id>` returns 404 for a non-owner - the report page is gated by session. The
+shareable artifact is the signed PDF. Do NOT demo the web report page to a buyer until a
+shareable view exists.
