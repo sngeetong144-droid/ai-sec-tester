@@ -524,3 +524,45 @@ it is legal/consent copy. Flagged, not edited.
    report, manual pentest and a 24h path can all be BUILT if Creator wants them back
    as differentiators. Nothing advertises them meanwhile.
 3. **Load**: self-chaining drain under real burst traffic still needs production load.
+
+## CLOSE 2026-08-02 - Creator ruling R-15, execution deferred
+
+**DECIDED: AIST sells TWO tiers. Normal $47 and Advanced $197. Enterprise $497 is
+RETIRED.** Creator's words: "then retire Enterprise, keep Normal and Advanced."
+Do not re-ask, do not re-litigate. Full ruling: `docs\reference\creator-rulings.md` R-15.
+
+Why: after five false Enterprise claims were retired earlier today, the tier had ZERO
+differentiators. `testsForTier` returns an IDENTICAL 15-check set for advanced and
+enterprise [VERIFIED: lib/scan-engine.ts:280], and its remaining bullets are delivered
+to every tier - `runTriage` runs at INTAKE for all plans
+(app/api/scan-request/route.ts:266) and 7 of 7 rows carry a triage_score [VERIFIED:
+direct query]. $497 bought exactly what $197 bought.
+
+PROVENANCE: the original price points were NOVA's suggestion in an early session and
+assumed differentiators that were never built. Creator only tiered them.
+
+**NOTHING WAS EXECUTED.** Creator deferred the work to a fresh session explicitly to
+save tokens. The codebase is unchanged from `817fe56`.
+
+### Scope when the next session executes R-15
+1. Remove the tier from the buying surfaces: `lib/tier-features.ts`, `landing.tsx`,
+   `faq.tsx` (both copy AND the JSON-LD Offer), `public/llms.txt`,
+   `app/command-center/products/page.tsx`, and the request-form plan selector.
+2. `lib/payment-links.ts` is the source of truth for tier ids/prices - removing
+   `enterprise` there will ripple; `resolvePaymentLink` is used by the webhook's
+   underpayment guard, so check every consumer before deleting the key.
+3. The `/enterprise` route tree (`page.tsx`, `report/[token]`, `rescan`, `success`)
+   and `deep-scan-cta.tsx` + `/api/deep-scan` become dead. Decide delete vs keep.
+   Verify reachability FIRST - that is how the dead `pricing-tiers.tsx` incident
+   happened.
+4. **PRESERVE** the 3 historical Enterprise `scan_requests` rows. Two carry delivered
+   `report_url`s. They are real completed sales, not test data.
+5. **GATED - do NOT touch:** the live Enterprise Stripe payment link. R-11 says the
+   three links are live. Retiring a tier is not authorisation to modify Stripe.
+   Ask Creator.
+6. `testsForTier` still branches on `advanced || enterprise`. Leave the enterprise
+   branch until the tier is gone everywhere, or historical rows stop grading correctly.
+
+### State at close
+Production `817fe56`, 264 tests 0 fail, typecheck clean, contracts PASS. 0 OWASP
+mismatches across 200 files. No code defects and no false claims outstanding.
