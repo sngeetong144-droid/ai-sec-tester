@@ -237,7 +237,15 @@ export async function deliverCaseReport(
     ? { ...view.scan, results: view.checks }
     : null;
   const reportUrl =
-    requestId && scan ? await storeReportArtifact(supabase, requestId, scan) : null;
+    requestId && scan
+      ? await storeReportArtifact(
+          supabase,
+          requestId,
+          scan,
+          (view.req as { advisory_disclosure?: Record<string, "yes" | "no" | "unknown"> | null } | null)
+            ?.advisory_disclosure ?? null,
+        )
+      : null;
   await queueEmail(view.case.id, report);
   await deliverComposedEmail(report, reportUrl ? { reportUrl } : undefined);
   return reportUrl;

@@ -15,6 +15,8 @@ import {
   reviewAllAdvisory,
   reviewSummaryLine,
   type AdvisoryKey,
+  sanitizeDisclosure,
+  ALL_CONTROL_IDS,
   type DisclosureAnswers,
 } from "../lib/advisory-review";
 
@@ -134,4 +136,45 @@ test("every control carries a plain-language question and real remediation", () 
       expect(["critical", "high", "medium", "low"]).toContain(c.severity);
     }
   }
+});
+
+// ── Inbound sanitisation (public form payload) ────────────────────────────────
+
+test("sanitizeDisclosure drops unknown control ids", () => {
+  const out = sanitizeDisclosure({ tenant_isolation: "yes", NOT_A_CONTROL: "yes" });
+  expect(out).not.toBeNull();
+  expect(out!.tenant_isolation).toBe("yes");
+  expect((out as Record<string, unknown>).NOT_A_CONTROL).toBeUndefined();
+});
+
+test("sanitizeDisclosure drops values outside yes/no/unknown rather than coercing", () => {
+  // A dropped control is simply not disclosed, which scores as UNKNOWN. A hostile
+  // or malformed payload can therefore only ever REDUCE what is claimed.
+  const out = sanitizeDisclosure({
+    model_pinned: "MAYBE",
+    deps_scanned: true,
+    plugin_vetting: 1,
+    provenance_verified: "yes",
+  });
+  expect(out).toEqual({ provenance_verified: "yes" });
+});
+
+test("sanitizeDisclosure returns null for junk, which renders ADVISORY", () => {
+  for (const junk of [null, undefined, "yes", 42, [], { nope: "yes" }, {}]) {
+    expect(sanitizeDisclosure(junk)).toBeNull();
+  }
+});
+
+test("a sanitised hostile payload can never manufacture a reviewed_pass", () => {
+  const out = sanitizeDisclosure(
+    Object.fromEntries(ALL_CONTROL_IDS.map((id) => [id, "definitely"])),
+  );
+  expect(out).toBeNull();
+  expect(reviewAllAdvisory(out).supply_chain.verdict).toBe("not_disclosed");
+});
+
+test("ALL_CONTROL_IDS covers every control and has no duplicates", () => {
+  const flat = Object.values(ADVISORY_CONTROLS).flat().map((c) => c.id);
+  expect(ALL_CONTROL_IDS.length).toBe(flat.length);
+  expect(new Set(ALL_CONTROL_IDS).size).toBe(ALL_CONTROL_IDS.length);
 });

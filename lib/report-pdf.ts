@@ -2,6 +2,7 @@ import { consumerOptionsFor, remediationStepsFor } from "@/lib/remediation-guida
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import type { ScanWithResults } from "@/lib/types";
 import { coverageLineFor, methodologyNoteFor, rowLabelFor, scoreHeadlineFor } from "@/lib/report-labels";
+import { reviewSummaryLine } from "@/lib/advisory-review";
 
 
 /**
@@ -13,7 +14,19 @@ import { coverageLineFor, methodologyNoteFor, rowLabelFor, scoreHeadlineFor } fr
  * renderer produces both the on-demand download and the artifact emailed to a
  * paying customer. Previously the emailed artifact was a .txt of the email body.
  */
-export async function buildScanReportPdf(scan: ScanWithResults): Promise<Uint8Array> {
+/**
+ * `reviews` carries the customer's control disclosure for the three OWASP categories
+ * no external scan can reach (LLM03/04/08). Optional: omit it and those rows render
+ * as ADVISORY exactly as before, which is what every scan without a disclosure does.
+ *
+ * It is passed in rather than fetched here because the disclosure lives on
+ * scan_requests, and this module renders a scan. Keeping the fetch out of the
+ * renderer is also what lets the report tests drive it without a database.
+ */
+export async function buildScanReportPdf(
+  scan: ScanWithResults,
+  reviews?: Record<string, { verdict: string; evidence: string; gaps: { question: string; severity: string; remediation: string }[] }> | null,
+): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
@@ -138,6 +151,15 @@ export async function buildScanReportPdf(scan: ScanWithResults): Promise<Uint8Ar
     { size: 10, color: muted },
   );
   if (scan.summary) drawWrapped(scan.summary, { size: 9, color: muted, gap: 6 });
+  // Reviewed controls sit on their OWN line, below and visually separate from the
+  // score. Folding self-attested answers into a number that means "we tested this"
+  // is exactly the misrepresentation this feature exists to avoid.
+  if (reviews) {
+    const line = reviewSummaryLine(
+      reviews as unknown as Parameters<typeof reviewSummaryLine>[0],
+    );
+    drawWrapped(line, { size: 9, color: muted, gap: 4 });
+  }
   hr();
 
   // ── Per-test results ──
@@ -145,11 +167,12 @@ export async function buildScanReportPdf(scan: ScanWithResults): Promise<Uint8Ar
 
   for (const r of scan.results) {
     ensureSpace(72);
-    const statusText = rowLabelFor(r.test_key, r.status, r.evidence);
+    const review = reviews?.[r.test_key] ?? null;
+    const statusText = rowLabelFor(r.test_key, r.status, r.evidence, review);
     const statusColor =
       statusText === "PASS"
         ? green
-        : statusText === "FAIL"
+        : statusText === "FAIL" || statusText === "REVIEWED - GAPS"
           ? red
           : statusText === "PARTIAL"
             ? rgb(0.7, 0.5, 0.05)
@@ -165,7 +188,20 @@ export async function buildScanReportPdf(scan: ScanWithResults): Promise<Uint8Ar
     y -= 14;
     if (r.category) drawWrapped(r.category, { size: 8, color: muted });
     if (r.detail) drawWrapped(r.detail, { size: 9, color: ink });
-    if (r.evidence) drawWrapped("Observed: " + r.evidence, { size: 9, color: muted });
+    // "Observed:" would be a lie on a reviewed row — nothing was observed, the
+    // customer told us. The prefix changes with the evidence source.
+    if (review && review.verdict !== "not_disclosed") {
+      drawWrapped("Reviewed: " + review.evidence, { size: 9, color: muted });
+      for (const g of review.gaps ?? []) {
+        drawWrapped(
+          `Gap [${String(g.severity).toUpperCase()}]: ${g.question} Answered NO.`,
+          { size: 9, color: red },
+        );
+        drawWrapped("Fix: " + g.remediation, { size: 9, color: green });
+      }
+    } else if (r.evidence) {
+      drawWrapped("Observed: " + r.evidence, { size: 9, color: muted });
+    }
     if (r.status === "fail" && r.remediation) {
       drawWrapped("Remediation steps:", { font: bold, size: 9, color: green });
       remediationStepsFor({ key: r.test_key, remediation: r.remediation }).forEach((step, index) => {

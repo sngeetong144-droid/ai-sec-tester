@@ -17,6 +17,7 @@ import {
 import { resolveTargetGeo } from "@/lib/geo";
 import { rateLimitScanRequest } from "@/lib/rate-limit";
 import { sendNewRequestAlert, sendRequesterAck } from "@/lib/email";
+import { sanitizeDisclosure } from "@/lib/advisory-review";
 
 /**
  * POST /api/scan-request — public scan-request intake for the
@@ -267,6 +268,13 @@ export async function POST(req: NextRequest) {
       triage_verdict: triage.verdict,
       triage_flags: flags,
       triage_recommendation: triage.recommendation,
+      // Customer-attested controls for the three OWASP categories no external scan
+      // can reach (LLM03/04/08). Optional: null means NOT DISCLOSED, which renders
+      // as ADVISORY exactly as before this existed. Sanitised to a strict allowlist,
+      // so a malformed payload can only reduce what is claimed, never inflate it.
+      advisory_disclosure: sanitizeDisclosure(
+        (body as { advisoryDisclosure?: unknown }).advisoryDisclosure,
+      ),
     })
     .select("id")
     .single();

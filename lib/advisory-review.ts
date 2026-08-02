@@ -309,3 +309,30 @@ export function reviewSummaryLine(
   if (unknown > 0) parts.push(unknown + " unknown");
   return parts.join(", ") + ". Self-reported; not independently verified.";
 }
+
+/** Every valid control id, flattened. The allowlist for anything inbound. */
+export const ALL_CONTROL_IDS: readonly string[] = Object.values(ADVISORY_CONTROLS)
+  .flat()
+  .map((c) => c.id);
+
+/**
+ * Accept a disclosure from the public request form.
+ *
+ * Strict allowlist in both directions: an unknown control id is DROPPED, and any
+ * value that is not exactly "yes" | "no" | "unknown" is DROPPED rather than coerced.
+ * A dropped control is simply not disclosed, which the scorer already treats as
+ * UNKNOWN and never as a pass - so a malformed or hostile payload can only ever
+ * reduce what is claimed, never inflate it.
+ *
+ * Returns null when nothing usable survives, which stores NULL and renders ADVISORY.
+ */
+export function sanitizeDisclosure(input: unknown): DisclosureAnswers | null {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+  const src = input as Record<string, unknown>;
+  const out: DisclosureAnswers = {};
+  for (const id of ALL_CONTROL_IDS) {
+    const v = src[id];
+    if (v === "yes" || v === "no" || v === "unknown") out[id] = v;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}

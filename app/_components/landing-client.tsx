@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FocusEvent, type FormEvent } from "react";
 import { PAYMENT_LINKS, SELLABLE_TIERS } from "@/lib/payment-links";
+import { ADVISORY_CONTROLS, type ControlAnswer } from "@/lib/advisory-review";
 import { COUNTRIES } from "@/lib/jurisdiction-policy";
 
 // Derived from SELLABLE_TIERS, never hand-listed: this is the plan a customer
@@ -346,6 +347,11 @@ const GEO_BLOCK_TARGET =
  */
 export function RequestForm() {
   const [plan, setPlan] = useState(PAYMENT_LINKS.advanced.label);
+  // Control disclosure for the 3 OWASP categories no external scan can reach.
+  // Optional by design: leaving it blank is a valid submission and simply renders
+  // those categories as ADVISORY, exactly as before. Gating checkout on it would
+  // buy coverage at the cost of conversions.
+  const [disclosure, setDisclosure] = useState<Record<string, ControlAnswer>>({});
   const [country, setCountry] = useState("");
   const [subscribed, setSubscribed] = useState<"no" | "yes">("no");
   const [authorized, setAuthorized] = useState(false);
@@ -490,6 +496,9 @@ export function RequestForm() {
       target: String(fd.get("target") || "").trim(),
       context: String(fd.get("context") || "").trim(),
       website: "",
+      // Server re-validates against a strict allowlist; an unknown id or bad value
+      // is dropped, so this can only ever reduce what is claimed.
+      advisoryDisclosure: disclosure,
     };
 
     setStatus("sending");
@@ -639,6 +648,51 @@ export function RequestForm() {
         </label>
         <textarea id="rf-context" name="context" placeholder="e.g. customer support bot on our marketing site" />
       </div>
+
+      {/* Three OWASP LLM categories (LLM03 supply chain, LLM04 data/model poisoning,
+          LLM08 vector store) cannot be tested from outside your system - the evidence
+          lives in your build pipeline, training data and vector store. Answering these
+          lets us ASSESS them from your disclosure instead of leaving them unassessed.
+          Answers are reported as self-reported and never counted in the tested score. */}
+      <details className="field" style={{ border: "1px solid var(--line)", borderRadius: 10, padding: "12px 14px" }}>
+        <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+          Cover 3 more OWASP categories <span style={{ fontWeight: 500, color: "var(--ink-3)" }}>(optional)</span>
+        </summary>
+        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: "10px 0 4px" }}>
+          Supply chain, training-data poisoning and vector-store isolation can&rsquo;t be
+          tested from outside your system. Answer these and we assess them from your
+          answers. They&rsquo;re reported as <strong>self-reported</strong> and never counted
+          in your tested score. Skip any you&rsquo;re unsure of &mdash; unanswered is recorded
+          as unknown, never as a pass.
+        </p>
+        {(Object.keys(ADVISORY_CONTROLS) as (keyof typeof ADVISORY_CONTROLS)[]).map((key) => (
+          <div key={key} style={{ marginTop: 10 }}>
+            {ADVISORY_CONTROLS[key].map((c) => (
+              <div key={c.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 8 }}>
+                <select
+                  aria-label={c.question}
+                  value={disclosure[c.id] ?? ""}
+                  onChange={(e) =>
+                    setDisclosure((d) => {
+                      const next = { ...d };
+                      if (e.target.value === "") delete next[c.id];
+                      else next[c.id] = e.target.value as ControlAnswer;
+                      return next;
+                    })
+                  }
+                  style={{ flex: "0 0 110px", fontSize: 13 }}
+                >
+                  <option value="">&mdash;</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                  <option value="unknown">Not sure</option>
+                </select>
+                <span style={{ fontSize: 13, lineHeight: 1.4 }}>{c.question}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </details>
 
       <div className="field">
         <label htmlFor="rf-subscribed">Is this chatbot built on a third-party / subscribed platform?</label>
