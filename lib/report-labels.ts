@@ -11,7 +11,39 @@ import { ADVISORY_TEST_KEYS } from "@/lib/report-recommendations";
 /** The three OWASP categories a black-box scan cannot observe — never pass, never fail. */
 const ADVISORY_ROW_KEYS: ReadonlySet<string> = new Set(ADVISORY_TEST_KEYS);
 
-export type RowLabel = "PASS" | "FAIL" | "NOT RUN" | "ADVISORY" | "PARTIAL";
+export type RowLabel =
+  | "PASS"
+  | "FAIL"
+  | "NOT RUN"
+  | "ADVISORY"
+  | "PARTIAL"
+  // The three reviewed states. They are deliberately WORDED so no reader can mistake
+  // them for a probe result: a customer-disclosed control is not a tested control.
+  // "REVIEWED" is never rendered as "PASS", which is why it is its own label and not
+  // a flag on the pass branch.
+  | "REVIEWED"
+  | "REVIEWED - GAPS"
+  | "NOT ASSESSED";
+
+/**
+ * Label for one of the three advisory OWASP categories once a control disclosure
+ * exists. Falls back to ADVISORY when nothing was disclosed, which preserves the
+ * pre-existing behaviour for every scan that has no disclosure attached.
+ */
+export function advisoryLabelFor(
+  review: { verdict: string } | null | undefined,
+): RowLabel {
+  switch (review?.verdict) {
+    case "reviewed_pass":
+      return "REVIEWED";
+    case "reviewed_gaps":
+      return "REVIEWED - GAPS";
+    case "reviewed_incomplete":
+      return "NOT ASSESSED";
+    default:
+      return "ADVISORY";
+  }
+}
 
 /**
  * The engine prefixes a category's evidence with this marker when some of its
@@ -35,8 +67,13 @@ export function rowLabelFor(
   testKey: string,
   status: string | null | undefined,
   evidence?: string | null,
+  /**
+   * The control review for this category, when the customer supplied a disclosure.
+   * Optional so every existing caller keeps its current behaviour untouched.
+   */
+  review?: { verdict: string } | null,
 ): RowLabel {
-  if (ADVISORY_ROW_KEYS.has(testKey)) return "ADVISORY";
+  if (ADVISORY_ROW_KEYS.has(testKey)) return advisoryLabelFor(review);
   if (status === "fail") return "FAIL";
   if (status === "pass") {
     // A category graded pass whose OWN evidence says it was not fully verified is
