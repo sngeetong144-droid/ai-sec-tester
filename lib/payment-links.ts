@@ -77,9 +77,12 @@ export const PAYMENT_LINKS: Record<ScanTier, TierPaymentLink> = {
   //     resolvePaymentLink("Enterprise — $497") return null, expectedCents 0, and
   //     the guard FAILS OPEN — a $47 checkout would settle a $497 request. The
   //     retirement must not reopen the very hole that guard was built to close.
-  //  2. HISTORICAL ROWS. Three scan_requests rows carry an Enterprise plan string;
-  //     two have delivered report_urls. They are real completed sales and must keep
-  //     grading and rendering correctly.
+  //  2. DEFENCE IN DEPTH for any stale Enterprise plan string. The three rows that
+  //     used to carry one were PURGED on 2026-08-02 (Creator: test traffic - own
+  //     email, company "Test Inc", own target, and paid_at/paid_amount_cents/
+  //     stripe_session_id all NULL, so no payment ever settled). Zero remain
+  //     [VERIFIED: count query]. The key stays anyway: it costs nothing, and it is
+  //     what stops reason 1 from becoming live again if any such row reappears.
   //
   // The live Stripe payment link itself is UNTOUCHED — R-11 says the three links are
   // live, and retiring a tier is not authorisation to modify Stripe.

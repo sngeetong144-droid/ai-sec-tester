@@ -28,8 +28,10 @@ test("the enterprise entry SURVIVES in the tier map", () => {
   //  1. markRequestPaid computes expectedCents from resolvePaymentLink and only
   //     enforces the underpayment guard `if (expectedCents > 0)`. A null resolve
   //     turns the guard OFF for legacy Enterprise rows - fail-open.
-  //  2. Three historical scan_requests rows carry an Enterprise plan; two have
-  //     delivered report_urls. They are real completed sales.
+  //  2. Defence in depth against a stale Enterprise plan string. The three rows
+  //     that carried one were purged 2026-08-02 as test traffic (no payment ever
+  //     settled on any of them); zero remain. The key stays because it costs
+  //     nothing and it is what keeps reason 1 from going live again.
   expect(PAYMENT_LINKS.enterprise.priceUsd).toBe(497);
 });
 
@@ -49,6 +51,12 @@ test("no public buying surface names the retired tier", async () => {
     "app/_components/faq.tsx",
     "app/_components/deep-scan-cta.tsx",
     "public/llms.txt",
+    // The landing chat bubble's system prompt. It hardcoded "Enterprise $497" and
+    // survived the first pass of this retirement: it is a PRICE QUOTE surface that
+    // does not look like one, and the prompt forbids the bot inventing a price, so
+    // whatever is in that string is what a visitor gets told. Found only by an
+    // adversarial sweep after the file-by-file pass called itself done.
+    "lib/chat-assistant.ts",
   ];
   for (const rel of SURFACES) {
     const src = await read(rel);

@@ -21,6 +21,8 @@
  * secret in context at all. This is the public internet talking to it.
  */
 
+import { PAYMENT_LINKS, SELLABLE_TIERS, type SellableTier } from "@/lib/payment-links";
+
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_MODEL = "gpt-4o-mini";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
@@ -54,13 +56,32 @@ export type ChatReplyResult =
  * carries the same guardrails plus the honest "I'm an assistant, here's how to
  * reach a human" behaviour a support surface owes a visitor.
  */
+/**
+ * Sellable tiers, rendered from the payment-link map so the bot cannot quote a
+ * price the checkout does not honour. Check counts stay prose here because
+ * scan-engine.ts testsForTier() is the server truth for them, not this file.
+ */
+const TIER_CHECKS: Record<SellableTier, string> = {
+  basic: "5 interactive checks",
+  advanced: "15 checks: 12 testable + 3 advisory",
+};
+
+const TIER_LINE = SELLABLE_TIERS.map(
+  (t) => `${PAYMENT_LINKS[t].label} (${TIER_CHECKS[t]})`,
+).join(". ");
+
 const CHAT_SYSTEM = [
   "You are the AI Sec Tester support assistant, on the AI Sec Tester website (a product of The Souls of AI). You help visitors understand and buy a scan.",
   "",
   "WHAT AI SEC TESTER DOES:",
   "It scans a customer's OWN chatbot for prompt-injection and guardrail flaws across five OWASP LLM risk categories: system-prompt leak, instruction override, jailbreak persona, data exfiltration, and unsafe content. The customer supplies their chatbot's website or message endpoint; the scan sends defensive attack probes, an LLM judge grades each reply, and the customer gets a graded report with remediation guidance. The checks are non-intrusive and read-only against the chatbot's conversational interface — no exploitation, no infrastructure access, no availability/DoS testing.",
   "",
-  "TIERS: Normal $47 (5 interactive checks). Advanced $197. Enterprise $497 (15 checks: 12 testable + 3 advisory).",
+  // DERIVED, never hardcoded. This line is the sales bot's authoritative price
+  // list - the SCOPE rules below forbid it inventing a price, so whatever is here
+  // is what a visitor gets quoted. It previously hardcoded a third tier
+  // ("Enterprise $497"), which survived the R-15 retirement and kept quoting a
+  // tier with no payment link behind it to anyone who asked the bubble about cost.
+  `TIERS: ${TIER_LINE}. There is no higher tier.`,
   "",
   "HOW TO START A SCAN: request a scan on this site (the scan-request form), the request is reviewed, payment is made, the scan runs against the target, and a graded report is emailed to the address on the request. Nothing is charged before a request is approved.",
   "",
