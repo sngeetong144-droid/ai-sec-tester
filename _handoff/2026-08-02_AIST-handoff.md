@@ -169,3 +169,10 @@ verification row was purged. Gates exit 0, 293 pass / 0 fail (session started at
 `/scans/<id>` returns 404 for a non-owner - the report page is gated by session. The
 shareable artifact is the signed PDF. Do NOT demo the web report page to a buyer until a
 shareable view exists.
+
+
+## Board detail snapshot - 2026-08-07
+
+> Verbatim text moved out of the `tasks.md` Board Focus cell so the Board can stay one line per project per CLAUDE.md section 6. Nothing edited.
+
+R-15 COMPLETE (tier retired in code, collateral, DB; Stripe link ARCHIVED by Creator). ADVISORY ASSESSMENT SHIPPED at e4b4c08: LLM03/04/08 assessed from a 12-control customer disclosure, so all 10 OWASP categories are addressed; tier bullet updated to match. Credibility rule test-enforced (REVIEWED never renders PASS/FAIL, never enters the probe score, silence is never a pass). Gates exit 0, 293 pass/0 fail. KNOWN LIMIT: /scans/<id> 404s for non-owners - the PDF is the shareable artifact.
