@@ -40,6 +40,7 @@ interface Body {
   email?: string;
   country?: string;
   website?: string; // honeypot
+  lead?: string; // capture source — which page earned this lead
 }
 
 export async function POST(req: NextRequest) {
@@ -63,6 +64,12 @@ export async function POST(req: NextRequest) {
   }
   if (country && country.length > 80) return bad("Country is too long (80 characters max).");
 
+  // Capture source. The column is varchar(60) and several SEO pages now post here, so an
+  // over-long or absent value must degrade to the historical default rather than fail the
+  // insert — losing the lead to protect the label would be the wrong trade.
+  const leadRaw = body.lead?.trim() ?? "";
+  const lead = leadRaw && leadRaw.length <= 60 ? leadRaw : "starter-map";
+
   const headersList = await headers();
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -72,7 +79,7 @@ export async function POST(req: NextRequest) {
   const supabase = createServiceClient();
   const { error: insErr } = await supabase
     .from("site_leads")
-    .insert({ name, email, country, lead: "starter-map", ip });
+    .insert({ name, email, country, lead, ip });
 
   if (insErr) {
     console.error("[starter-map] insert error:", insErr.message);
