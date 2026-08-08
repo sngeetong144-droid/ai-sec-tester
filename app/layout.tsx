@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/login/actions";
 import { SiteFooter } from "@/app/_components/site-footer";
 import { SiteNav, SiteNavOffset } from "@/app/_components/site-nav";
+import { GoogleAnalytics } from "@/app/_components/google-analytics";
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
@@ -99,6 +100,7 @@ export default async function RootLayout({
         {/* Site footer — suppressed on the public landing ("/"), which ships its own. */}
         <SiteFooter />
         <Analytics />
+        <GoogleAnalytics />
       </body>
     </html>
   );
